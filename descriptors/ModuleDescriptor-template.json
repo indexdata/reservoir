@@ -110,7 +110,7 @@
           ],
           "pathPattern": "/reservoir/config/matchkeys/{id}/initialize",
           "permissionsRequired": [
-            "reservoir-config-matchkeys.item.initialize"
+            "reservoir-config.matchkeys.item.initialize.put"
           ]
         },
         {
@@ -119,7 +119,7 @@
           ],
           "pathPattern": "/reservoir/config/matchkeys/{id}/stats",
           "permissionsRequired": [
-            "reservoir-config-matchkeys.item.stats"
+            "reservoir-config-matchkeys.item.stats.get"
           ]
         }
       ]
@@ -179,7 +179,7 @@
           ],
           "pathPattern": "/reservoir/config/modules/{id}/reload",
           "permissionsRequired": [
-            "reservoir-config-modules.item.reload"
+            "reservoir-config-modules.item.reload.put"
           ]
         }
       ]
@@ -254,7 +254,7 @@
           ],
           "pathPattern": "/reservoir/clusters/touch",
           "permissionsRequired": [
-            "reservoir-clusters.collection.touch"
+            "reservoir-clusters.collection.touch.post"
           ]
         }
       ]
@@ -336,7 +336,7 @@
           ],
           "pathPattern": "/reservoir/pmh-clients/{id}/stop",
           "permissionsRequired": [
-            "reservoir-pmh-clients.stop"
+            "reservoir-pmh-clients.stop.post"
           ]
         },
         {
@@ -345,7 +345,7 @@
           ],
           "pathPattern": "/reservoir/pmh-clients/{id}/status",
           "permissionsRequired": [
-            "reservoir-pmh-clients.status"
+            "reservoir-pmh-clients.status.get"
           ]
         }
       ]
@@ -436,12 +436,14 @@
       "description": "Delete match key configuration"
     },
     {
-      "permissionName": "reservoir-config-matchkeys.item.initialize",
+      "permissionName": "reservoir-config.matchkeys.item.initialize.put",
+      "replaces": ["reservoir-config.matchkeys.item.initialize"],
       "displayName": "reservoir - initialize match key configuration",
       "description": "Initialize match key configuration"
     },
     {
-      "permissionName": "reservoir-config-matchkeys.item.stats",
+      "permissionName": "reservoir-config-matchkeys.item.stats.get",
+      "replaces": ["reservoir-config-matchkeys.item.stats"],
       "displayName": "reservoir - get match key statistics",
       "description": "Get match key statistics"
     },
@@ -455,8 +457,8 @@
         "reservoir-config-matchkeys.item.get",
         "reservoir-config-matchkeys.item.put",
         "reservoir-config-matchkeys.item.delete",
-        "reservoir-config-matchkeys.item.initialize",
-        "reservoir-config-matchkeys.item.stats"
+        "reservoir-config-matchkeys.item.initialize.put",
+        "reservoir-config-matchkeys.item.stats.get"
      ]
     },
     {
@@ -485,7 +487,8 @@
       "description": "Delete code module config"
     },
     {
-      "permissionName": "reservoir-config-modules.item.reload",
+      "permissionName": "reservoir-config-modules.item.reload.put",
+      "replaces": ["reservoir-config-modules.item.reload"],
       "displayName": "reservoir - reload code module",
       "description": "Reload code module config"
     },
@@ -544,7 +547,8 @@
       "description": "Get cluster"
     },
     {
-      "permissionName": "reservoir-clusters.collection.touch",
+      "permissionName": "reservoir-clusters.collection.touch.post",
+      "replaces": ["reservoir-clusters.collection.touch"],
       "displayName": "reservoir - update clusters timestamp",
       "description": "Update clusters timestamp"
     },
@@ -555,7 +559,7 @@
       "subPermissions": [
         "reservoir-clusters.collection.get",
         "reservoir-clusters.item.get",
-        "reservoir-clusters.collection.touch"
+        "reservoir-clusters.collection.touch.post"
       ]
     },
     {
@@ -589,12 +593,14 @@
       "description": "Start OAI PMH client"
     },
     {
-      "permissionName": "reservoir-pmh-clients.stop",
+      "permissionName": "reservoir-pmh-clients.stop.post",
+      "replaces": ["reservoir-pmh-clients.stop"],
       "displayName": "reservoir - OAI PMH client stop",
       "description": "Stop OAI PMH client"
     },
     {
-      "permissionName": "reservoir-pmh-clients.status",
+      "permissionName": "reservoir-pmh-clients.status.get",
+      "replaces": ["reservoir-pmh-clients.status"],
       "displayName": "reservoir - OAI PMH client status",
       "description": "Get OAI PMH status"
     },
@@ -609,7 +615,7 @@
         "reservoir-pmh-clients.item.put",
         "reservoir-pmh-clients.item.delete",
         "reservoir-pmh-clients.start",
-        "reservoir-pmh-clients.stop",
+        "reservoir-pmh-clients.stop.post",
         "reservoir-pmh-clients.status"
       ]
     },

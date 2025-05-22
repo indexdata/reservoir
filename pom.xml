@@ -44,6 +44,7 @@
     <okapi.version>6.2.3</okapi.version>
     <vertxlib.version>3.3.0</vertxlib.version>
     <micrometer.version>1.12.13</micrometer.version>
+    <folio-module-descriptor-validator.version>1.0.1</folio-module-descriptor-validator.version>
   </properties>
 
   <dependencyManagement>
@@ -380,6 +381,13 @@
       <url>https://maven.indexdata.com/</url>
     </repository>
   </repositories>
+  <pluginRepositories>
+    <pluginRepository>
+      <id>folio-nexus</id>
+      <name>FOLIO Maven repository</name>
+      <url>https://repository.folio.org/repository/maven-folio</url>
+    </pluginRepository>
+  </pluginRepositories>
 
   <distributionManagement>
     <repository>
