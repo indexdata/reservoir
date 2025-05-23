@@ -586,7 +586,7 @@ API descriptions:
  * [OpenAPI](server/src/main/resources/openapi/reservoir.yaml)
  * [Schemas](server/src/main/resources/openapi/schemas/)
 
-Generated [API documentation](https://dev.folio.org/reference/api/#mod-reservoir).
+Generated [API documentation](https://s3.amazonaws.com/indexdata-docs/api/reservoir/reservoir.html).
 
 ### Code analysis
 

@@ -27,6 +27,7 @@ env:
   API_WARNINGS: false
 
 on:
+  workflow_dispatch:
   push:
     paths:
       - 'server/src/main/resources/openapi/**'
