@@ -2,8 +2,9 @@
 
 Copyright (C) 2021-2025 The Open Library Foundation
 
-This software is distributed under the terms of the Apache License,
-Version 2.0. See the file "[LICENSE](LICENSE)" for more information.
+This software is distributed under the terms of the
+GNU AFFERO GENERAL PUBLIC LICENSE Version 3.
+See the file "[LICENSE](LICENSE)" for more information.
 
 ## Introduction
 
