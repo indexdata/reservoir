@@ -3,7 +3,7 @@
 Copyright (C) 2021-2025 The Open Library Foundation
 
 This software is distributed under the terms of the
-GNU AFFERO GENERAL PUBLIC LICENSE Version 3.
+GNU Affero General Public License version 3.0
 See the file "[LICENSE](LICENSE)" for more information.
 
 ## Introduction
