@@ -7,7 +7,7 @@ GNU Affero General Public License version 3.0
 See the file "[LICENSE](LICENSE)" for more information.
 
 This software was previously hosted at
-[github.com/folio-org/mod-reservoir](github.com/folio-org/mod-reservoir), which
+[github.com/folio-org/mod-reservoir](https://github.com/folio-org/mod-reservoir), which
 is now archived. The original repository was distributed under the Apache
 License 2.0, which is the default license for repositories in the FOLIO
 organization. While developed within the FOLIO GitHub organization, this
