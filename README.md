@@ -1,14 +1,23 @@
 # Reservoir
 
-Copyright (C) 2021-2025 The Open Library Foundation
+Copyright (C) 2025 Index Data ApS
 
 This software is distributed under the terms of the
 GNU Affero General Public License version 3.0
 See the file "[LICENSE](LICENSE)" for more information.
 
+This software was previously hosted at
+[github.com/folio-org/mod-reservoir](github.com/folio-org/mod-reservoir), which
+is now archived. The original repository was distributed under the Apache
+License 2.0, which is the default license for repositories in the FOLIO
+organization. While developed within the FOLIO GitHub organization, this
+software was never formally accepted as part of the FOLIO project.
+The license change to AGPL v3 has been consented to by all contributors to this project.
+
 ## Introduction
 
-A service that provides a clustering storage of metadata for Data Integration purposes. Optimized for fast storage and retrieval performance.
+A service that provides a clustering storage of metadata for Data Integration purposes.
+Optimized for fast storage and retrieval performance.
 
 This project has three subprojects:
 
@@ -567,12 +576,7 @@ In `ingress-nginx` the following annotations should be used:
 
 ### Issue tracker
 
-See project [RSRVR](https://issues.folio.org/browse/RSRVR)
-at the [FOLIO issue tracker](https://dev.folio.org/guidelines/issue-tracker).
-
-### Code of Conduct
-
-Refer to the Wiki [FOLIO Code of Conduct](https://wiki.folio.org/display/COMMUNITY/FOLIO+Code+of+Conduct).
+See project [RSRVR](https://index-data.atlassian.net/jira/software/c/projects/RSRVR/issues) .
 
 ### ModuleDescriptor
 
@@ -587,15 +591,4 @@ API descriptions:
  * [OpenAPI](server/src/main/resources/openapi/reservoir.yaml)
  * [Schemas](server/src/main/resources/openapi/schemas/)
 
-Generated [API documentation](https://s3.amazonaws.com/indexdata-docs/api/reservoir/reservoir.html).
 
-### Code analysis
-
-[SonarQube analysis](https://sonarcloud.io/dashboard?id=org.folio%3Amod-reservoir).
-
-### Download and configuration
-
-The built artifacts for this module are available.
-See [configuration](https://dev.folio.org/download/artifacts) for repository access,
-and the Docker images for [released versions](https://hub.docker.com/r/folioorg/mod-reservoir/)
-and for [snapshot versions](https://hub.docker.com/r/folioci/mod-reservoir/).

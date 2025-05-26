@@ -1,22 +1,22 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>org.folio</groupId>
+  <groupId>com.indexdata</groupId>
   <artifactId>mod-reservoir</artifactId>
   <version>0.0.1-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>Reservoir</name>
-  <url>https://github.com/folio-org/mod-reservoir</url>
+  <url>https://github.com/indexdata/reservoir</url>
   <description>Module for shared meta data</description>
   <inceptionYear>2021</inceptionYear>
   <organization>
-    <name>The Open Library Foundation</name>
-    <url>https://dev.folio.org/</url>
+    <name>Index Data</name>
+    <url>https://www.indexdata.com</url>
   </organization>
   <scm>
-    <url>https://github.com/folio-org/mod-reservoir</url>
-    <connection>scm:git:git://github.com/folio-org/mod-reservoir.git</connection>
-    <developerConnection>scm:git:git@github.com:folio-org/mod-reservoir.git</developerConnection>
+    <url>https://github.com/indexdata/reservoir</url>
+    <connection>scm:git:git://github.com/indexdata/reservoir.git</connection>
+    <developerConnection>scm:git:git@github.com:indexdata/reservoir.git</developerConnection>
     <tag>HEAD</tag>
   </scm>
 
@@ -400,6 +400,6 @@
 
   <issueManagement>
     <system>JIRA</system>
-    <url>https://issues.folio.org/browse/RSRVR</url>
+    <url>https://index-data.atlassian.net/jira/software/c/projects/RSRVR/issues</url>
   </issueManagement>
 </project>
