@@ -11,7 +11,6 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.validation.RequestParameters;
 import io.vertx.ext.web.validation.ValidationHandler;
 import io.vertx.sqlclient.Row;
-import io.vertx.sqlclient.RowIterator;
 import io.vertx.sqlclient.RowStream;
 import io.vertx.sqlclient.SqlConnection;
 import io.vertx.sqlclient.Transaction;
@@ -25,7 +24,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.HttpResponse;
 import org.folio.reservoir.module.ModuleExecutable;
-import org.folio.reservoir.server.entity.ClusterBuilder;
 
 public final class OaiService {
   private static final Logger log = LogManager.getLogger(OaiService.class);
@@ -206,14 +204,6 @@ public final class OaiService {
     oaiFooter(ctx);
   }
 
-  static Future<ClusterBuilder> getClusterValues(Storage storage, SqlConnection conn,
-      UUID clusterId, ClusterBuilder cb) {
-    return conn.preparedQuery("SELECT match_value FROM " + storage.getClusterValuesTable()
-            + " WHERE cluster_id = $1")
-        .execute(Tuple.of(clusterId))
-        .map(cb::matchValues);
-  }
-
   static void writeResumptionToken(RoutingContext ctx, ResumptionToken token) {
     HttpServerResponse response = ctx.response();
     response.write("    <resumptionToken>");
@@ -310,28 +300,22 @@ public final class OaiService {
     UUID clusterId = decodeOaiIdentifier(identifier);
     Storage storage = new Storage(ctx);
     return storage.getTransformer(ctx).compose(transformer -> {
-      String sqlQuery = "SELECT * FROM " + storage.getClusterMetaTable() + " WHERE cluster_id = $1";
-      return storage.getPool()
-          .withConnection(conn -> conn.preparedQuery(sqlQuery)
-              .execute(Tuple.of(clusterId))
-              .compose(res -> {
-                RowIterator<Row> iterator = res.iterator();
-                if (!iterator.hasNext()) {
-                  throw OaiException.idDoesNotExist(identifier);
-                }
-                Row row = iterator.next();
-                return getClusterRecordMetadata(row, transformer, storage, conn, true, ctx.vertx())
-                    .map(buf -> {
-                      oaiHeader(ctx);
-                      HttpServerResponse response = ctx.response();
-                      response.write("  <GetRecord>\n");
-                      response.write(buf);
-                      response.write("  </GetRecord>\n");
-                      oaiFooter(ctx);
-                      return null;
-                    });
-              }));
+      return storage.getClusterRecord(ctx, clusterId).compose(row -> {
+        if (row == null) {
+          throw OaiException.idDoesNotExist(identifier);
+        }
+        return getClusterRecordMetadata(row, transformer, storage,
+            storage.getPool().getConnection().result(), true, ctx.vertx())
+            .map(buf -> {
+              oaiHeader(ctx);
+              HttpServerResponse response = ctx.response();
+              response.write("  <GetRecord>\n");
+              response.write(buf);
+              response.write("  </GetRecord>\n");
+              oaiFooter(ctx);
+              return null;
+            });
+      });
     });
   }
-
 }
