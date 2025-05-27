@@ -95,13 +95,7 @@ public class ClusterRecordStream implements WriteStream<ClusterRecordItem> {
             future = Future.succeededFuture(getMetadataJava(cb.build()));
           } else {
             JsonObject cluster = cb.build();
-            future = vertx.executeBlocking(prom -> {
-              try {
-                prom.handle(transformer.execute(cluster).map(JsonToMarcXml::convert));
-              } catch (Exception e) {
-                prom.fail(e);
-              }
-            });
+            future = transformer.execute(cluster).map(JsonToMarcXml::convert);
           }
           return future.map(metadata -> {
             String begin = withMetadata ? "    <record>\n" : "";

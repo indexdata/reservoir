@@ -7,7 +7,7 @@ import java.util.Collection;
 public class ModuleExecutable {
   private final Module module;
   private final ModuleInvocation invocation;
- 
+
   /**
    * Create module executable by passing it a module and am invocation.
    * @param module  module to be executed
@@ -24,8 +24,8 @@ public class ModuleExecutable {
 
   }
 
-  public Collection<String> executeAsCollection(JsonObject input) {
+  public Future<Collection<String>> executeAsCollection(JsonObject input) {
     return module.executeAsCollection(invocation.getFunctionName(), input);
-  }  
-  
+  }
+
 }

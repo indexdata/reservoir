@@ -39,7 +39,7 @@ public class ModuleJsonPath implements Module {
   }
 
   @Override
-  public Collection<String> executeAsCollection(String function, JsonObject input) {
+  public Future<Collection<String>> executeAsCollection(String function, JsonObject input) {
     if (jsonPath == null) {
       throw new IllegalStateException("uninitialized");
     }
@@ -52,7 +52,7 @@ public class ModuleJsonPath implements Module {
       } else if (o instanceof List<?> list) {
         for (Object m : list) {
           if (!(m instanceof String)) {
-            return keys;
+            return Future.succeededFuture(keys);
           }
         }
         keys.addAll((List<String>) o);
@@ -60,7 +60,7 @@ public class ModuleJsonPath implements Module {
     } catch (PathNotFoundException e) {
       //ignore
     }
-    return keys;
+    return Future.succeededFuture(keys);
   }
 
   @Override
