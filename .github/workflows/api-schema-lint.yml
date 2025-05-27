@@ -17,6 +17,7 @@ env:
   API_EXCLUDES: ''
 
 on:
+  workflow_dispatch:
   push:
     paths:
       - 'server/src/main/resources/openapi/**'

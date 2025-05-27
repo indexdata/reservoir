@@ -1,6 +1,6 @@
 # Reservoir
 
-Copyright (C) 2021-2023 The Open Library Foundation
+Copyright (C) 2021-2025 The Open Library Foundation
 
 This software is distributed under the terms of the Apache License,
 Version 2.0. See the file "[LICENSE](LICENSE)" for more information.
@@ -19,7 +19,7 @@ This project has three subprojects:
 
 Requirements:
 
-* Java 17 or later
+* Java 21 (later versions might not work with graalvm)
 * Maven 3.6.3 or later
 * Docker (unless `-DskipTests` is used)
 
@@ -49,8 +49,7 @@ The server's database connection is then configured by setting environment varia
 Once configured, start the server with:
 
 ```
-java -Dport=8081 --module-path=compiler/ \
-   --upgrade-module-path=compiler/compiler.jar:compiler/compiler-management.jar \
+java -Dport=8081 --upgrade-module-path=server/target/compiler \
    -XX:+UnlockExperimentalVMOptions -XX:+EnableJVMCI \
    -jar server/target/mod-reservoir-server-fat.jar
 ```
@@ -587,7 +586,7 @@ API descriptions:
  * [OpenAPI](server/src/main/resources/openapi/reservoir.yaml)
  * [Schemas](server/src/main/resources/openapi/schemas/)
 
-Generated [API documentation](https://dev.folio.org/reference/api/#mod-reservoir).
+Generated [API documentation](https://s3.amazonaws.com/indexdata-docs/api/reservoir/reservoir.html).
 
 ### Code analysis
 

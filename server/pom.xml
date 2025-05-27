@@ -76,12 +76,13 @@
       <artifactId>json-path</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.graalvm.js</groupId>
-      <artifactId>js</artifactId>
+      <groupId>org.graalvm.polyglot</groupId>
+      <artifactId>polyglot</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.graalvm.regex</groupId>
-      <artifactId>regex</artifactId>
+      <groupId>org.graalvm.polyglot</groupId>
+      <artifactId>js-community</artifactId>
+      <type>pom</type>
     </dependency>
     <!-- Test dependencies -->
     <dependency>
@@ -242,42 +243,41 @@
             <goals>
               <goal>copy</goal>
             </goals>
+            <!-- https://github.com/graalvm/polyglot-embedding-demo/blob/main/pom.xml -->
             <configuration>
+              <outputDirectory>${graal.compiler.dir}</outputDirectory>
+              <overWriteReleases>true</overWriteReleases>
+              <overWriteSnapshots>true</overWriteSnapshots>
               <artifactItems>
+                <artifactItem>
+                  <groupId>org.graalvm.sdk</groupId>
+                  <artifactId>collections</artifactId>
+                  <version>${graalvm.version}</version>
+                  <type>jar</type>
+                  <destFileName>collections.jar</destFileName>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.graalvm.sdk</groupId>
+                  <artifactId>word</artifactId>
+                  <version>${graalvm.version}</version>
+                  <type>jar</type>
+                  <destFileName>word.jar</destFileName>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.graalvm.truffle</groupId>
+                  <artifactId>truffle-compiler</artifactId>
+                  <version>${graalvm.version}</version>
+                  <type>jar</type>
+                  <destFileName>truffle-compiler.jar</destFileName>
+                </artifactItem>
                 <artifactItem>
                   <groupId>org.graalvm.compiler</groupId>
                   <artifactId>compiler</artifactId>
                   <version>${graalvm.version}</version>
                   <type>jar</type>
-                  <overWrite>true</overWrite>
                   <destFileName>compiler.jar</destFileName>
                 </artifactItem>
-                <artifactItem>
-                  <groupId>org.graalvm.compiler</groupId>
-                  <artifactId>compiler-management</artifactId>
-                  <version>${graalvm.version}</version>
-                  <type>jar</type>
-                  <overWrite>true</overWrite>
-                  <destFileName>compiler-management.jar</destFileName>
-                </artifactItem>
-                <artifactItem>
-                  <groupId>org.graalvm.truffle</groupId>
-                  <artifactId>truffle-api</artifactId>
-                  <version>${graalvm.version}</version>
-                  <type>jar</type>
-                  <overWrite>true</overWrite>
-                  <destFileName>truffle-api.jar</destFileName>
-                </artifactItem>
-                <artifactItem>
-                  <groupId>org.graalvm.sdk</groupId>
-                  <artifactId>graal-sdk</artifactId>
-                  <version>${graalvm.version}</version>
-                  <type>jar</type>
-                  <overWrite>true</overWrite>
-                  <destFileName>graal-sdk.jar</destFileName>
-                </artifactItem>
               </artifactItems>
-              <outputDirectory>${graal.compiler.dir}</outputDirectory>
             </configuration>
           </execution>
         </executions>
@@ -301,7 +301,7 @@
                 <classpath />
                 <argument>-XX:+UnlockExperimentalVMOptions</argument>
                 <argument>-XX:+EnableJVMCI</argument>
-                <argument>--upgrade-module-path=${graal.compiler.dir}/compiler.jar:${graal.compiler.dir}/compiler-management.jar</argument>
+                <argument>--upgrade-module-path=${graal.compiler.dir}</argument>
                 <argument>${vertx.launcher}</argument>
                 <argument>run</argument>
                 <argument>${vertx.verticle}</argument>
