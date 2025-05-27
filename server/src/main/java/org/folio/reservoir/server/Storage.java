@@ -326,17 +326,8 @@ public class Storage {
             }
             return ModuleCache.getInstance().lookup(vertx, tenant, entity);
           })
-          .compose(module ->
-              vertx.<Collection<String>>executeBlocking(p -> {
-                try {
-                  p.complete(new ModuleExecutable(module, invocation).executeAsCollection(payload));
-                } catch (Exception e) {
-                  p.fail(e);
-                }
-              }, true)
-              .compose(values ->
-                updateMatchKeyValues(conn, globalId, matchkeyId, values)
-              ));
+          .compose(module -> new ModuleExecutable(module, invocation).executeAsCollection(payload))
+          .compose(values -> updateMatchKeyValues(conn, globalId, matchkeyId, values));
     } else {
       String methodName = matchKeyConfig.getString("method");
       JsonObject params = matchKeyConfig.getJsonObject("params");
@@ -810,8 +801,9 @@ public class Storage {
             totalRecords.incrementAndGet();
             UUID globalId = row.getUUID("id");
             if (matcher != null) {
-              updateMatchKeyValues(connection, globalId, matchKeyConfigId,
-                  matcher.executeAsCollection(row.getJsonObject("payload")))
+              matcher.executeAsCollection(row.getJsonObject("payload"))
+                  .compose(values ->
+                    updateMatchKeyValues(connection, globalId, matchKeyConfigId, values))
                   .onFailure(e -> log.error(e.getMessage(), e))
                   .onComplete(e -> stream.resume());
             } else {

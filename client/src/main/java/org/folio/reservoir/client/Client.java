@@ -195,13 +195,7 @@ public class Client {
   }
 
   Future<JsonObject> createIngestRecordT(String marcXml, List<Templates> templates) {
-    return vertx.executeBlocking(x -> {
-      try {
-        x.complete(IngestRecord.createIngestRecord(marcXml, templates));
-      } catch (Exception e) {
-        x.fail(e);
-      }
-    }, false);
+    return vertx.executeBlocking(() -> IngestRecord.createIngestRecord(marcXml, templates), false);
   }
 
   private class XmlReaderProxy implements ReaderProxy {

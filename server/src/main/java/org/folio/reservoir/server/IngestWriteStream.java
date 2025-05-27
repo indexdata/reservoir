@@ -139,11 +139,7 @@ public class IngestWriteStream implements WriteStream<JsonObject> {
 
   private static Future<Collection<String>> lookupPath(Vertx vertx,
       ModuleJsonPath jsonPath, JsonObject payload) {
-    return vertx.executeBlocking(p -> {
-      Collection<String> strings = jsonPath.executeAsCollection(null, payload);
-      p.complete(strings);
-    },
-    false);
+    return jsonPath.executeAsCollection(null, payload);
   }
 
   private Future<JsonObject> lookupId(JsonObject rec) {

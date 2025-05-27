@@ -25,6 +25,7 @@ public class ModuleJavaScript implements Module {
   private Value module;
   private Value function;
   private Context context;
+  private Vertx vertx;
 
   @Override
   public Future<Void> initialize(Vertx vertx, CodeModuleEntity entity) {
@@ -33,6 +34,7 @@ public class ModuleJavaScript implements Module {
       return Future.failedFuture(
         new IllegalArgumentException("Module config must include 'id'"));
     }
+    this.vertx = vertx;
     String url = entity.getUrl();
     String script = entity.getScript();
     if (url != null && !url.isEmpty()) {
@@ -46,7 +48,7 @@ public class ModuleJavaScript implements Module {
       Context.Builder cb = Context.newBuilder("js")
           .allowExperimentalOptions(true)
           .option("js.esm-eval-returns-exports", "true");
-      context = cb.build();      
+      context = cb.build();
       return evalUrl(vertx, url)
         .map(value -> module = value)
         .mapEmpty();
@@ -64,7 +66,7 @@ public class ModuleJavaScript implements Module {
   private Future<Value> evalUrl(Vertx vertx, String url) {
     WebClient webClient = WebClientFactory.getWebClient(vertx);
     String moduleName = url.substring(url.lastIndexOf("/") + 1);
-    ErrorConverter converter = ErrorConverter.createFullBody(result -> 
+    ErrorConverter converter = ErrorConverter.createFullBody(result ->
       new IOException(
         String.format("Config error: cannot retrieve module '%1s' at %1s (%2d)",
          id, url, result.response().statusCode()))
@@ -98,36 +100,45 @@ public class ModuleJavaScript implements Module {
       throw new IllegalStateException("uninitialized");
     }
   }
-  
-  @Override
-  public Future<JsonObject> execute(String functionName, JsonObject input) {
-    Value output = getFunction(functionName).execute(input.encode());
-    if (output.isString()) {
-      //only support string encoded JSON objects for now
-      try {
-        return Future.succeededFuture(new JsonObject(output.asString()));
-      } catch (DecodeException de) {
-        return Future.failedFuture(de);
-      }
-    } else {
-      return Future.failedFuture(
-        "Function " + functionName + " of module " + id + " must return JSON string");
-    }
+
+  private Future<Value> execJavaScript(String functionName, JsonObject input) {
+    return vertx
+      .executeBlocking(() -> getFunction(functionName).execute(input.encode()));
   }
 
   @Override
-  public Collection<String> executeAsCollection(String functionName, JsonObject input) {
-    Value output = getFunction(functionName).execute(input.encode());
-    Collection<String> keys = new HashSet<>();
-    if (output.hasArrayElements()) {
-      for (int i = 0; i < output.getArraySize(); i++) {
-        Value memberValue = output.getArrayElement(i);
-        addValue(keys, memberValue);
+  public Future<JsonObject> execute(String functionName, JsonObject input) {
+    return execJavaScript(functionName, input)
+      .compose(output -> {
+        if (output.isString()) {
+          //only support string encoded JSON objects for now
+          try {
+            return Future.succeededFuture(new JsonObject(output.asString()));
+          } catch (DecodeException de) {
+            return Future.failedFuture(de);
+          }
+        } else {
+          return Future.failedFuture(
+            "Function " + functionName + " of module " + id + " must return JSON string");
+        }
+      });
+  }
+
+  @Override
+  public Future<Collection<String>> executeAsCollection(String functionName, JsonObject input) {
+    return execJavaScript(functionName, input)
+    .map(output -> {
+      Collection<String> keys = new HashSet<>();
+      if (output.hasArrayElements()) {
+        for (int i = 0; i < output.getArraySize(); i++) {
+          Value memberValue = output.getArrayElement(i);
+          addValue(keys, memberValue);
+        }
+      } else {
+        addValue(keys, output);
       }
-    } else {
-      addValue(keys, output);
-    }
-    return keys;
+      return keys;
+    });
   }
 
   private void addValue(Collection<String> keys, Value value) {
