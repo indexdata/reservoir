@@ -84,7 +84,7 @@
         <configuration>
           <archive>
             <manifestEntries>
-              <Automatic-Module-Name>org.folio.reservoir.util</Automatic-Module-Name>
+              <Automatic-Module-Name>com.indexdata.reservoir.util</Automatic-Module-Name>
             </manifestEntries>
           </archive>
         </configuration>

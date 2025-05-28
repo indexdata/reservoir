@@ -179,7 +179,7 @@
         <configuration>
           <archive>
             <manifestEntries>
-              <Automatic-Module-Name>org.folio.reservoir.server</Automatic-Module-Name>
+              <Automatic-Module-Name>com.indexdata.reservoir.server</Automatic-Module-Name>
             </manifestEntries>
           </archive>
         </configuration>
