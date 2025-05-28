@@ -1,4 +1,4 @@
-package org.folio.reservoir.server;
+package com.indexdata.reservoir.server;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -12,7 +12,8 @@ import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.reservoir.module.impl.ModuleJsonPath;
+
+import com.indexdata.reservoir.module.impl.ModuleJsonPath;
 
 public class IngestWriteStream implements WriteStream<JsonObject> {
   final Vertx vertx;

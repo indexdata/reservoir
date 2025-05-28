@@ -1,4 +1,4 @@
-package org.folio.reservoir.server.entity;
+package com.indexdata.reservoir.server.entity;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -8,6 +8,8 @@ import io.vertx.core.json.JsonObject;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import org.junit.Test;
+
+import com.indexdata.reservoir.server.entity.OaiPmhStatus;
 
 public class OaiPmhStatusTest {
 

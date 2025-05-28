@@ -1,4 +1,4 @@
-package org.folio.reservoir.client;
+package com.indexdata.reservoir.client;
 
 import io.vertx.core.Vertx;
 import org.apache.logging.log4j.LogManager;

@@ -1,7 +1,7 @@
-package org.folio.reservoir.util;
+package com.indexdata.reservoir.util;
 
-import static org.folio.reservoir.util.MarcConstants.FIELDS_LABEL;
-import static org.folio.reservoir.util.MarcConstants.SUBFIELDS_LABEL;
+import static com.indexdata.reservoir.util.MarcConstants.FIELDS_LABEL;
+import static com.indexdata.reservoir.util.MarcConstants.SUBFIELDS_LABEL;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;

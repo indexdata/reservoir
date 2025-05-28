@@ -1,4 +1,4 @@
-package org.folio.reservoir.util.readstream;
+package com.indexdata.reservoir.util.readstream;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -17,6 +17,11 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import com.indexdata.reservoir.util.readstream.XmlMapper;
+import com.indexdata.reservoir.util.readstream.XmlMapperException;
+import com.indexdata.reservoir.util.readstream.XmlParser;
+
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamReader;
 

@@ -1,8 +1,9 @@
-package org.folio.reservoir.util;
-
-import static org.folio.reservoir.util.EncodeXmlText.encodeXmlText;
+package com.indexdata.reservoir.util;
 
 import io.vertx.core.buffer.Buffer;
+
+import static com.indexdata.reservoir.util.EncodeXmlText.encodeXmlText;
+
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;

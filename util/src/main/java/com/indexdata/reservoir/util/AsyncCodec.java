@@ -1,4 +1,4 @@
-package org.folio.reservoir.util;
+package com.indexdata.reservoir.util;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;

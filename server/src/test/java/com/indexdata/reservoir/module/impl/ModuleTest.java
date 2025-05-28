@@ -1,4 +1,4 @@
-package org.folio.reservoir.module.impl;
+package com.indexdata.reservoir.module.impl;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.json.DecodeException;
@@ -9,18 +9,20 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.UUID;
-import org.folio.reservoir.module.ModuleCache;
-import org.folio.reservoir.module.ModuleExecutable;
-import org.folio.reservoir.module.ModuleInvocation;
-import org.folio.reservoir.server.entity.ClusterBuilder;
-import org.folio.reservoir.server.entity.CodeModuleEntity;
-import org.folio.reservoir.server.entity.CodeModuleEntity.CodeModuleBuilder;
+
 import org.graalvm.polyglot.PolyglotException;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import com.indexdata.reservoir.module.ModuleCache;
+import com.indexdata.reservoir.module.ModuleExecutable;
+import com.indexdata.reservoir.module.ModuleInvocation;
+import com.indexdata.reservoir.server.entity.ClusterBuilder;
+import com.indexdata.reservoir.server.entity.CodeModuleEntity;
+import com.indexdata.reservoir.server.entity.CodeModuleEntity.CodeModuleBuilder;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;

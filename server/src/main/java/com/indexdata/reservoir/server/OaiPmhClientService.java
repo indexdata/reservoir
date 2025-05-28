@@ -1,4 +1,4 @@
-package org.folio.reservoir.server;
+package com.indexdata.reservoir.server;
 
 import io.netty.handler.codec.http.QueryStringEncoder;
 import io.vertx.core.Future;
@@ -35,15 +35,16 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.okapi.common.HttpResponse;
-import org.folio.reservoir.server.entity.ClusterBuilder;
-import org.folio.reservoir.server.entity.OaiPmhStatus;
-import org.folio.reservoir.util.SourceId;
-import org.folio.reservoir.util.XmlMetadataParserMarcInJson;
-import org.folio.reservoir.util.XmlMetadataStreamParser;
-import org.folio.reservoir.util.oai.OaiParserStream;
-import org.folio.reservoir.util.oai.OaiRecord;
-import org.folio.reservoir.util.readstream.XmlFixer;
-import org.folio.reservoir.util.readstream.XmlParser;
+
+import com.indexdata.reservoir.server.entity.ClusterBuilder;
+import com.indexdata.reservoir.server.entity.OaiPmhStatus;
+import com.indexdata.reservoir.util.SourceId;
+import com.indexdata.reservoir.util.XmlMetadataParserMarcInJson;
+import com.indexdata.reservoir.util.XmlMetadataStreamParser;
+import com.indexdata.reservoir.util.oai.OaiParserStream;
+import com.indexdata.reservoir.util.oai.OaiRecord;
+import com.indexdata.reservoir.util.readstream.XmlFixer;
+import com.indexdata.reservoir.util.readstream.XmlParser;
 
 public class OaiPmhClientService {
 

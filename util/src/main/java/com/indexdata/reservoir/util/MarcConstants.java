@@ -1,4 +1,4 @@
-package org.folio.reservoir.util;
+package com.indexdata.reservoir.util;
 
 /**
  * Various constants pertaining to MARC-XML and MARC-in-JSON.

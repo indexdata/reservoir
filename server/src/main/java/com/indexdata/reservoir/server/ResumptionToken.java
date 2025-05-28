@@ -1,4 +1,4 @@
-package org.folio.reservoir.server;
+package com.indexdata.reservoir.server;
 
 import java.time.LocalDateTime;
 import java.util.Base64;

@@ -1,5 +1,7 @@
-package org.folio.reservoir.matchkey.impl;
+package com.indexdata.reservoir.matchkey.impl;
 
+import com.indexdata.reservoir.matchkey.MatchKeyMethod;
+import com.indexdata.reservoir.matchkey.impl.MatchKeyJsonPath;
 import com.jayway.jsonpath.InvalidPathException;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -10,7 +12,6 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.folio.reservoir.matchkey.MatchKeyMethod;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;

@@ -1,4 +1,4 @@
-package org.folio.reservoir.util;
+package com.indexdata.reservoir.util;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
@@ -9,6 +9,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import com.indexdata.reservoir.util.AsyncCodec;
 
 @RunWith(VertxUnitRunner.class)
 public class AsyncCodecTest {

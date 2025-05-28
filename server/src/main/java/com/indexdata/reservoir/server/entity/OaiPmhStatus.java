@@ -1,4 +1,4 @@
-package org.folio.reservoir.server.entity;
+package com.indexdata.reservoir.server.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;

@@ -1,4 +1,4 @@
-package org.folio.reservoir.client;
+package com.indexdata.reservoir.client;
 
 import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
@@ -35,15 +35,16 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.okapi.common.XOkapiHeaders;
-import org.folio.reservoir.util.AsyncCodec;
-import org.folio.reservoir.util.IngestRecord;
-import org.folio.reservoir.util.SourceId;
-import org.folio.reservoir.util.XmlSerializer;
 import org.marc4j.MarcPermissiveStreamReader;
 import org.marc4j.MarcReader;
 import org.marc4j.MarcStreamReader;
 import org.marc4j.MarcXmlWriter;
 import org.marc4j.converter.impl.AnselToUnicode;
+
+import com.indexdata.reservoir.util.AsyncCodec;
+import com.indexdata.reservoir.util.IngestRecord;
+import com.indexdata.reservoir.util.SourceId;
+import com.indexdata.reservoir.util.XmlSerializer;
 
 @java.lang.SuppressWarnings({"squid:S106"})
 public class Client {

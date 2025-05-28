@@ -1,12 +1,13 @@
-package org.folio.reservoir.module.impl;
+package com.indexdata.reservoir.module.impl;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import java.util.HashMap;
 import java.util.Map;
-import org.folio.reservoir.module.Module;
-import org.folio.reservoir.module.ModuleCache;
-import org.folio.reservoir.server.entity.CodeModuleEntity;
+
+import com.indexdata.reservoir.module.Module;
+import com.indexdata.reservoir.module.ModuleCache;
+import com.indexdata.reservoir.server.entity.CodeModuleEntity;
 
 public class ModuleCacheImpl implements ModuleCache {
 

@@ -1,4 +1,4 @@
-package org.folio.reservoir.util.oai;
+package com.indexdata.reservoir.util.oai;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -7,13 +7,18 @@ import io.vertx.core.file.OpenOptions;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import org.folio.reservoir.util.XmlMetadataParserMarcInJson;
-import org.folio.reservoir.util.XmlMetadataStreamParser;
-import org.folio.reservoir.util.readstream.XmlParser;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import com.indexdata.reservoir.util.XmlMetadataParserMarcInJson;
+import com.indexdata.reservoir.util.XmlMetadataStreamParser;
+import com.indexdata.reservoir.util.oai.OaiParserStream;
+import com.indexdata.reservoir.util.oai.OaiRecord;
+import com.indexdata.reservoir.util.readstream.XmlParser;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;

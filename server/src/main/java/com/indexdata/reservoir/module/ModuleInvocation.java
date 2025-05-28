@@ -1,4 +1,4 @@
-package org.folio.reservoir.module;
+package com.indexdata.reservoir.module;
 
 public class ModuleInvocation {
   private final String moduleName;
@@ -49,5 +49,5 @@ public class ModuleInvocation {
   public String toString() {
     return moduleName + "::" + functionName;
   }
-  
+
 }

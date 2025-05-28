@@ -1,4 +1,4 @@
-package org.folio.reservoir.server.entity;
+package com.indexdata.reservoir.server.entity;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;

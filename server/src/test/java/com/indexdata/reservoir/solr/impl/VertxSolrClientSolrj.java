@@ -1,4 +1,4 @@
-package org.folio.reservoir.solr.impl;
+package com.indexdata.reservoir.solr.impl;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -17,7 +17,8 @@ import org.apache.solr.common.SolrDocumentList;
 import org.apache.solr.common.SolrInputDocument;
 import org.apache.solr.common.params.MapSolrParams;
 import org.apache.solr.common.params.SolrParams;
-import org.folio.reservoir.solr.VertxSolrClient;
+
+import com.indexdata.reservoir.solr.VertxSolrClient;
 
 /**
  * Vert.x wrapper for Solrj.

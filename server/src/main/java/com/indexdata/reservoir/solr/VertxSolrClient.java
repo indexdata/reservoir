@@ -1,11 +1,12 @@
-package org.folio.reservoir.solr;
+package com.indexdata.reservoir.solr;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import java.util.Map;
-import org.folio.reservoir.solr.impl.VertxSolrWebClient;
+
+import com.indexdata.reservoir.solr.impl.VertxSolrWebClient;
 
 public interface VertxSolrClient {
 

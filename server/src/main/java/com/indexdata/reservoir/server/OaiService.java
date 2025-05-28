@@ -1,6 +1,4 @@
-package org.folio.reservoir.server;
-
-import static org.folio.reservoir.util.EncodeXmlText.encodeXmlText;
+package com.indexdata.reservoir.server;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -15,6 +13,9 @@ import io.vertx.sqlclient.RowStream;
 import io.vertx.sqlclient.SqlConnection;
 import io.vertx.sqlclient.Transaction;
 import io.vertx.sqlclient.Tuple;
+
+import static com.indexdata.reservoir.util.EncodeXmlText.encodeXmlText;
+
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,7 +24,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.HttpResponse;
-import org.folio.reservoir.module.ModuleExecutable;
+
+import com.indexdata.reservoir.module.ModuleExecutable;
 
 public final class OaiService {
   private static final Logger log = LogManager.getLogger(OaiService.class);

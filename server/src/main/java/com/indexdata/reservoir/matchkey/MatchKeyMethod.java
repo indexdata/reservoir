@@ -1,4 +1,4 @@
-package org.folio.reservoir.matchkey;
+package com.indexdata.reservoir.matchkey;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;

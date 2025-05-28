@@ -1,4 +1,4 @@
-package org.folio.reservoir.server;
+package com.indexdata.reservoir.server;
 
 import io.restassured.RestAssured;
 import io.vertx.core.Future;
@@ -38,7 +38,6 @@ import io.vertx.sqlclient.Tuple;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.awaitility.Awaitility;
-import org.folio.reservoir.server.entity.CodeModuleEntity;
 import org.folio.okapi.common.XOkapiHeaders;
 import org.hamcrest.Matchers;
 import org.junit.After;
@@ -46,6 +45,11 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xml.sax.SAXException;
+
+import com.indexdata.reservoir.server.OaiPmhClientService;
+import com.indexdata.reservoir.server.ResumptionToken;
+import com.indexdata.reservoir.server.Storage;
+import com.indexdata.reservoir.server.entity.CodeModuleEntity;
 
 import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.containsString;

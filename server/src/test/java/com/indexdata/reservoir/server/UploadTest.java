@@ -1,4 +1,4 @@
-package org.folio.reservoir.server;
+package com.indexdata.reservoir.server;
 
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.file.FileSystem;

@@ -1,9 +1,10 @@
-package org.folio.reservoir.module;
+package com.indexdata.reservoir.module;
+
+import com.indexdata.reservoir.module.impl.ModuleCacheImpl;
+import com.indexdata.reservoir.server.entity.CodeModuleEntity;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import org.folio.reservoir.module.impl.ModuleCacheImpl;
-import org.folio.reservoir.server.entity.CodeModuleEntity;
 
 public interface ModuleCache {
 

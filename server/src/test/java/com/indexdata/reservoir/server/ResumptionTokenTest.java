@@ -1,7 +1,9 @@
-package org.folio.reservoir.server;
+package com.indexdata.reservoir.server;
 
 import org.junit.Assert;
 import org.junit.Test;
+
+import com.indexdata.reservoir.server.ResumptionToken;
 
 import java.time.LocalDateTime;
 import java.util.Base64;

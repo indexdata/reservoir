@@ -1,11 +1,12 @@
-package org.folio.reservoir.util.oai;
+package com.indexdata.reservoir.util.oai;
 
 import io.vertx.core.Handler;
 import io.vertx.core.streams.ReadStream;
 import java.util.function.Consumer;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamReader;
-import org.folio.reservoir.util.XmlMetadataStreamParser;
+
+import com.indexdata.reservoir.util.XmlMetadataStreamParser;
 
 public class OaiParserStream<T> {
 

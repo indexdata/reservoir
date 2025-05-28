@@ -1,4 +1,4 @@
-package org.folio.reservoir.client;
+package com.indexdata.reservoir.client;
 
 public class ClientException extends RuntimeException {
 

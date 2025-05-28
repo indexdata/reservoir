@@ -1,5 +1,6 @@
-package org.folio.reservoir.matchkey.impl;
+package com.indexdata.reservoir.matchkey.impl;
 
+import com.indexdata.reservoir.matchkey.MatchKeyMethod;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.PathNotFoundException;
 import com.jayway.jsonpath.ReadContext;
@@ -8,7 +9,6 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import java.util.Collection;
 import java.util.List;
-import org.folio.reservoir.matchkey.MatchKeyMethod;
 
 /**
  * Don't use this.

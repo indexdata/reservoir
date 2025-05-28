@@ -1,4 +1,4 @@
-package org.folio.reservoir.server;
+package com.indexdata.reservoir.server;
 
 import io.vertx.core.Launcher;
 import io.vertx.core.VertxOptions;

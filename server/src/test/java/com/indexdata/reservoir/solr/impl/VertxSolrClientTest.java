@@ -1,4 +1,4 @@
-package org.folio.reservoir.solr.impl;
+package com.indexdata.reservoir.solr.impl;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
@@ -13,13 +13,14 @@ import java.util.UUID;
 import org.apache.solr.common.SolrDocumentList;
 import org.apache.solr.common.SolrInputDocument;
 import org.apache.solr.common.params.MapSolrParams;
-import org.folio.reservoir.solr.VertxSolrClient;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.testcontainers.containers.SolrContainer;
+
+import com.indexdata.reservoir.solr.VertxSolrClient;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;

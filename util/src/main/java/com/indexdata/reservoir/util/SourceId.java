@@ -1,4 +1,4 @@
-package org.folio.reservoir.util;
+package com.indexdata.reservoir.util;
 
 import java.util.regex.Pattern;
 

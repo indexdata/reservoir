@@ -1,7 +1,11 @@
-package org.folio.reservoir.util;
+package com.indexdata.reservoir.util;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+
+import static com.indexdata.reservoir.util.IngestRecord.createIngestRecord;
+import static com.indexdata.reservoir.util.InventoryToXml.inventoryXmlToJson;
+
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,8 +23,11 @@ import javax.xml.transform.stream.StreamSource;
 import org.junit.Assert;
 import org.junit.Test;
 
-import static org.folio.reservoir.util.IngestRecord.createIngestRecord;
-import static org.folio.reservoir.util.InventoryToXml.inventoryXmlToJson;
+import com.indexdata.reservoir.util.InventoryToXml;
+import com.indexdata.reservoir.util.JsonToMarcXml;
+import com.indexdata.reservoir.util.MarcInJsonUtil;
+import com.indexdata.reservoir.util.MarcXmlToJson;
+import com.indexdata.reservoir.util.XmlSerializer;
 
 public class XmlJsonUtilTest {
   static final String MARCXML1_SAMPLE =

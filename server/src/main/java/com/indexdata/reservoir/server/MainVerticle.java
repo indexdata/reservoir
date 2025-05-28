@@ -1,7 +1,6 @@
-package org.folio.reservoir.server;
+package com.indexdata.reservoir.server;
 
 import io.vertx.core.AbstractVerticle;
-import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpServerOptions;
 import org.apache.logging.log4j.LogManager;
@@ -45,17 +44,17 @@ public class MainVerticle extends AbstractVerticle {
               .requestHandler(router)
               .listen(port).mapEmpty();
         })
-        .compose(a ->
-          vertx.executeBlocking(() -> {
+        .compose(x ->
+          vertx.executeBlocking(e -> {
             JavaScriptCheck.check();
-            return null;
+            e.complete();
           })
         )
         .onComplete(x -> promise.handle(x.mapEmpty()));
   }
 
   @Override
-  public void stop(Promise<Void> promise) {
+  publi½ void stop(Promise<Void> promise) {
     TenantPgPool.closeAll()
         .onComplete(promise);
   }

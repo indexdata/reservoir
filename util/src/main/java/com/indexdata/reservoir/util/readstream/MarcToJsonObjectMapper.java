@@ -1,4 +1,4 @@
-package org.folio.reservoir.util.readstream;
+package com.indexdata.reservoir.util.readstream;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;

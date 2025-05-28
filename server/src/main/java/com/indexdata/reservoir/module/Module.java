@@ -1,10 +1,11 @@
-package org.folio.reservoir.module;
+package com.indexdata.reservoir.module;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import java.util.Collection;
-import org.folio.reservoir.server.entity.CodeModuleEntity;
+
+import com.indexdata.reservoir.server.entity.CodeModuleEntity;
 
 public interface Module {
 

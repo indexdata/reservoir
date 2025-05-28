@@ -1,4 +1,4 @@
-package org.folio.reservoir.util.readstream;
+package com.indexdata.reservoir.util.readstream;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -15,6 +15,9 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.marc4j.marc.Record;
+
+import com.indexdata.reservoir.util.readstream.MappingReadStream;
+import com.indexdata.reservoir.util.readstream.Marc4jMapper;
 
 import java.util.ArrayList;
 import java.util.List;

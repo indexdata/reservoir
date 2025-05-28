@@ -1,6 +1,4 @@
-package org.folio.reservoir.server;
-
-import static org.folio.reservoir.util.EncodeXmlText.encodeXmlText;
+package com.indexdata.reservoir.server;
 
 import io.vertx.codegen.annotations.Nullable;
 import io.vertx.core.AsyncResult;
@@ -10,6 +8,9 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.streams.WriteStream;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.SqlConnection;
+
+import static com.indexdata.reservoir.util.EncodeXmlText.encodeXmlText;
+
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Function;

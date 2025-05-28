@@ -1,12 +1,13 @@
-package org.folio.reservoir.matchkey;
+package com.indexdata.reservoir.matchkey;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import java.util.HashMap;
 import java.util.Map;
-import org.folio.reservoir.matchkey.impl.MatchKeyJavaScript;
-import org.folio.reservoir.matchkey.impl.MatchKeyJsonPath;
+
+import com.indexdata.reservoir.matchkey.impl.MatchKeyJavaScript;
+import com.indexdata.reservoir.matchkey.impl.MatchKeyJsonPath;
 
 /**
  * Don't use this.

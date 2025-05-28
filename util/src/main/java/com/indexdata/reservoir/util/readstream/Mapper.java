@@ -1,4 +1,4 @@
-package org.folio.reservoir.util.readstream;
+package com.indexdata.reservoir.util.readstream;
 
 /**
  * Represents a FIFO queue for mapping elements from one type to another.

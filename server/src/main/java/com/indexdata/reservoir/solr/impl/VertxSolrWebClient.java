@@ -1,4 +1,4 @@
-package org.folio.reservoir.solr.impl;
+package com.indexdata.reservoir.solr.impl;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -10,7 +10,8 @@ import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import java.util.Map;
-import org.folio.reservoir.solr.VertxSolrClient;
+
+import com.indexdata.reservoir.solr.VertxSolrClient;
 
 public class VertxSolrWebClient implements VertxSolrClient {
 

@@ -1,4 +1,4 @@
-package org.folio.reservoir.server;
+package com.indexdata.reservoir.server;
 
 import io.restassured.RestAssured;
 import io.restassured.builder.RequestSpecBuilder;
@@ -18,12 +18,14 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.reservoir.module.impl.ModuleScripts;
 import org.folio.tlib.postgres.testing.TenantPgPoolContainer;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.xml.sax.SAXException;
+
+import com.indexdata.reservoir.module.impl.ModuleScripts;
+import com.indexdata.reservoir.server.MainVerticle;
 
 import javax.xml.XMLConstants;
 import javax.xml.validation.Schema;

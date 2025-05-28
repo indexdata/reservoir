@@ -1,15 +1,15 @@
-package org.folio.reservoir.util;
+package com.indexdata.reservoir.util;
 
-import static org.folio.reservoir.util.EncodeXmlText.encodeXmlText;
-import static org.folio.reservoir.util.MarcConstants.CODE_LABEL;
-import static org.folio.reservoir.util.MarcConstants.CONTROLFIELD_LABEL;
-import static org.folio.reservoir.util.MarcConstants.DATAFIELD_LABEL;
-import static org.folio.reservoir.util.MarcConstants.FIELDS_LABEL;
-import static org.folio.reservoir.util.MarcConstants.LEADER_LABEL;
-import static org.folio.reservoir.util.MarcConstants.RECORD_LABEL;
-import static org.folio.reservoir.util.MarcConstants.SUBFIELDS_LABEL;
-import static org.folio.reservoir.util.MarcConstants.SUBFIELD_LABEL;
-import static org.folio.reservoir.util.MarcConstants.TAG_LABEL;
+import static com.indexdata.reservoir.util.EncodeXmlText.encodeXmlText;
+import static com.indexdata.reservoir.util.MarcConstants.CODE_LABEL;
+import static com.indexdata.reservoir.util.MarcConstants.CONTROLFIELD_LABEL;
+import static com.indexdata.reservoir.util.MarcConstants.DATAFIELD_LABEL;
+import static com.indexdata.reservoir.util.MarcConstants.FIELDS_LABEL;
+import static com.indexdata.reservoir.util.MarcConstants.LEADER_LABEL;
+import static com.indexdata.reservoir.util.MarcConstants.RECORD_LABEL;
+import static com.indexdata.reservoir.util.MarcConstants.SUBFIELDS_LABEL;
+import static com.indexdata.reservoir.util.MarcConstants.SUBFIELD_LABEL;
+import static com.indexdata.reservoir.util.MarcConstants.TAG_LABEL;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;

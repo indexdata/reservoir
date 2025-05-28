@@ -1,11 +1,12 @@
-package org.folio.reservoir.util.readstream;
+package com.indexdata.reservoir.util.readstream;
 
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import java.util.LinkedList;
 import java.util.List;
-import org.folio.reservoir.util.MarcInJsonUtil;
+
+import com.indexdata.reservoir.util.MarcInJsonUtil;
 
 /**
  * Converts stream of JSON-in-MARC to payload JSON objects.

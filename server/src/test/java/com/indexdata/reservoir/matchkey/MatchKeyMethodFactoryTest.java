@@ -1,5 +1,7 @@
-package org.folio.reservoir.matchkey;
+package com.indexdata.reservoir.matchkey;
 
+import com.indexdata.reservoir.matchkey.MatchKeyMethod;
+import com.indexdata.reservoir.matchkey.MatchKeyMethodFactory;
 import com.jayway.jsonpath.InvalidPathException;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;

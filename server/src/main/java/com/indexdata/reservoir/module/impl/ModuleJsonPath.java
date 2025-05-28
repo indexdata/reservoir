@@ -1,5 +1,7 @@
-package org.folio.reservoir.module.impl;
+package com.indexdata.reservoir.module.impl;
 
+import com.indexdata.reservoir.module.Module;
+import com.indexdata.reservoir.server.entity.CodeModuleEntity;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.PathNotFoundException;
 import com.jayway.jsonpath.ReadContext;
@@ -9,8 +11,6 @@ import io.vertx.core.json.JsonObject;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
-import org.folio.reservoir.module.Module;
-import org.folio.reservoir.server.entity.CodeModuleEntity;
 
 public class ModuleJsonPath implements Module {
 

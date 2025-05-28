@@ -1,4 +1,4 @@
-package org.folio.reservoir.module.impl;
+package com.indexdata.reservoir.module.impl;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -11,11 +11,12 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.HashSet;
 import org.folio.okapi.common.WebClientFactory;
-import org.folio.reservoir.module.Module;
-import org.folio.reservoir.server.entity.CodeModuleEntity;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
+
+import com.indexdata.reservoir.module.Module;
+import com.indexdata.reservoir.server.entity.CodeModuleEntity;
 
 @SuppressWarnings({"squid:S5738","squid:S1123"})
 public class ModuleJavaScript implements Module {

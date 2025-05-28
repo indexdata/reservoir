@@ -1,4 +1,4 @@
-package org.folio.reservoir.server;
+package com.indexdata.reservoir.server;
 
 public enum CqlFields {
   CQL_ALL_RECORDS("cql.allRecords"),

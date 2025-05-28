@@ -1,4 +1,4 @@
-package org.folio.reservoir.server.entity;
+package com.indexdata.reservoir.server.entity;
 
 import io.vertx.core.json.JsonObject;
 import io.vertx.sqlclient.Row;
@@ -27,7 +27,7 @@ public class CodeModuleEntity {
     this.function = function;
     this.script = script;
   }
-  
+
   /**
    * Return the id.
    * @return the id
@@ -35,7 +35,7 @@ public class CodeModuleEntity {
   public String getId() {
     return id;
   }
-  
+
   /**
    * Type of the module, e.g jsonpath or javascript.
    * @return the type
@@ -51,7 +51,7 @@ public class CodeModuleEntity {
   public String getUrl() {
     return url;
   }
-  
+
   /**
    * Return the function name.
    * @return the function
@@ -59,7 +59,7 @@ public class CodeModuleEntity {
   public String getFunction() {
     return function;
   }
-  
+
 
   /**
    * Inline code script.
@@ -68,7 +68,7 @@ public class CodeModuleEntity {
   public String getScript() {
     return script;
   }
-  
+
   private static void put(JsonObject json, boolean omitNull, String key, Object value) {
     if (omitNull && value == null) {
       return;
@@ -98,7 +98,7 @@ public class CodeModuleEntity {
     put(json, omitNull, CodeModuleBuilder.SCRIPT_FIELD, script);
     return json;
   }
-  
+
   /**
    * Encode the entity as Tuple.
    * @return Tuple object
@@ -111,7 +111,7 @@ public class CodeModuleEntity {
   /* (non-Javadoc)
    * @see java.lang.Object#hashCode()
    */
-  
+
   @Override
   public int hashCode() {
     return Objects.hash(id, type, url, function, script);
@@ -120,7 +120,7 @@ public class CodeModuleEntity {
   /* (non-Javadoc)
    * @see java.lang.Object#equals(java.lang.Object)
    */
-  
+
   @Override
   public boolean equals(Object obj) {
     if (this == obj) {
@@ -133,10 +133,10 @@ public class CodeModuleEntity {
       return false;
     }
     CodeModuleEntity other = (CodeModuleEntity) obj;
-    return Objects.equals(id, other.id) 
-        && Objects.equals(type, other.type) 
+    return Objects.equals(id, other.id)
+        && Objects.equals(type, other.type)
         && Objects.equals(url, other.url)
-        && Objects.equals(function, other.function) 
+        && Objects.equals(function, other.function)
         && Objects.equals(script, other.script);
   }
 
@@ -145,12 +145,12 @@ public class CodeModuleEntity {
     public static final String ID_FIELD = "id";
 
     public static final String TYPE_FIELD = "type";
-    
+
     public static final String URL_FIELD = "url";
 
     @Deprecated(forRemoval = true, since = "1.0")
     public static final String FUNCTION_FIELD = "function";
-    
+
     public static final String SCRIPT_FIELD = "script";
 
     private final JsonObject json;

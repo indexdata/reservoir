@@ -1,9 +1,9 @@
-package org.folio.reservoir.server;
+package com.indexdata.reservoir.server;
 
+import com.indexdata.reservoir.module.impl.ModuleJsonPath;
+import com.indexdata.reservoir.util.SourceId;
 import com.jayway.jsonpath.InvalidPathException;
 import io.vertx.core.http.HttpServerRequest;
-import org.folio.reservoir.module.impl.ModuleJsonPath;
-import org.folio.reservoir.util.SourceId;
 
 public class IngestParams {
   final SourceId sourceId;

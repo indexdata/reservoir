@@ -1,9 +1,10 @@
-package org.folio.reservoir.util;
-
-import static org.folio.reservoir.util.MarcConstants.COLLECTION_LABEL;
-import static org.folio.reservoir.util.MarcConstants.RECORD_LABEL;
+package com.indexdata.reservoir.util;
 
 import io.vertx.core.json.JsonObject;
+
+import static com.indexdata.reservoir.util.MarcConstants.COLLECTION_LABEL;
+import static com.indexdata.reservoir.util.MarcConstants.RECORD_LABEL;
+
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.List;
