@@ -1,5 +1,7 @@
 package com.indexdata.reservoir.module.impl;
 
+import com.indexdata.reservoir.module.Module;
+import com.indexdata.reservoir.server.entity.CodeModuleEntity;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.DecodeException;
@@ -14,9 +16,6 @@ import org.folio.okapi.common.WebClientFactory;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
-
-import com.indexdata.reservoir.module.Module;
-import com.indexdata.reservoir.server.entity.CodeModuleEntity;
 
 @SuppressWarnings({"squid:S5738","squid:S1123"})
 public class ModuleJavaScript implements Module {

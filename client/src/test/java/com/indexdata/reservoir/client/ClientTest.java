@@ -1,5 +1,6 @@
 package com.indexdata.reservoir.client;
 
+import com.indexdata.reservoir.util.SourceId;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
@@ -15,8 +16,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-
-import com.indexdata.reservoir.util.SourceId;
 
 @RunWith(VertxUnitRunner.class)
 public class ClientTest {

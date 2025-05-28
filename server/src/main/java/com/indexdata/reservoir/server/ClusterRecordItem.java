@@ -1,13 +1,12 @@
 package com.indexdata.reservoir.server;
 
+import com.indexdata.reservoir.server.entity.ClusterBuilder;
 import io.vertx.core.Future;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.SqlConnection;
 import io.vertx.sqlclient.Tuple;
 import java.time.LocalDateTime;
 import java.util.UUID;
-
-import com.indexdata.reservoir.server.entity.ClusterBuilder;
 
 public class ClusterRecordItem {
 

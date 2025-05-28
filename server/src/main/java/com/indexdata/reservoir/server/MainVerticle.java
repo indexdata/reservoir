@@ -54,7 +54,7 @@ public class MainVerticle extends AbstractVerticle {
   }
 
   @Override
-  publi½ void stop(Promise<Void> promise) {
+  public void stop(Promise<Void> promise) {
     TenantPgPool.closeAll()
         .onComplete(promise);
   }

@@ -1,12 +1,11 @@
 package com.indexdata.reservoir.util.readstream;
 
+import com.indexdata.reservoir.util.MarcInJsonUtil;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import java.util.LinkedList;
 import java.util.List;
-
-import com.indexdata.reservoir.util.MarcInJsonUtil;
 
 /**
  * Converts stream of JSON-in-MARC to payload JSON objects.

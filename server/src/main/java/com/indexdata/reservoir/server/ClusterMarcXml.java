@@ -1,14 +1,13 @@
 package com.indexdata.reservoir.server;
 
-import io.vertx.core.Future;
-import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-
 import com.indexdata.reservoir.module.ModuleExecutable;
 import com.indexdata.reservoir.server.entity.ClusterBuilder;
 import com.indexdata.reservoir.util.JsonToMarcXml;
 import com.indexdata.reservoir.util.MarcInJsonUtil;
+import io.vertx.core.Future;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 public class ClusterMarcXml {
   private ClusterMarcXml() {}

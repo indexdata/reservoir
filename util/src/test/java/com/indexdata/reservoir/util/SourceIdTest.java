@@ -1,12 +1,10 @@
 package com.indexdata.reservoir.util;
 
-import org.junit.Assert;
-import org.junit.Test;
-
-import com.indexdata.reservoir.util.SourceId;
-
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+
+import org.junit.Assert;
+import org.junit.Test;
 
 public class SourceIdTest {
 

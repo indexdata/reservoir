@@ -1,5 +1,6 @@
 package com.indexdata.reservoir.solr.impl;
 
+import com.indexdata.reservoir.solr.VertxSolrClient;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
@@ -17,8 +18,6 @@ import org.apache.solr.common.SolrDocumentList;
 import org.apache.solr.common.SolrInputDocument;
 import org.apache.solr.common.params.MapSolrParams;
 import org.apache.solr.common.params.SolrParams;
-
-import com.indexdata.reservoir.solr.VertxSolrClient;
 
 /**
  * Vert.x wrapper for Solrj.

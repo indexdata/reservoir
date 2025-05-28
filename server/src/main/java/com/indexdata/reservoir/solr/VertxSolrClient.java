@@ -1,12 +1,11 @@
 package com.indexdata.reservoir.solr;
 
+import com.indexdata.reservoir.solr.impl.VertxSolrWebClient;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import java.util.Map;
-
-import com.indexdata.reservoir.solr.impl.VertxSolrWebClient;
 
 public interface VertxSolrClient {
 

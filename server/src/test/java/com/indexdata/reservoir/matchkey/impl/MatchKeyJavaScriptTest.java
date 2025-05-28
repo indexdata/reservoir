@@ -1,5 +1,11 @@
 package com.indexdata.reservoir.matchkey.impl;
 
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+
+import com.indexdata.reservoir.matchkey.MatchKeyMethod;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerResponse;
@@ -11,19 +17,10 @@ import io.vertx.ext.web.Router;
 import io.vertx.reactivex.core.http.HttpHeaders;
 import java.util.Collection;
 import java.util.HashSet;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-
-import com.indexdata.reservoir.matchkey.MatchKeyMethod;
-import com.indexdata.reservoir.matchkey.impl.MatchKeyJavaScript;
-
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
 
 @RunWith(VertxUnitRunner.class)
 public class MatchKeyJavaScriptTest {

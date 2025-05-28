@@ -1,5 +1,8 @@
 package com.indexdata.reservoir.util.readstream;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -11,17 +14,10 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-
-import com.indexdata.reservoir.util.readstream.MarcXmlParserToJson;
-import com.indexdata.reservoir.util.readstream.XmlParser;
-
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
 
 @RunWith(VertxUnitRunner.class)
 public class MarcXmlParserToJsonTest {

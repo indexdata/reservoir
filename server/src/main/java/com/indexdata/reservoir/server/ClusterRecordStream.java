@@ -1,5 +1,6 @@
 package com.indexdata.reservoir.server;
 
+import com.indexdata.reservoir.util.EncodeXmlText;
 import io.vertx.codegen.annotations.Nullable;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -8,9 +9,6 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.streams.WriteStream;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.SqlConnection;
-
-import static com.indexdata.reservoir.util.EncodeXmlText.encodeXmlText;
-
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Function;
@@ -59,8 +57,8 @@ public class ClusterRecordStream implements WriteStream<Row> {
       log.warn("Failed to produce record {} cause: {}", row.deepToString(), e.getMessage());
       log.debug(e);
       return response.write(Buffer.buffer("<!-- Failed to produce record "
-          + encodeXmlText(row.deepToString()) + " cause: "
-          + encodeXmlText(e.getMessage()) + " -->\n")).mapEmpty();
+          + EncodeXmlText.encodeXmlText(row.deepToString()) + " cause: "
+          + EncodeXmlText.encodeXmlText(e.getMessage()) + " -->\n")).mapEmpty();
     });
   }
 

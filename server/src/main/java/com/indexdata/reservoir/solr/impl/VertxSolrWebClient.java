@@ -1,5 +1,6 @@
 package com.indexdata.reservoir.solr.impl;
 
+import com.indexdata.reservoir.solr.VertxSolrClient;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
@@ -10,8 +11,6 @@ import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import java.util.Map;
-
-import com.indexdata.reservoir.solr.VertxSolrClient;
 
 public class VertxSolrWebClient implements VertxSolrClient {
 

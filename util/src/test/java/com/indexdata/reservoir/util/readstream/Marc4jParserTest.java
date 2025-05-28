@@ -1,5 +1,9 @@
 package com.indexdata.reservoir.util.readstream;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -8,24 +12,15 @@ import io.vertx.core.file.OpenOptions;
 import io.vertx.core.json.DecodeException;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.marc4j.marc.Record;
-
-import com.indexdata.reservoir.util.readstream.MappingReadStream;
-import com.indexdata.reservoir.util.readstream.Marc4jMapper;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.is;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.marc4j.marc.Record;
 
 @RunWith(VertxUnitRunner.class)
 public class Marc4jParserTest {

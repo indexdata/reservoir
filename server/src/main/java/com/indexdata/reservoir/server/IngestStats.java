@@ -3,7 +3,6 @@ package com.indexdata.reservoir.server;
 import io.vertx.core.json.JsonObject;
 import java.util.concurrent.atomic.AtomicInteger;
 
-
 public class IngestStats {
   private final String fileName;
   private final AtomicInteger processed = new AtomicInteger();

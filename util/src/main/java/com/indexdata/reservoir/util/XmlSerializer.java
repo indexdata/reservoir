@@ -1,9 +1,8 @@
 package com.indexdata.reservoir.util;
 
-import io.vertx.core.buffer.Buffer;
-
 import static com.indexdata.reservoir.util.EncodeXmlText.encodeXmlText;
 
+import io.vertx.core.buffer.Buffer;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;

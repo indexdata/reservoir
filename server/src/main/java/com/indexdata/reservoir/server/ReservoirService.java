@@ -1,5 +1,10 @@
 package com.indexdata.reservoir.server;
 
+import com.indexdata.reservoir.matchkey.MatchKeyMethodFactory;
+import com.indexdata.reservoir.module.ModuleCache;
+import com.indexdata.reservoir.module.ModuleInvocation;
+import com.indexdata.reservoir.server.entity.CodeModuleEntity;
+import com.indexdata.reservoir.util.readstream.LargeJsonReadStream;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpMethod;
@@ -28,12 +33,6 @@ import org.folio.tlib.postgres.cqlfield.PgCqlFieldNumber;
 import org.folio.tlib.postgres.cqlfield.PgCqlFieldText;
 import org.folio.tlib.postgres.cqlfield.PgCqlFieldUuid;
 import org.folio.tlib.util.TenantUtil;
-
-import com.indexdata.reservoir.matchkey.MatchKeyMethodFactory;
-import com.indexdata.reservoir.module.ModuleCache;
-import com.indexdata.reservoir.module.ModuleInvocation;
-import com.indexdata.reservoir.server.entity.CodeModuleEntity;
-import com.indexdata.reservoir.util.readstream.LargeJsonReadStream;
 
 public class ReservoirService implements RouterCreator, TenantInitHooks {
 

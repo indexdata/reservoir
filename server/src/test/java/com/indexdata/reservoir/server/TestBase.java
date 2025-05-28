@@ -1,5 +1,6 @@
 package com.indexdata.reservoir.server;
 
+import com.indexdata.reservoir.module.impl.ModuleScripts;
 import io.restassured.RestAssured;
 import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.config.HttpClientConfig;
@@ -16,17 +17,6 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.folio.tlib.postgres.testing.TenantPgPoolContainer;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.xml.sax.SAXException;
-
-import com.indexdata.reservoir.module.impl.ModuleScripts;
-import com.indexdata.reservoir.server.MainVerticle;
-
 import javax.xml.XMLConstants;
 import javax.xml.validation.Schema;
 import javax.xml.validation.SchemaFactory;
@@ -35,6 +25,13 @@ import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.folio.tlib.postgres.testing.TenantPgPoolContainer;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.xml.sax.SAXException;
 
 public class TestBase {
   protected final static Logger log = LogManager.getLogger("TestBase");

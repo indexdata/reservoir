@@ -1,5 +1,11 @@
 package com.indexdata.reservoir.server;
 
+import com.indexdata.reservoir.util.readstream.MappingReadStream;
+import com.indexdata.reservoir.util.readstream.MarcJsonToIngestMapper;
+import com.indexdata.reservoir.util.readstream.MarcToJsonParser;
+import com.indexdata.reservoir.util.readstream.MarcXmlParserToJson;
+import com.indexdata.reservoir.util.readstream.XmlFixer;
+import com.indexdata.reservoir.util.readstream.XmlParser;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
@@ -19,13 +25,6 @@ import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.okapi.common.HttpResponse;
 import org.folio.okapi.common.XOkapiHeaders;
-
-import com.indexdata.reservoir.util.readstream.MappingReadStream;
-import com.indexdata.reservoir.util.readstream.MarcJsonToIngestMapper;
-import com.indexdata.reservoir.util.readstream.MarcToJsonParser;
-import com.indexdata.reservoir.util.readstream.MarcXmlParserToJson;
-import com.indexdata.reservoir.util.readstream.XmlFixer;
-import com.indexdata.reservoir.util.readstream.XmlParser;
 
 public class UploadService {
 

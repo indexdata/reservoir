@@ -1,5 +1,15 @@
 package com.indexdata.reservoir.module.impl;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.is;
+
+import com.indexdata.reservoir.module.ModuleCache;
+import com.indexdata.reservoir.module.ModuleExecutable;
+import com.indexdata.reservoir.module.ModuleInvocation;
+import com.indexdata.reservoir.server.entity.ClusterBuilder;
+import com.indexdata.reservoir.server.entity.CodeModuleEntity;
+import com.indexdata.reservoir.server.entity.CodeModuleEntity.CodeModuleBuilder;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
@@ -9,24 +19,12 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.UUID;
-
 import org.graalvm.polyglot.PolyglotException;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-
-import com.indexdata.reservoir.module.ModuleCache;
-import com.indexdata.reservoir.module.ModuleExecutable;
-import com.indexdata.reservoir.module.ModuleInvocation;
-import com.indexdata.reservoir.server.entity.ClusterBuilder;
-import com.indexdata.reservoir.server.entity.CodeModuleEntity;
-import com.indexdata.reservoir.server.entity.CodeModuleEntity.CodeModuleBuilder;
-
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.is;
 
 @RunWith(VertxUnitRunner.class)
 public class ModuleTest {

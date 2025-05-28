@@ -23,12 +23,6 @@ import javax.xml.transform.stream.StreamSource;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.indexdata.reservoir.util.InventoryToXml;
-import com.indexdata.reservoir.util.JsonToMarcXml;
-import com.indexdata.reservoir.util.MarcInJsonUtil;
-import com.indexdata.reservoir.util.MarcXmlToJson;
-import com.indexdata.reservoir.util.XmlSerializer;
-
 public class XmlJsonUtilTest {
   static final String MARCXML1_SAMPLE =
       "<record xmlns=\"http://www.loc.gov/MARC21/slim\">\n"

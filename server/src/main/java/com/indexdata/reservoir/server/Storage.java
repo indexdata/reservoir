@@ -1,5 +1,14 @@
 package com.indexdata.reservoir.server;
 
+import com.indexdata.reservoir.matchkey.MatchKeyMethod;
+import com.indexdata.reservoir.module.ModuleCache;
+import com.indexdata.reservoir.module.ModuleExecutable;
+import com.indexdata.reservoir.module.ModuleInvocation;
+import com.indexdata.reservoir.server.entity.ClusterBuilder;
+import com.indexdata.reservoir.server.entity.CodeModuleEntity;
+import com.indexdata.reservoir.util.ReadStreamConsumer;
+import com.indexdata.reservoir.util.SourceId;
+import com.indexdata.reservoir.util.readstream.LargeJsonReadStream;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -35,15 +44,6 @@ import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.tlib.postgres.PgCqlQuery;
 import org.folio.tlib.postgres.TenantPgPool;
 import org.folio.tlib.util.TenantUtil;
-import com.indexdata.reservoir.matchkey.MatchKeyMethod;
-import com.indexdata.reservoir.module.ModuleCache;
-import com.indexdata.reservoir.module.ModuleExecutable;
-import com.indexdata.reservoir.module.ModuleInvocation;
-import com.indexdata.reservoir.server.entity.ClusterBuilder;
-import com.indexdata.reservoir.server.entity.CodeModuleEntity;
-import com.indexdata.reservoir.util.ReadStreamConsumer;
-import com.indexdata.reservoir.util.SourceId;
-import com.indexdata.reservoir.util.readstream.LargeJsonReadStream;
 
 // Define a constant instead of duplicating this literal
 @java.lang.SuppressWarnings({"squid:S1192"})

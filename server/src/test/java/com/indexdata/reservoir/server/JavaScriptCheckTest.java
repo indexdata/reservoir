@@ -4,8 +4,6 @@ import org.folio.okapi.testing.UtilityClassTester;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.indexdata.reservoir.server.JavaScriptCheck;
-
 public class JavaScriptCheckTest {
 
   @Test

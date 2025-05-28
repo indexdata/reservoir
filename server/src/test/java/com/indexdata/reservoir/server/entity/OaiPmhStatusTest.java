@@ -9,8 +9,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import org.junit.Test;
 
-import com.indexdata.reservoir.server.entity.OaiPmhStatus;
-
 public class OaiPmhStatusTest {
 
   @Test

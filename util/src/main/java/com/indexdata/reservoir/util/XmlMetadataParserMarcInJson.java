@@ -1,8 +1,5 @@
 package com.indexdata.reservoir.util;
 
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-
 import static com.indexdata.reservoir.util.MarcConstants.CODE_LABEL;
 import static com.indexdata.reservoir.util.MarcConstants.COLLECTION_LABEL;
 import static com.indexdata.reservoir.util.MarcConstants.CONTROLFIELD_LABEL;
@@ -10,8 +7,11 @@ import static com.indexdata.reservoir.util.MarcConstants.LEADER_LABEL;
 import static com.indexdata.reservoir.util.MarcConstants.SUBFIELD_LABEL;
 import static com.indexdata.reservoir.util.MarcConstants.TAG_LABEL;
 
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamReader;
+
 
 /**
  * Produce MARC-in-JSON from streaming XML.

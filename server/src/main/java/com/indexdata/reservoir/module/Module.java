@@ -1,11 +1,10 @@
 package com.indexdata.reservoir.module;
 
+import com.indexdata.reservoir.server.entity.CodeModuleEntity;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import java.util.Collection;
-
-import com.indexdata.reservoir.server.entity.CodeModuleEntity;
 
 public interface Module {
 

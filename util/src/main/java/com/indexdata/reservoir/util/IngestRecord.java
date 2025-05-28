@@ -1,10 +1,9 @@
 package com.indexdata.reservoir.util;
 
-import io.vertx.core.json.JsonObject;
-
 import static com.indexdata.reservoir.util.MarcConstants.COLLECTION_LABEL;
 import static com.indexdata.reservoir.util.MarcConstants.RECORD_LABEL;
 
+import io.vertx.core.json.JsonObject;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.List;

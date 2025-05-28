@@ -1,7 +1,9 @@
 package com.indexdata.reservoir.matchkey;
 
-import com.indexdata.reservoir.matchkey.MatchKeyMethod;
-import com.indexdata.reservoir.matchkey.MatchKeyMethodFactory;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
+
 import com.jayway.jsonpath.InvalidPathException;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -13,10 +15,6 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
 
 @RunWith(VertxUnitRunner.class)
 public class MatchKeyMethodFactoryTest {

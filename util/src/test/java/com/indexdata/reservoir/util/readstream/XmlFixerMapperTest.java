@@ -1,13 +1,11 @@
 package com.indexdata.reservoir.util.readstream;
 
-import io.vertx.core.buffer.Buffer;
-import org.junit.Test;
-
-import com.indexdata.reservoir.util.readstream.XmlFixerMapper;
-
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.nullValue;
+
+import io.vertx.core.buffer.Buffer;
+import org.junit.Test;
 
 // ignore warnings about Parameterized test
 @SuppressWarnings({"java:S5976"})

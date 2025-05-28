@@ -1,5 +1,6 @@
 package com.indexdata.reservoir.matchkey.impl;
 
+import com.indexdata.reservoir.matchkey.MatchKeyMethod;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -10,8 +11,6 @@ import org.folio.okapi.common.WebClientFactory;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
-
-import com.indexdata.reservoir.matchkey.MatchKeyMethod;
 
 /**
  * Don't use this.

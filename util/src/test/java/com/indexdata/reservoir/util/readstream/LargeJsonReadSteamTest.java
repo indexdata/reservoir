@@ -1,5 +1,6 @@
 package com.indexdata.reservoir.util.readstream;
 
+import com.indexdata.reservoir.util.ReadStreamConsumer;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -18,8 +19,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import com.indexdata.reservoir.util.ReadStreamConsumer;
-import com.indexdata.reservoir.util.readstream.LargeJsonReadStream;
 
 @RunWith(VertxUnitRunner.class)
 public class LargeJsonReadSteamTest {

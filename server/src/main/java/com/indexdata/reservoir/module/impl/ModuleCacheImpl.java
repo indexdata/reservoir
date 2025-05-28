@@ -1,13 +1,12 @@
 package com.indexdata.reservoir.module.impl;
 
+import com.indexdata.reservoir.module.Module;
+import com.indexdata.reservoir.module.ModuleCache;
+import com.indexdata.reservoir.server.entity.CodeModuleEntity;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import java.util.HashMap;
 import java.util.Map;
-
-import com.indexdata.reservoir.module.Module;
-import com.indexdata.reservoir.module.ModuleCache;
-import com.indexdata.reservoir.server.entity.CodeModuleEntity;
 
 public class ModuleCacheImpl implements ModuleCache {
 

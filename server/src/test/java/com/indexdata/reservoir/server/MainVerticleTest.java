@@ -1,5 +1,19 @@
 package com.indexdata.reservoir.server;
 
+import static org.hamcrest.Matchers.anyOf;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.endsWith;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.hasLength;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.startsWith;
+import static org.hamcrest.MatcherAssert.assertThat;
+
+import com.indexdata.reservoir.server.entity.CodeModuleEntity;
 import io.restassured.RestAssured;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
@@ -32,7 +46,6 @@ import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.transform.Source;
 import javax.xml.transform.stream.StreamSource;
-
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.sqlclient.Tuple;
 import org.apache.logging.log4j.LogManager;
@@ -45,24 +58,6 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xml.sax.SAXException;
-
-import com.indexdata.reservoir.server.OaiPmhClientService;
-import com.indexdata.reservoir.server.ResumptionToken;
-import com.indexdata.reservoir.server.Storage;
-import com.indexdata.reservoir.server.entity.CodeModuleEntity;
-
-import static org.hamcrest.Matchers.anyOf;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.empty;
-import static org.hamcrest.Matchers.endsWith;
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.hasLength;
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.nullValue;
-import static org.hamcrest.Matchers.startsWith;
-import static org.hamcrest.MatcherAssert.assertThat;
 
 @RunWith(VertxUnitRunner.class)
 public class MainVerticleTest extends TestBase {

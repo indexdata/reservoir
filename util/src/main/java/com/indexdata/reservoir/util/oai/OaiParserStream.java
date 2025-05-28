@@ -1,12 +1,11 @@
 package com.indexdata.reservoir.util.oai;
 
+import com.indexdata.reservoir.util.XmlMetadataStreamParser;
 import io.vertx.core.Handler;
 import io.vertx.core.streams.ReadStream;
 import java.util.function.Consumer;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamReader;
-
-import com.indexdata.reservoir.util.XmlMetadataStreamParser;
 
 public class OaiParserStream<T> {
 

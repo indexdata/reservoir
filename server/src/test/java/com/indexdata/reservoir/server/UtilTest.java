@@ -1,15 +1,11 @@
 package com.indexdata.reservoir.server;
 
-import org.folio.okapi.testing.UtilityClassTester;
-import org.junit.Assert;
-import org.junit.Test;
-
-import com.indexdata.reservoir.server.OaiException;
-import com.indexdata.reservoir.server.Util;
-
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
+import org.folio.okapi.testing.UtilityClassTester;
+import org.junit.Assert;
+import org.junit.Test;
 
 public class UtilTest {
 
