@@ -1,6 +1,5 @@
 package org.folio.reservoir.util;
 
-import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.unit.TestContext;
@@ -25,17 +24,11 @@ public class AsyncCodecTest {
     vertx.close(context.asyncAssertSuccess());
   }
 
-
   @Test
   public void compressAndDecompress(TestContext context){
     String s = "compression test";
-    Future<Buffer> f = AsyncCodec.compress(vertx, Buffer.buffer(s));
-    f = f.compose(bc -> {
-        return AsyncCodec.decompress(vertx, bc);
-    });
-    f.onComplete(context.asyncAssertSuccess(bd -> {
-      context.assertEquals(s, bd.toString());
-    }));
+    AsyncCodec.compress(vertx, Buffer.buffer(s))
+     .compose(bc -> AsyncCodec.decompress(vertx, bc))
+     .onComplete(context.asyncAssertSuccess(bd -> context.assertEquals(s, bd.toString())));
   }
-
 }

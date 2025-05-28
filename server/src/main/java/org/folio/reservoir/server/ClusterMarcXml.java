@@ -80,13 +80,6 @@ public class ClusterMarcXml {
     } else if (transformer == null) {
       return Future.succeededFuture(getMetadataJava(cb.build()));
     }
-    JsonObject cluster = cb.build();
-    return vertx.executeBlocking(prom -> {
-      try {
-        prom.handle(transformer.execute(cluster).map(JsonToMarcXml::convert));
-      } catch (Exception e) {
-        prom.fail(e);
-      }
-    });
+    return transformer.execute(cb.build()).map(JsonToMarcXml::convert);
   }
 }

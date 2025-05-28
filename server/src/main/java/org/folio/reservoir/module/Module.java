@@ -12,7 +12,7 @@ public interface Module {
 
   Future<JsonObject> execute(String symbol, JsonObject input);
 
-  Collection<String> executeAsCollection(String symbol, JsonObject input);
+  Future<Collection<String>> executeAsCollection(String symbol, JsonObject input);
 
   Future<Void> terminate();
 

@@ -1,6 +1,7 @@
 package org.folio.reservoir.server;
 
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpServerOptions;
 import org.apache.logging.log4j.LogManager;
@@ -44,10 +45,10 @@ public class MainVerticle extends AbstractVerticle {
               .requestHandler(router)
               .listen(port).mapEmpty();
         })
-        .compose(x ->
-          vertx.executeBlocking(e -> {
+        .compose(a ->
+          vertx.executeBlocking(() -> {
             JavaScriptCheck.check();
-            e.complete();
+            return null;
           })
         )
         .onComplete(x -> promise.handle(x.mapEmpty()));
