@@ -1,4 +1,4 @@
-package org.folio.reservoir.server;
+package com.indexdata.reservoir.server;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -32,18 +32,18 @@ import java.util.function.Function;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.GenericCompositeFuture;
-import org.folio.reservoir.matchkey.MatchKeyMethod;
-import org.folio.reservoir.module.ModuleCache;
-import org.folio.reservoir.module.ModuleExecutable;
-import org.folio.reservoir.module.ModuleInvocation;
-import org.folio.reservoir.server.entity.ClusterBuilder;
-import org.folio.reservoir.server.entity.CodeModuleEntity;
-import org.folio.reservoir.util.ReadStreamConsumer;
-import org.folio.reservoir.util.SourceId;
-import org.folio.reservoir.util.readstream.LargeJsonReadStream;
 import org.folio.tlib.postgres.PgCqlQuery;
 import org.folio.tlib.postgres.TenantPgPool;
 import org.folio.tlib.util.TenantUtil;
+import com.indexdata.reservoir.matchkey.MatchKeyMethod;
+import com.indexdata.reservoir.module.ModuleCache;
+import com.indexdata.reservoir.module.ModuleExecutable;
+import com.indexdata.reservoir.module.ModuleInvocation;
+import com.indexdata.reservoir.server.entity.ClusterBuilder;
+import com.indexdata.reservoir.server.entity.CodeModuleEntity;
+import com.indexdata.reservoir.util.ReadStreamConsumer;
+import com.indexdata.reservoir.util.SourceId;
+import com.indexdata.reservoir.util.readstream.LargeJsonReadStream;
 
 // Define a constant instead of duplicating this literal
 @java.lang.SuppressWarnings({"squid:S1192"})

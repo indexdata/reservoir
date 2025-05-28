@@ -1,4 +1,4 @@
-package org.folio.reservoir.client;
+package com.indexdata.reservoir.client;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -10,14 +10,13 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
-
 import java.util.UUID;
-
-import org.folio.reservoir.util.SourceId;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import com.indexdata.reservoir.util.SourceId;
 
 @RunWith(VertxUnitRunner.class)
 public class ClientTest {

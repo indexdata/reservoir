@@ -8,8 +8,8 @@
   <artifactId>mod-reservoir-server</artifactId>
   <name>Reservoir storage server module</name>
   <properties>
-    <vertx.launcher>org.folio.reservoir.server.ReservoirLauncher</vertx.launcher>
-    <vertx.verticle>org.folio.reservoir.server.MainVerticle</vertx.verticle>
+    <vertx.launcher>com.indexdata.reservoir.server.ReservoirLauncher</vertx.launcher>
+    <vertx.verticle>com.indexdata.reservoir.server.MainVerticle</vertx.verticle>
     <graal.compiler.dir>${project.build.directory}/compiler</graal.compiler.dir>
   </properties>
   <dependencies>
