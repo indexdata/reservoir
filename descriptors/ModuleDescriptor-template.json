@@ -268,7 +268,7 @@
             "GET"
           ],
           "pathPattern": "/reservoir/oai",
-          "permissionsRequired": [ ]
+          "permissionsRequired": []
         }
       ]
     },
@@ -356,7 +356,8 @@
       "handlers": [
         {
           "methods": [
-            "POST", "PUT"
+            "POST",
+            "PUT"
           ],
           "pathPattern": "/reservoir/upload",
           "permissionsRequired": [
@@ -375,9 +376,23 @@
       "handlers": [
         {
           "methods": [
-            "GET", "HEAD"
+            "GET",
+            "HEAD"
           ],
           "pathPattern": "/reservoir/upload-form*",
+          "permissionsRequired": []
+        }
+      ]
+    },
+    {
+      "id": "reservoir-sru",
+      "version": "1.0",
+      "handlers": [
+        {
+          "methods": [
+            "GET"
+          ],
+          "pathPattern": "/reservoir/sru",
           "permissionsRequired": []
         }
       ]
@@ -408,7 +423,7 @@
         "reservoir-config-oai.get",
         "reservoir-config-oai.put",
         "reservoir-config-oai.delete"
-     ]
+      ]
     },
     {
       "permissionName": "reservoir-config-matchkeys.item.post",
@@ -457,7 +472,7 @@
         "reservoir-config-matchkeys.item.delete",
         "reservoir-config-matchkeys.item.initialize",
         "reservoir-config-matchkeys.item.stats"
-     ]
+      ]
     },
     {
       "permissionName": "reservoir-config-modules.item.post",
@@ -500,7 +515,7 @@
         "reservoir-config-modules.item.put",
         "reservoir-config-modules.item.delete",
         "reservoir-config-modules.item.reload"
-     ]
+      ]
     },
     {
       "permissionName": "reservoir-records.collection.get",

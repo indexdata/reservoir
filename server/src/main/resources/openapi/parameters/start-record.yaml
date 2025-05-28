@@ -1,0 +1,8 @@
+in: query
+name: startRecord
+description: SRU start Record (first record is 1)
+required: false
+schema:
+  type: integer
+  default: 1
+  minimum: 1

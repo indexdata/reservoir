@@ -1,0 +1,6 @@
+in: query
+name: version
+description: SRU version
+required: false
+schema:
+  type: string

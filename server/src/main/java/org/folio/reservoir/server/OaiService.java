@@ -3,14 +3,14 @@ package org.folio.reservoir.server;
 import static org.folio.reservoir.util.EncodeXmlText.encodeXmlText;
 
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServerResponse;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.validation.RequestParameters;
 import io.vertx.ext.web.validation.ValidationHandler;
 import io.vertx.sqlclient.Row;
-import io.vertx.sqlclient.RowIterator;
 import io.vertx.sqlclient.RowStream;
 import io.vertx.sqlclient.SqlConnection;
 import io.vertx.sqlclient.Transaction;
@@ -23,13 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.HttpResponse;
-import org.folio.reservoir.module.ModuleCache;
 import org.folio.reservoir.module.ModuleExecutable;
-import org.folio.reservoir.module.ModuleInvocation;
-import org.folio.reservoir.server.entity.ClusterBuilder;
-import org.folio.reservoir.util.JsonToMarcXml;
-import org.folio.reservoir.util.MarcInJsonUtil;
-import org.folio.tlib.util.TenantUtil;
 
 public final class OaiService {
   private static final Logger log = LogManager.getLogger(OaiService.class);
@@ -62,7 +56,7 @@ public final class OaiService {
     response.write(OAI_HEADER);
     response.write("  <responseDate>" + Instant.now() + "</responseDate>\n");
     response.write("  <request");
-    String verb = Util.getParameterString(params.queryParameter("verb"));
+    String verb = Util.getQueryParameter(params, "verb");
     if (verb != null) {
       response.write(" verb=\"" + encodeXmlText(verb) + "\"");
     }
@@ -96,11 +90,11 @@ public final class OaiService {
   static Future<Void> getCheck(RoutingContext ctx) {
     try {
       RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-      String verb = Util.getParameterString(params.queryParameter("verb"));
+      String verb = Util.getQueryParameter(params, "verb");
       if (verb == null) {
         throw OaiException.badVerb("missing verb");
       }
-      String metadataPrefix = Util.getParameterString(params.queryParameter("metadataPrefix"));
+      String metadataPrefix = Util.getQueryParameter(params, "metadataPrefix");
       if (metadataPrefix != null && !"marcxml".equals(metadataPrefix)) {
         throw OaiException.cannotDisseminateFormat("only metadataPrefix \"marcxml\" supported");
       }
@@ -149,13 +143,13 @@ public final class OaiService {
 
   static Future<Void> listRecords(RoutingContext ctx, boolean withMetadata) {
     RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    String coded = Util.getParameterString(params.queryParameter("resumptionToken"));
+    String coded = Util.getQueryParameter(params, "resumptionToken");
     ResumptionToken token = coded != null ? new ResumptionToken(coded) : null;
     String set = token != null
-        ? token.getSet() : Util.getParameterString(params.queryParameter("set"));
-    String from = Util.getParameterString(params.queryParameter("from"));
+        ? token.getSet() : Util.getQueryParameter(params, "set");
+    String from = Util.getQueryParameter(params, "from");
     String until = token != null
-        ? token.getUntil() : Util.getParameterString(params.queryParameter("until"));
+        ? token.getUntil() : Util.getQueryParameter(params, "until");
     Integer limit = params.queryParameter("limit").getInteger();
     Storage storage = new Storage(ctx);
     return storage.selectMatchKeyConfig(set).compose(conf -> {
@@ -189,7 +183,7 @@ public final class OaiService {
       }
       ResumptionToken resumptionToken = new ResumptionToken(conf.getString("id"), until);
       sqlQuery.append(" ORDER BY datestamp, cluster_id");
-      return getTransformer(storage, ctx)
+      return storage.getTransformer(ctx)
           .compose(transformer -> storage.getPool().getConnection().compose(conn ->
               listRecordsResponse(ctx, transformer, storage, conn, sqlQuery.toString(),
                   Tuple.from(tupleList), limit, withMetadata, resumptionToken)
@@ -210,94 +204,40 @@ public final class OaiService {
     oaiFooter(ctx);
   }
 
-  /**
-   * Construct metadata record XML string.
-   *
-   * <p>999 ind1=1 ind2=0 has identifiers for the record. $i cluster UUID; multiple $m for each
-   * match value; Multiple $l, $s pairs for local identifier and source identifiers.
-   *
-   * <p>999 ind1=0 ind2=0 has holding information. Not complete yet.
-   *
-   * @param clusterJson ClusterBuilder.build output
-   * @return metadata record string; null if it's deleted record
-   */
-  static String getMetadataJava(JsonObject clusterJson) {
-    JsonArray identifiersField = new JsonArray();
-    identifiersField.add(new JsonObject()
-        .put("i", clusterJson.getString(ClusterBuilder.CLUSTER_ID_LABEL)));
-    JsonArray matchValues = clusterJson.getJsonArray(ClusterBuilder.MATCH_VALUES_LABEL);
-    if (matchValues != null) {
-      for (int i = 0; i < matchValues.size(); i++) {
-        String matchValue = matchValues.getString(i);
-        identifiersField.add(new JsonObject().put("m", matchValue));
-      }
-    }
-    JsonArray records = clusterJson.getJsonArray("records");
-    JsonObject combinedMarc = null;
-    for (int i = 0; i < records.size(); i++) {
-      JsonObject clusterRecord = records.getJsonObject(i);
-      JsonObject thisMarc = clusterRecord.getJsonObject(ClusterBuilder.PAYLOAD_LABEL)
-          .getJsonObject("marc");
-      JsonArray f999 = MarcInJsonUtil.lookupMarcDataField(thisMarc, "999", " ", " ");
-      if (combinedMarc == null) {
-        combinedMarc = thisMarc;
-      } else {
-        JsonArray c999 = MarcInJsonUtil.lookupMarcDataField(combinedMarc, "999", " ", " ");
-        // normally we'd have 999 in combined record
-        if (f999 != null && c999 != null) {
-          c999.addAll(f999); // all 999 in one data field
-        }
-      }
-      identifiersField.add(new JsonObject()
-          .put("l", clusterRecord.getString(ClusterBuilder.LOCAL_ID_LABEL)));
-      identifiersField.add(new JsonObject()
-          .put("s", clusterRecord.getString(ClusterBuilder.SOURCE_ID_LABEL)));
-      identifiersField.add(new JsonObject()
-          .put("v", clusterRecord.getInteger(ClusterBuilder.SOURCE_VERSION_LABEL).toString()));
-    }
-    if (combinedMarc == null) {
-      return null; // a deleted record
-    }
-    MarcInJsonUtil.createMarcDataField(combinedMarc, "999", "1", "0").addAll(identifiersField);
-    return JsonToMarcXml.convert(combinedMarc);
-  }
-
-  static Future<ModuleExecutable> getTransformer(Storage storage, RoutingContext ctx) {
-    return storage.selectOaiConfig()
-        .compose(oaiCfg -> {
-          if (oaiCfg == null) {
-            return Future.succeededFuture(null);
-          }
-          String transformerProp = oaiCfg.getString("transformer");
-          if (transformerProp == null) {
-            return Future.succeededFuture(null);
-          }
-          ModuleInvocation invocation = new ModuleInvocation(transformerProp);
-          return storage.selectCodeModuleEntity(invocation.getModuleName())
-              .compose(entity -> {
-                if (entity == null) {
-                  return Future.failedFuture("Transformer module '" 
-                    + invocation.getModuleName() + "' not found");
-                }
-                return ModuleCache.getInstance().lookup(ctx.vertx(), TenantUtil.tenant(ctx), entity)
-                          .map(mod -> new ModuleExecutable(mod, invocation));
-              });
-        });
-  }
-
-  static Future<ClusterBuilder> getClusterValues(Storage storage, SqlConnection conn,
-      UUID clusterId, ClusterBuilder cb) {
-    return conn.preparedQuery("SELECT match_value FROM " + storage.getClusterValuesTable()
-            + " WHERE cluster_id = $1")
-        .execute(Tuple.of(clusterId))
-        .map(cb::matchValues);
-  }
-
   static void writeResumptionToken(RoutingContext ctx, ResumptionToken token) {
     HttpServerResponse response = ctx.response();
     response.write("    <resumptionToken>");
     response.write(encodeXmlText(token.encode()));
     response.write("</resumptionToken>\n");
+  }
+
+  static Future<Buffer> getClusterRecordMetadata(Row row, ModuleExecutable transformer,
+      Storage storage, SqlConnection connection, boolean withMetadata, Vertx vertx) {
+
+    ClusterRecordItem cr = new ClusterRecordItem(row);
+    return cr.populateCluster(storage, connection, withMetadata)
+      .compose(cb -> ClusterMarcXml.getClusterMarcXml(cb, transformer, vertx)
+        .map(metadata -> {
+          String begin = withMetadata ? "    <record>\n" : "";
+          String end = withMetadata ? "    </record>\n" : "";
+          return Buffer.buffer(
+              begin
+                  + "      <header" + (metadata == null
+                  ? " status=\"deleted\"" : "") + ">\n"
+                  + "        <identifier>"
+                  + encodeXmlText(encodeOaiIdentifier(cr.clusterId)) + "</identifier>\n"
+                  + "        <datestamp>"
+                  + encodeXmlText(Util.formatOaiDateTime(cr.datestamp))
+                  + "</datestamp>\n"
+                  + "        <setSpec>" + encodeXmlText(cr.oaiSet) + "</setSpec>\n"
+                  + "      </header>\n"
+                  + (withMetadata && metadata != null
+                  ? "    <metadata>\n" + metadata + "\n"
+                  + "    </metadata>\n"
+                  : "")
+                  + end);
+        })
+    );
   }
 
   @java.lang.SuppressWarnings({"squid:S107"})  // too many arguments
@@ -310,7 +250,10 @@ public final class OaiService {
         conn.begin().compose(tx -> {
           HttpServerResponse response = ctx.response();
           ClusterRecordStream clusterRecordStream = new ClusterRecordStream(
-              ctx.vertx(), storage, conn, response, transformer, withMetadata);
+              conn, response, row ->
+                getClusterRecordMetadata(row, transformer, storage, conn,
+                withMetadata, ctx.vertx())
+          );
           RowStream<Row> stream = pq.createStream(100, tuple);
           AtomicInteger cnt = new AtomicInteger();
           clusterRecordStream.drainHandler(x -> stream.resume());
@@ -330,8 +273,7 @@ public final class OaiService {
               return;
             }
             cnt.incrementAndGet();
-            ClusterRecordItem cr = new ClusterRecordItem(row);
-            clusterRecordStream.write(cr);
+            clusterRecordStream.write(row);
             if (clusterRecordStream.writeQueueFull()) {
               stream.pause();
             }
@@ -351,37 +293,29 @@ public final class OaiService {
 
   static Future<Void> getRecord(RoutingContext ctx) {
     RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    String identifier = Util.getParameterString(params.queryParameter("identifier"));
+    String identifier = Util.getQueryParameter(params, "identifier");
     if (identifier == null) {
       throw OaiException.badArgument("missing identifier");
     }
     UUID clusterId = decodeOaiIdentifier(identifier);
     Storage storage = new Storage(ctx);
-    return getTransformer(storage, ctx).compose(transformer -> {
-      String sqlQuery = "SELECT * FROM " + storage.getClusterMetaTable() + " WHERE cluster_id = $1";
-      return storage.getPool()
-          .withConnection(conn -> conn.preparedQuery(sqlQuery)
-              .execute(Tuple.of(clusterId))
-              .compose(res -> {
-                RowIterator<Row> iterator = res.iterator();
-                if (!iterator.hasNext()) {
-                  throw OaiException.idDoesNotExist(identifier);
-                }
-                Row row = iterator.next();
-                ClusterRecordItem cr = new ClusterRecordItem(row);
-                HttpServerResponse response = ctx.response();
-                ClusterRecordStream clusterRecordStream = new ClusterRecordStream(
-                    ctx.vertx(), storage, conn, response, transformer, true);
-                return clusterRecordStream.getClusterRecordMetadata(cr)
-                    .map(buf -> {
-                      oaiHeader(ctx);
-                      response.write("  <GetRecord>\n");
-                      response.write(buf);
-                      response.write("  </GetRecord>\n");
-                      oaiFooter(ctx);
-                      return null;
-                    });
-              }));
+    return storage.getTransformer(ctx).compose(transformer -> {
+      return storage.getClusterRecord(ctx, clusterId).compose(row -> {
+        if (row == null) {
+          throw OaiException.idDoesNotExist(identifier);
+        }
+        return getClusterRecordMetadata(row, transformer, storage,
+            storage.getPool().getConnection().result(), true, ctx.vertx())
+            .map(buf -> {
+              oaiHeader(ctx);
+              HttpServerResponse response = ctx.response();
+              response.write("  <GetRecord>\n");
+              response.write(buf);
+              response.write("  </GetRecord>\n");
+              oaiFooter(ctx);
+              return null;
+            });
+      });
     });
   }
 }

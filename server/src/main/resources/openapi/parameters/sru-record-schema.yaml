@@ -1,0 +1,6 @@
+in: query
+name: recordSchema
+description: SRU record schema
+required: false
+schema:
+  type: string

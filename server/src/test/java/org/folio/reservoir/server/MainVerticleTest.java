@@ -40,7 +40,6 @@ import org.apache.logging.log4j.Logger;
 import org.awaitility.Awaitility;
 import org.folio.reservoir.server.entity.CodeModuleEntity;
 import org.folio.okapi.common.XOkapiHeaders;
-import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Assert;
@@ -59,6 +58,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.startsWith;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 @RunWith(VertxUnitRunner.class)
 public class MainVerticleTest extends TestBase {
@@ -71,6 +71,7 @@ public class MainVerticleTest extends TestBase {
 
   @After
   public void after() {
+    deleteIssnMatchKey();
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .delete("/reservoir/config/oai")
@@ -99,6 +100,69 @@ public class MainVerticleTest extends TestBase {
         .header(XOkapiHeaders.TENANT, TENANT_2)
         .delete("/reservoir/pmh-clients/" + PMH_CLIENT_ID);
   }
+
+
+  public class SruVerify {
+
+    List<String> identifiers = new LinkedList<>();
+    List<String> errors = new LinkedList<>();
+    int numberOfRecords = 0;
+    String response;
+
+    public SruVerify(String s) throws XMLStreamException {
+        InputStream stream = new ByteArrayInputStream(s.getBytes());
+        XMLInputFactory factory = XMLInputFactory.newInstance();
+        XMLStreamReader xmlStreamReader = factory.createXMLStreamReader(stream);
+
+        int level = 0;
+        while (xmlStreamReader.hasNext()) {
+          int event = xmlStreamReader.next();
+          if (event == XMLStreamConstants.START_ELEMENT) {
+            level++;
+            String elem = xmlStreamReader.getLocalName();
+            if (level == 1) {
+              response = elem;
+            } else if ("numberOfRecords".equals(elem)) {
+              if (level != 2 && level <= 4) {
+                throw new IllegalStateException("numberOfRecords not at level 2");
+              }
+              event = xmlStreamReader.next();
+              if (event == XMLStreamConstants.CHARACTERS) {
+                numberOfRecords = Integer.parseInt(xmlStreamReader.getText());
+              }
+            } else if ("diagnostic".equals(elem)) {
+              if (level < 3) {
+                throw new IllegalStateException("diagnostic not at level 3");
+              }
+            } else if ("message".equals(elem)) {
+              if (level < 4) {
+                throw new IllegalStateException("message not at level 4");
+              }
+              event = xmlStreamReader.next();
+              if (event == XMLStreamConstants.CHARACTERS) {
+                errors.add(xmlStreamReader.getText());
+              }
+            } else if ("records".equals(elem)) {
+              if (level != 2 && level <= 4 ) {
+                throw new IllegalStateException("records not at level 2");
+              }
+            } else if ("record".equals(elem)) {
+              if (level != 3 && level <= 4) {
+                throw new IllegalStateException("record not at level 3");
+              }
+            } else if ("recordData".equals(elem)) {
+              if (level < 4) {
+                throw new IllegalStateException("recordData not at level 4");
+              }
+              identifiers.add("1");
+            }
+          }
+          if (event == XMLStreamConstants.END_ELEMENT) {
+            level--;
+          }
+        }
+      }
+    }
 
   @Test
   public void testAdminHealth() {
@@ -1208,7 +1272,7 @@ public class MainVerticleTest extends TestBase {
 
     String datestamp2 = new JsonObject(s).getJsonArray("items").getJsonObject(0).getString("datestamp");
 
-    MatcherAssert.assertThat(datestamp2, greaterThan(datestamp1));
+    assertThat(datestamp2, greaterThan(datestamp1));
   }
 
   @Test
@@ -1284,12 +1348,12 @@ public class MainVerticleTest extends TestBase {
     RestAssured.given()
       .header(XOkapiHeaders.TENANT, TENANT_1)
       .delete("/reservoir/config/modules/issn-matcher")
-      .then().statusCode(204);
+      .then().statusCode(anyOf(is(204), is(404)));
 
     RestAssured.given()
       .header(XOkapiHeaders.TENANT, TENANT_1)
       .delete("/reservoir/config/matchkeys/issn")
-      .then().statusCode(204);
+      .then().statusCode(anyOf(is(204), is(404)));
   }
 
   JsonObject createIsbnMatchKey() {
@@ -1361,8 +1425,6 @@ public class MainVerticleTest extends TestBase {
         .param("query", "cql.allRecords=true")
         .delete("/reservoir/records")
         .then().statusCode(204);
-
-    deleteIssnMatchKey();
   }
 
   @Test
@@ -1398,7 +1460,6 @@ public class MainVerticleTest extends TestBase {
         .delete("/reservoir/records")
         .then().statusCode(204);
 
-    deleteIssnMatchKey();
   }
 
   @Test
@@ -1562,7 +1623,6 @@ public class MainVerticleTest extends TestBase {
         .delete("/reservoir/config/matchkeys/isbn")
         .then().statusCode(204);
 
-    deleteIssnMatchKey();
   }
 
   @Test
@@ -1808,8 +1868,6 @@ public class MainVerticleTest extends TestBase {
         .body("items[0].records", hasSize(1))
         .body("items[1].records", hasSize(1))
         .extract().body().asString();
-
-    deleteIssnMatchKey();
   }
 
   @Test
@@ -2261,11 +2319,258 @@ public class MainVerticleTest extends TestBase {
         .put("/reservoir/config/oai")
         .then()
         .statusCode(400);
-
   }
 
   @Test
-  @java.lang.SuppressWarnings("squid:S5961")
+  @java.lang.SuppressWarnings("squid:S5961") // Test methods should not contain too many assertions
+  public void testSru() throws XMLStreamException, IOException, SAXException {
+    createIsbnMatchKey();
+    createIssnMatchKey();
+    JsonArray ingest1a = new JsonArray()
+        .add(new JsonObject()
+            .put("localId", "S101")
+            .put("payload", new JsonObject()
+                .put("marc", new JsonObject()
+                    .put("leader", "00914naa  2200337   450 ")
+                    .put("fields", new JsonArray()
+                        .add(new JsonObject()
+                            .put("999", new JsonObject()
+                                .put("ind1", " ")
+                                .put("ind2", " ")
+                                .put("subfields", new JsonArray()
+                                    .add(new JsonObject()
+                                        .put("a", "S101a")
+                                    )
+                                    .add(new JsonObject()
+                                        .put("b", "S101b")
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+                .put("inventory", new JsonObject()
+                    .put("isbn", new JsonArray().add("1"))
+                    .put("issn", new JsonArray().add("01"))
+                )
+            )
+        );
+    JsonArray ingest1b = new JsonArray()
+        .add(new JsonObject()
+            .put("localId", "S102")
+            .put("payload", new JsonObject()
+                .put("marc", new JsonObject()
+                    .put("leader", "00914naa  2200337   450 ")
+                    .put("fields", new JsonArray()
+                        .add(new JsonObject()
+                            .put("999", new JsonObject()
+                                .put("ind1", " ")
+                                .put("ind2", " ")
+                                .put("subfields", new JsonArray()
+                                    .add(new JsonObject()
+                                        .put("a", "S102a")
+                                    )
+                                    .add(new JsonObject()
+                                        .put("b", "S102b")
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+                .put("inventory", new JsonObject()
+                    .put("isbn", new JsonArray().add("2").add("3"))
+                    .put("issn", new JsonArray().add("01"))
+                )
+            )
+        );
+    //post records individually, otherwise the order of clusters and records in clusters is non-deterministic
+    ingestRecords(ingest1a, SOURCE_ID_1, 2);
+    ingestRecords(ingest1b, SOURCE_ID_1, 2);
+
+    // use OAI to get record identifiers out
+    String s = RestAssured.given()
+      .header(XOkapiHeaders.TENANT, TENANT_1)
+      .param("set", "isbn")
+      .param("verb", "ListRecords")
+      .param("metadataPrefix", "marcxml")
+      .get("/reservoir/oai")
+      .then().statusCode(200)
+      .contentType("text/xml")
+      .extract().body().asString();
+
+    List<String> identifiers = new LinkedList<>();
+    verifyOaiResponse(s, "ListRecords", identifiers, 2, null);
+
+    // SRU tests
+
+    // explain
+    s = RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .get("/reservoir/sru")
+        .then().statusCode(200)
+        .contentType("text/xml")
+        .extract().body().asString();
+
+    SruVerify sruVerify = new SruVerify(s);
+    assertThat(sruVerify.response, is("explainResponse"));
+    assertThat(sruVerify.numberOfRecords, is(0));
+    assertThat(sruVerify.identifiers, hasSize(0));
+    assertThat(sruVerify.errors, hasSize(0));
+
+    s = RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .param("version", "1.1")
+        .get("/reservoir/sru")
+        .then().statusCode(200)
+        .contentType("text/xml")
+        .extract().body().asString();
+
+    sruVerify = new SruVerify(s);
+    assertThat(sruVerify.response, is("explainResponse"));
+    assertThat(sruVerify.numberOfRecords, is(0));
+    assertThat(sruVerify.identifiers, hasSize(0));
+    assertThat(sruVerify.errors, hasSize(1));
+    assertThat(sruVerify.errors.get(0), is("Unsupported version"));
+
+    s = RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .param("version", "2.0")
+        .get("/reservoir/sru")
+        .then().statusCode(200)
+        .contentType("text/xml")
+        .extract().body().asString();
+
+    sruVerify = new SruVerify(s);
+    assertThat(sruVerify.response, is("explainResponse"));
+    assertThat(sruVerify.numberOfRecords, is(0));
+    assertThat(sruVerify.identifiers, hasSize(0));
+    assertThat(sruVerify.errors, hasSize(0));
+
+    // CQL syntax error
+    s = RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .param("query", "xd=")
+        .get("/reservoir/sru")
+        .then().statusCode(200)
+        .contentType("text/xml")
+        .extract().body().asString();
+
+    sruVerify = new SruVerify(s);
+    assertThat(sruVerify.response, is("searchRetrieveResponse"));
+    assertThat(sruVerify.numberOfRecords, is(0));
+    assertThat(sruVerify.identifiers, hasSize(0));
+    assertThat(sruVerify.errors, hasSize(1));
+    assertThat(sruVerify.errors.get(0), is("Query syntax error"));
+
+    // unsupported SRU version
+    s = RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .param("query", "xd=1")
+        .param("version", "1.2")
+        .get("/reservoir/sru")
+        .then().statusCode(200)
+        .contentType("text/xml")
+        .extract().body().asString();
+
+    sruVerify = new SruVerify(s);
+    assertThat(sruVerify.response, is("searchRetrieveResponse"));
+    assertThat(sruVerify.numberOfRecords, is(0));
+    assertThat(sruVerify.identifiers, hasSize(0));
+    assertThat(sruVerify.errors, hasSize(1));
+    assertThat(sruVerify.errors.get(0), is("Unsupported version"));
+
+    // unsupported record schema
+        s = RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .param("query", "xd=1")
+        .param("version", "2.0")
+        .param("recordSchema", "mods")
+        .get("/reservoir/sru")
+        .then().statusCode(200)
+        .contentType("text/xml")
+        .extract().body().asString();
+
+    sruVerify = new SruVerify(s);
+    assertThat(sruVerify.response, is("searchRetrieveResponse"));
+    assertThat(sruVerify.numberOfRecords, is(0));
+    assertThat(sruVerify.identifiers, hasSize(0));
+    assertThat(sruVerify.errors, hasSize(1));
+    assertThat(sruVerify.errors.get(0), is("Unknown schema for retrieval"));
+
+    // search for one record
+    s = RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .param("query", "rec.id=" + identifiers.get(0).substring(4))
+        .param("startRecord", "1")
+        .param("maximumRecord", "1")
+        .param("recordSchema", "marcxml")
+        .get("/reservoir/sru")
+        .then().statusCode(200)
+        .contentType("text/xml")
+        .extract().body().asString();
+
+    assertThat(s, containsString("numberOfRecords>1<"));
+    assertThat(s, containsString("<subfield code=\"s\">SOURCE-1</subfield>"));
+
+    sruVerify = new SruVerify(s);
+    assertThat(sruVerify.response, is("searchRetrieveResponse"));
+    assertThat(sruVerify.numberOfRecords, is(1));
+    assertThat(sruVerify.identifiers, hasSize(1));
+    assertThat(sruVerify.errors, hasSize(0));
+
+    s = RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .param("query", "cql.AllRecords=true")
+        .get("/reservoir/sru")
+        .then().statusCode(200)
+        .contentType("text/xml")
+        .extract().body().asString();
+
+    sruVerify = new SruVerify(s);
+    assertThat(sruVerify.numberOfRecords, is(3));
+    assertThat(sruVerify.identifiers, hasSize(3));
+    assertThat(sruVerify.errors, hasSize(0));
+
+    s = RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .param("query", "cql.AllRecords=true")
+        .param("startRecord", "3")
+        .get("/reservoir/sru")
+        .then().statusCode(200)
+        .contentType("text/xml")
+        .extract().body().asString();
+
+    sruVerify = new SruVerify(s);
+    assertThat(sruVerify.numberOfRecords, is(3));
+    assertThat(sruVerify.identifiers, hasSize(1));
+    assertThat(sruVerify.errors, hasSize(0));
+
+    s = RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .param("query", "cql.AllRecords=true")
+        .param("maximumRecords", "2")
+        .get("/reservoir/sru")
+        .then().statusCode(200)
+        .contentType("text/xml")
+        .extract().body().asString();
+
+    sruVerify = new SruVerify(s);
+    assertThat(sruVerify.numberOfRecords, is(3));
+    assertThat(sruVerify.identifiers, hasSize(2));
+    assertThat(sruVerify.errors, hasSize(0));
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .param("query", "cql.AllRecords=true")
+        .param("maximumRecords", "x")
+        .get("/reservoir/sru")
+        .then().statusCode(400);
+  }
+
+
+  @Test
+  @java.lang.SuppressWarnings("squid:S5961") // Test methods should not contain too many assertions
   public void testOaiSimple() throws XMLStreamException, IOException, SAXException {
     createIsbnMatchKey();
 
@@ -2755,8 +3060,6 @@ public class MainVerticleTest extends TestBase {
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .delete("/reservoir/config/matchkeys/isbn")
         .then().statusCode(204);
-
-    deleteIssnMatchKey();
   }
 
   @Test

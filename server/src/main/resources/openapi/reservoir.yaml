@@ -951,6 +951,31 @@ paths:
           $ref: "#/components/responses/trait_404"
         "500":
           $ref: "#/components/responses/trait_500"
+  /reservoir/sru:
+    parameters:
+      - $ref: headers/okapi-tenant.yaml
+      - $ref: headers/okapi-token.yaml
+      - $ref: headers/okapi-url.yaml
+      - $ref: parameters/query.yaml
+      - $ref: parameters/start-record.yaml
+      - $ref: parameters/maximum-records.yaml
+      - $ref: parameters/sru-version.yaml
+      - $ref: parameters/sru-operation.yaml
+      - $ref: parameters/sru-record-schema.yaml
+    get:
+      description: SRU service
+      operationId: sruService
+      responses:
+        "200":
+          description: SRU response
+          content:
+            text/xml:
+              schema:
+                type: string
+        "400":
+          $ref: "#/components/responses/trait_400"
+        "500":
+          $ref: "#/components/responses/trait_500"
 # Reservoir error responses
 components:
   responses:

@@ -119,7 +119,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
   Future<Void> deleteGlobalRecords(RoutingContext ctx) {
     PgCqlDefinition definition = createDefinitionGlobalRecords();
     RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    String query = Util.getQueryParameter(params);
+    String query = Util.getQueryParameterQuery(params);
     if (query == null) {
       failHandler(400, ctx, "Must specify query for delete records");
       return Future.succeededFuture();
@@ -133,7 +133,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
   Future<Void> getGlobalRecords(RoutingContext ctx) {
     PgCqlDefinition definition = createDefinitionGlobalRecords();
     RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameter(params));
+    PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameterQuery(params));
     Storage storage = new Storage(ctx);
     return storage.getGlobalRecords(ctx, pgCqlQuery.getWhereClause(),
         pgCqlQuery.getOrderByClause());
@@ -174,8 +174,8 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
         new PgCqlFieldNumber().withColumn(CqlFields.SOURCE_VERSION.getQualifiedSqlName()));
 
     RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameter(params));
-    String matchKeyId = Util.getParameterString(params.queryParameter("matchkeyid"));
+    PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameterQuery(params));
+    String matchKeyId = Util.getQueryParameter(params, "matchkeyid");
     Storage storage = new Storage(ctx);
     return storage.selectMatchKeyConfig(matchKeyId).compose(conf -> {
       if (conf == null) {
@@ -199,7 +199,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
         new PgCqlFieldNumber().withColumn(CqlFields.SOURCE_VERSION.getQualifiedSqlName()));
 
     RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameter(params));
+    PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameterQuery(params));
     Storage storage = new Storage(ctx);
     return storage.touchClusters(pgCqlQuery)
         .map(count -> new JsonObject().put("count", count))
@@ -320,7 +320,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     definition.addField(CqlFields.MATCHER.getCqlName(), new PgCqlFieldText().withExact());
 
     RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameter(params));
+    PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameterQuery(params));
 
     Storage storage = new Storage(ctx);
     return storage.getMatchKeyConfigs(ctx, pgCqlQuery.getWhereClause(),
@@ -411,7 +411,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     definition.addField(CqlFields.FUNCTION.getCqlName(), new PgCqlFieldText().withExact());
 
     RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameter(params));
+    PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameterQuery(params));
 
     Storage storage = new Storage(ctx);
     return storage.selectCodeModuleEntities(ctx, pgCqlQuery.getWhereClause(),
@@ -543,6 +543,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
           add(routerBuilder, "startOaiPmhClient", oaiPmhClient::start);
           add(routerBuilder, "stopOaiPmhClient", oaiPmhClient::stop);
           add(routerBuilder, "statusOaiPmhClient", oaiPmhClient::status);
+          add(routerBuilder, "sruService", SruService::get);
           Router router = Router.router(vertx);
           // this endpoint is streaming, and we handle it without OpenAPI and validation
           router.put("/reservoir/records").handler(ctx ->

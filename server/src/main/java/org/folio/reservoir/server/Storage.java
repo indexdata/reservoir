@@ -1198,9 +1198,8 @@ public class Storage {
         );
   }
 
-  Future<Void> streamResult(RoutingContext ctx, String distinct,
-      String from, String orderByClause, String property, Function<Row,
-      Future<JsonObject>> handler) {
+  Future<Void> streamResult(RoutingContext ctx, String distinct,  String from,
+      String orderByClause, String property, Function<Row, Future<JsonObject>> handler) {
 
     return streamResult(ctx, distinct, distinct, Tuple.tuple(), List.of(from),
         Collections.emptyList(), orderByClause, property, handler);
@@ -1249,5 +1248,90 @@ public class Storage {
             tuple, property, facets, handler)
             .onFailure(x -> sqlConnection.close()));
   }
+
+  Future<ModuleExecutable> getTransformer(RoutingContext ctx) {
+    return selectOaiConfig()
+        .compose(oaiCfg -> {
+          if (oaiCfg == null) {
+            return Future.succeededFuture(null);
+          }
+          String transformerProp = oaiCfg.getString("transformer");
+          if (transformerProp == null) {
+            return Future.succeededFuture(null);
+          }
+          ModuleInvocation invocation = new ModuleInvocation(transformerProp);
+          return selectCodeModuleEntity(invocation.getModuleName())
+              .compose(entity -> {
+                if (entity == null) {
+                  return Future.failedFuture("Transformer module '"
+                    + invocation.getModuleName() + "' not found");
+                }
+                return ModuleCache.getInstance().lookup(ctx.vertx(), TenantUtil.tenant(ctx), entity)
+                          .map(mod -> new ModuleExecutable(mod, invocation));
+              });
+        });
+  }
+
+  Future<Integer> getTotalRecords(PgCqlQuery pgCqlQuery) {
+    String sqlWhere = pgCqlQuery.getWhereClause();
+    final String wClause = sqlWhere == null ? "" : " WHERE " + sqlWhere;
+    String sqlQuery = "SELECT COUNT(*) FROM " + getClusterMetaTable() + wClause;
+    return getPool()
+        .withConnection(conn -> conn.query(sqlQuery)
+            .execute()
+            .map(res -> res.iterator().next().getInteger(0)));
+  }
+
+  Future<Void> getMarcxmlRecords(RoutingContext ctx, PgCqlQuery pgCqlQuery,
+      int offset, int limit, Function<String, Future<Void>> handler) {
+    String sqlWhere = pgCqlQuery.getWhereClause();
+    final String wClause = sqlWhere == null ? "" : " WHERE " + sqlWhere;
+    String sqlQuery = "SELECT * FROM " + getClusterMetaTable() + wClause
+        + " LIMIT " + limit + " OFFSET " + offset;
+    return getMarcxmlRecords(ctx, sqlQuery, handler);
+  }
+
+  private Future<Void> getMarcxmlRecords(RoutingContext ctx, String sqlQuery,
+      Function<String, Future<Void>> handler) {
+    return getTransformer(ctx).compose(transformer -> {
+      log.info("SQL Query: {}", sqlQuery);
+      return getPool()
+          .withConnection(conn -> conn.query(sqlQuery)
+              .execute()
+              .compose(res -> {
+                RowIterator<Row> iterator = res.iterator();
+                Future<Void> future = Future.succeededFuture();
+                while (iterator.hasNext()) {
+                  Row row = iterator.next();
+                  future = future.compose(x -> {
+                    ClusterRecordItem cr = new ClusterRecordItem(row);
+                    return cr.populateCluster(this, conn, true)
+                      .compose(cb -> ClusterMarcXml.getClusterMarcXml(cb, transformer, ctx.vertx())
+                      .compose(marcxml -> handler.apply(marcxml)));
+                  });
+                }
+                return future;
+              }
+        ));
+    });
+  }
+
+  Future<Row> getClusterRecord(RoutingContext ctx, UUID clusterId) {
+    return getTransformer(ctx).compose(transformer -> {
+      String sqlQuery = "SELECT * FROM " + getClusterMetaTable() + " WHERE cluster_id = $1";
+      return getPool()
+          .withConnection(conn -> conn.preparedQuery(sqlQuery)
+              .execute(Tuple.of(clusterId))
+              .compose(res -> {
+                RowIterator<Row> iterator = res.iterator();
+                if (!iterator.hasNext()) {
+                  return Future.succeededFuture(null);
+                }
+                Row row = iterator.next();
+                return Future.succeededFuture(row);
+              }));
+    });
+  }
+
 
 }

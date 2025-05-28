@@ -19,8 +19,12 @@ public final class Util {
     return parameter == null ? null : parameter.getString();
   }
 
-  static String getQueryParameter(RequestParameters params) {
-    return Util.getParameterString(params.queryParameter("query"));
+  static String getQueryParameter(RequestParameters params, String key) {
+    return Util.getParameterString(params.queryParameter(key));
+  }
+
+  static String getQueryParameterQuery(RequestParameters params) {
+    return getQueryParameter(params, "query");
   }
 
   /**

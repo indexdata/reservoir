@@ -1,0 +1,6 @@
+in: query
+name: operation
+description: SRU operation, such as searchRetrieve
+required: false
+schema:
+  type: string
