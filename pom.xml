@@ -294,7 +294,10 @@
         <configuration>
           <release>21</release>
           <encoding>UTF-8</encoding>
-          <compilerArgument>-Xlint:unchecked</compilerArgument>
+          <compilerArgs>
+            <arg>-Xlint:unchecked</arg>
+            <arg>-Xlint:-options</arg>
+          </compilerArgs>
         </configuration>
       </plugin>
 
