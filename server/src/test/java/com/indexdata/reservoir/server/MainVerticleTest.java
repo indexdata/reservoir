@@ -16,6 +16,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import com.indexdata.reservoir.server.entity.CodeModuleEntity;
 import io.restassured.RestAssured;
 import io.vertx.core.Future;
+import io.vertx.core.http.HttpResponseExpectation;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
@@ -46,7 +47,6 @@ import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.transform.Source;
 import javax.xml.transform.stream.StreamSource;
-import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.sqlclient.Tuple;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -3598,25 +3598,25 @@ public class MainVerticleTest extends TestBase {
 
     f = f.compose(t ->
         webClient.postAbs(OKAPI_URL + "/_/proxy/modules")
-            .expect(ResponsePredicate.SC_CREATED)
             .sendJsonObject(new JsonObject(md))
+            .expecting(HttpResponseExpectation.SC_CREATED)
             .mapEmpty());
 
     f = f.compose(t ->
         webClient.postAbs(OKAPI_URL + "/_/discovery/modules")
-            .expect(ResponsePredicate.SC_CREATED)
             .sendJsonObject(new JsonObject()
                 .put("instId", nextModule)
                 .put("srvcId", nextModule)
                 .put("url", MODULE_URL))
+            .expecting(HttpResponseExpectation.SC_CREATED)
             .mapEmpty());
 
     f = f.compose(t -> webClient.postAbs(OKAPI_URL + "/_/proxy/tenants/" + TENANT_1 + "/install")
-        .expect(ResponsePredicate.SC_OK)
         .sendJson(new JsonArray().add(new JsonObject()
             .put("from", MODULE_ID)
             .put("id", nextModule)
             .put("action", "enable")))
+        .expecting(HttpResponseExpectation.SC_OK)
         .mapEmpty());
 
     f.onComplete(context.asyncAssertSuccess());

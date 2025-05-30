@@ -29,6 +29,7 @@ public class IngestWriteStream implements WriteStream<JsonObject> {
   AtomicInteger ops = new AtomicInteger();
   int queueSize = 5;
   boolean ingest;
+  Throwable failure;
   private static final Logger log = LogManager.getLogger(IngestWriteStream.class);
   private static final String LOCAL_ID = "localId";
 
@@ -82,6 +83,9 @@ public class IngestWriteStream implements WriteStream<JsonObject> {
           return future;
         })
         .onFailure(e -> {
+          if (failure == null) {
+            failure = e;
+          }
           if (exceptionHandler != null) {
             exceptionHandler.handle(e);
           }
@@ -94,7 +98,11 @@ public class IngestWriteStream implements WriteStream<JsonObject> {
           if (ops.get() == 0 && ended) {
             log.info("{} {}", params.getSummary(fileName), stats);
             if (endHandler != null) {
-              endHandler.handle(Future.succeededFuture());
+              if (failure != null) {
+                endHandler.handle(Future.failedFuture(failure));
+              } else {
+                endHandler.handle(Future.succeededFuture());
+              }
             }
           }
         });

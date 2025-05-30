@@ -4,20 +4,21 @@ import com.indexdata.reservoir.util.AsyncCodec;
 import com.indexdata.reservoir.util.IngestRecord;
 import com.indexdata.reservoir.util.SourceId;
 import com.indexdata.reservoir.util.XmlSerializer;
+import io.vertx.core.Expectation;
 import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.http.HttpResponseExpectation;
+import io.vertx.core.http.HttpResponseHead;
 import io.vertx.core.http.HttpVersion;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
-import io.vertx.ext.web.client.predicate.ErrorConverter;
-import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -65,15 +66,12 @@ public class Client {
 
   List<Templates> templates = new LinkedList<>();
 
-
-  ErrorConverter converter = ErrorConverter.createFullBody(result -> {
-    HttpResponse<Buffer> response = result.response();
-    return new IOException(
-      String.format("%1d %2s", response.statusCode(), response.bodyAsString()));
-  });
-
-  ResponsePredicate errorPredicate = ResponsePredicate
-      .create(ResponsePredicate.SC_SUCCESS, converter);
+  Expectation<HttpResponseHead> errorExpectation =
+      HttpResponseExpectation.SC_SUCCESS.wrappingFailure((resp, err) -> {
+        HttpResponse<?> response = (HttpResponse<?>) resp;
+        return new IOException(
+          String.format("%1d %2s", resp.statusCode(), response.bodyAsString()));
+      });
 
   /**
    * Construct the client.
@@ -293,9 +291,9 @@ public class Client {
                         .putHeader(HttpHeaders.CONTENT_TYPE.toString(), "application/json")
                         .putHeader(HttpHeaders.CONTENT_ENCODING.toString(),
                             compress ? "gzip" : null)
-                        .expect(errorPredicate)
-                        .expect(ResponsePredicate.JSON)
-                        .sendBuffer(b))
+                        .sendBuffer(b)
+                        .expecting(errorExpectation))
+                        .expecting(HttpResponseExpectation.JSON)
                 .onFailure(e -> {
                   log.info("Failed offset (resume at): {}", currentOffset - 1);
                   promise.fail(e);
@@ -339,8 +337,9 @@ public class Client {
           String id = res.bodyAsJsonObject().getString("id");
           return webClient.getAbs(okapiUrl + "/_/tenant/" + id + "?wait=10000")
               .putHeaders(headers)
-              .expect(ResponsePredicate.SC_OK)
-              .expect(ResponsePredicate.JSON).send()
+              .send()
+              .expecting(HttpResponseExpectation.SC_OK)
+              .expecting(HttpResponseExpectation.JSON)
               .compose(res2 -> {
                 if (Boolean.FALSE.equals(res2.bodyAsJsonObject().getBoolean("complete"))) {
                   throw new ClientException("Incomplete job");
@@ -354,8 +353,9 @@ public class Client {
               .compose(x ->
                 webClient.deleteAbs(okapiUrl + "/_/tenant/" + id)
                     .putHeaders(headers)
-                    .expect(ResponsePredicate.SC_NO_CONTENT)
-                    .send().mapEmpty()
+                    .send()
+                    .expecting(HttpResponseExpectation.SC_NO_CONTENT)
+                    .mapEmpty()
               );
         });
   }
@@ -367,7 +367,7 @@ public class Client {
           ? new MarcStreamReader(stream)
           : new MarcPermissiveStreamReader(stream, true, true)),
         p))
-        .eventually(x -> {
+        .eventually(() -> {
           try {
             stream.close();
             return Future.succeededFuture();
@@ -382,7 +382,7 @@ public class Client {
     factory.setProperty(XMLInputFactory.SUPPORT_DTD, false);
     XMLStreamReader xmlStreamReader = factory.createXMLStreamReader(stream);
     return Future.<Void>future(p -> sendChunk(new XmlReaderProxy(xmlStreamReader), p))
-        .eventually(x -> {
+        .eventually(() -> {
           try {
             stream.close();
             return Future.succeededFuture();

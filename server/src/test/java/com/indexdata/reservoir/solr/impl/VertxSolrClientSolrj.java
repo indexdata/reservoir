@@ -5,12 +5,10 @@ import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import java.io.IOException;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.Map;
 import org.apache.solr.client.solrj.SolrClient;
-import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.impl.Http2SolrClient;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.client.solrj.response.UpdateResponse;
@@ -70,22 +68,14 @@ public class VertxSolrClientSolrj implements VertxSolrClient {
   }
 
   Future<UpdateResponse> add(Collection<SolrInputDocument> docs) {
-    return vertx.executeBlocking(p -> {
-      try {
-        p.complete(solrClient.add(collection, docs));
-      } catch (SolrServerException | IOException e) {
-        p.fail(e);
-      }
+    return vertx.executeBlocking(() -> {
+      return solrClient.add(collection, docs);
     });
   }
 
   Future<QueryResponse> query(SolrParams params) {
-    return vertx.executeBlocking(p -> {
-      try {
-        p.complete(solrClient.query(collection, params));
-      } catch (SolrServerException | IOException e) {
-        p.fail(e);
-      }
+    return vertx.executeBlocking(() -> {
+      return solrClient.query(collection, params);
     });
   }
 
@@ -102,12 +92,9 @@ public class VertxSolrClientSolrj implements VertxSolrClient {
 
   @Override
   public Future<JsonObject> commit() {
-    return vertx.executeBlocking(p -> {
-      try {
-        p.complete(solrClient.commit(collection));
-      } catch (SolrServerException | IOException e) {
-        p.fail(e);
-      }
-    }).map(x -> new JsonObject());
+    return vertx.executeBlocking(() -> {
+      solrClient.commit(collection);
+      return new JsonObject();
+    });
   }
 }

@@ -12,7 +12,6 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.streams.Pump;
 import io.vertx.core.streams.ReadStream;
 import io.vertx.ext.web.RoutingContext;
 import java.util.ArrayList;
@@ -34,13 +33,9 @@ public class UploadService {
 
   private Future<IngestStats> uploadPayloadStream(ReadStream<JsonObject> upload,
       IngestWriteStream ingestWriteStream, int queueSize) {
-    Promise<IngestStats> promise = Promise.promise();
-    upload.endHandler(x -> ingestWriteStream.end(y ->
-        promise.tryComplete(ingestWriteStream.stats())));
-    upload.exceptionHandler(promise::tryFail);
-    ingestWriteStream.exceptionHandler(promise::tryFail);
-    Pump.pump(upload, ingestWriteStream, queueSize).start();
-    return promise.future();
+
+    ReadStream<JsonObject> parser = upload;
+    return parser.pipeTo(ingestWriteStream).map(x -> ingestWriteStream.stats());
   }
 
   /**
