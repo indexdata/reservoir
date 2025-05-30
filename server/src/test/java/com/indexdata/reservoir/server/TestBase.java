@@ -8,6 +8,7 @@ import io.restassured.config.RestAssuredConfig;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpResponseExpectation;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -16,7 +17,6 @@ import io.vertx.core.net.NetSocket;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.client.WebClient;
-import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import javax.xml.XMLConstants;
 import javax.xml.validation.Schema;
 import javax.xml.validation.SchemaFactory;
@@ -117,50 +117,50 @@ public class TestBase {
     // register module
     f = f.compose(t ->
         webClient.postAbs(OKAPI_URL + "/_/proxy/modules")
-            .expect(ResponsePredicate.SC_CREATED)
             .sendJsonObject(new JsonObject(md))
+            .expecting(HttpResponseExpectation.SC_CREATED)
             .mapEmpty());
 
     // tell okapi where our module is running
     f = f.compose(t ->
         webClient.postAbs(OKAPI_URL + "/_/discovery/modules")
-            .expect(ResponsePredicate.SC_CREATED)
             .sendJsonObject(new JsonObject()
                 .put("instId", MODULE_ID)
                 .put("srvcId", MODULE_ID)
                 .put("url", MODULE_URL))
+            .expecting(HttpResponseExpectation.SC_CREATED)
             .mapEmpty());
 
     // create tenant 1
     f = f.compose(t ->
         webClient.postAbs(OKAPI_URL + "/_/proxy/tenants")
-            .expect(ResponsePredicate.SC_CREATED)
             .sendJsonObject(new JsonObject().put("id", TENANT_1))
+            .expecting(HttpResponseExpectation.SC_CREATED)
             .mapEmpty());
 
     // enable module for tenant 1
     f = f.compose(e ->
         webClient.postAbs(OKAPI_URL + "/_/proxy/tenants/" + TENANT_1 + "/install")
-            .expect(ResponsePredicate.SC_OK)
             .sendJson(new JsonArray().add(new JsonObject()
                 .put("id", MODULE_PREFIX)
                 .put("action", "enable")))
+            .expecting(HttpResponseExpectation.SC_OK)
             .mapEmpty());
 
     // create tenant 2
     f = f.compose(t ->
         webClient.postAbs(OKAPI_URL + "/_/proxy/tenants")
-            .expect(ResponsePredicate.SC_CREATED)
             .sendJsonObject(new JsonObject().put("id", TENANT_2))
+            .expecting(HttpResponseExpectation.SC_CREATED)
             .mapEmpty());
 
     // enable module for tenant 2
     f = f.compose(e ->
         webClient.postAbs(OKAPI_URL + "/_/proxy/tenants/" + TENANT_2 + "/install")
-            .expect(ResponsePredicate.SC_OK)
             .sendJson(new JsonArray().add(new JsonObject()
                 .put("id", MODULE_PREFIX)
                 .put("action", "enable")))
+            .expecting(HttpResponseExpectation.SC_OK)
             .mapEmpty());
 
     Router router = Router.router(vertx);

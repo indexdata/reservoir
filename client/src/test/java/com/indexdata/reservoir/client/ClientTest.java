@@ -164,7 +164,7 @@ public class ClientTest {
     };
     future = future.compose(x -> Client.exec(client, args));
 
-    future.eventually(x -> httpServer.close())
+    future.eventually(() -> httpServer.close())
         .onComplete(context.asyncAssertSuccess(res -> {
           context.assertEquals(2, requests.size()); // two requests
 
@@ -209,7 +209,7 @@ public class ClientTest {
     };
     future = future.compose(x -> Client.exec(client, args));
 
-    future.eventually(x -> httpServer.close())
+    future.eventually(() -> httpServer.close())
         .onComplete(context.asyncAssertFailure(e -> {
           context.assertEquals("400 {\"error\": \"bad request\"}", e.getMessage());
         }));
@@ -245,7 +245,7 @@ public class ClientTest {
     };
     future = future.compose(x -> Client.exec(client, args));
 
-    future.eventually(x -> httpServer.close())
+    future.eventually(() -> httpServer.close())
         .onComplete(context.asyncAssertSuccess(res -> {
           context.assertEquals(2, requests.size()); // two requests
 
@@ -294,7 +294,7 @@ public class ClientTest {
     };
     future = future.compose(x -> Client.exec(client, args));
 
-    future.eventually(x -> httpServer.close())
+    future.eventually(() -> httpServer.close())
         .onComplete(context.asyncAssertFailure(e -> {
           context.assertTrue(e.getMessage().startsWith("error parsing leader"));
         }));
@@ -331,7 +331,7 @@ public class ClientTest {
     };
     future = future.compose(x -> Client.exec(client, args));
 
-    future.eventually(x -> httpServer.close())
+    future.eventually(() -> httpServer.close())
         .onComplete(context.asyncAssertSuccess(e -> {
           context.assertEquals(1, requests.size()); // two requests
         }));
@@ -368,7 +368,7 @@ public class ClientTest {
     };
     future = future.compose(x -> Client.exec(client, args));
 
-    future.eventually(x -> httpServer.close())
+    future.eventually(() -> httpServer.close())
         .onComplete(context.asyncAssertSuccess(e -> {
           context.assertEquals(1, requests.size()); // two requests
         }));
@@ -404,7 +404,7 @@ public class ClientTest {
     };
     future = future.compose(x -> Client.exec(client, args));
 
-    future.eventually(x -> httpServer.close())
+    future.eventually(() -> httpServer.close())
         .onComplete(context.asyncAssertSuccess(e -> {
           context.assertEquals(1, requests.size()); // two requests
         }));
@@ -440,7 +440,7 @@ public class ClientTest {
     };
     future = future.compose(x -> Client.exec(client, args));
 
-    future.eventually(x -> httpServer.close())
+    future.eventually(() -> httpServer.close())
         .onComplete(context.asyncAssertSuccess(e -> {
           context.assertEquals(1, requests.size()); // two requests
         }));
@@ -476,7 +476,7 @@ public class ClientTest {
     };
     future = future.compose(x -> Client.exec(client, args));
 
-    future.eventually(x -> httpServer.close())
+    future.eventually(() -> httpServer.close())
         .onComplete(context.asyncAssertSuccess(res -> {
           context.assertEquals(3, requests.size());
 
@@ -526,7 +526,7 @@ public class ClientTest {
     };
     future = future.compose(x -> Client.exec(client, args));
 
-    future.eventually(x -> httpServer.close())
+    future.eventually(() -> httpServer.close())
         .onComplete(context.asyncAssertSuccess(res -> {
           context.assertEquals(3, requests.size());
 
@@ -576,7 +576,7 @@ public class ClientTest {
     };
     future = future.compose(x -> Client.exec(client, args));
 
-    future.eventually(x -> httpServer.close())
+    future.eventually(() -> httpServer.close())
         .onComplete(context.asyncAssertSuccess(res -> {
           context.assertEquals(3, requests.size());
 
@@ -627,7 +627,7 @@ public class ClientTest {
     };
     future = future.compose(x -> Client.exec(client, args));
 
-    future.eventually(x -> httpServer.close())
+    future.eventually(() -> httpServer.close())
         .onComplete(context.asyncAssertSuccess(res -> {
           context.assertEquals(1, requests.size());
 
@@ -674,7 +674,7 @@ public class ClientTest {
     };
     future = future.compose(x -> Client.exec(client, args));
 
-    future.eventually(x -> httpServer.close())
+    future.eventually(() -> httpServer.close())
         .onComplete(context.asyncAssertSuccess(res -> {
           context.assertEquals(0, requests.size());
         }));
@@ -713,7 +713,7 @@ public class ClientTest {
     };
     future = future.compose(x -> Client.exec(client, args));
 
-    future.eventually(x -> httpServer.close())
+    future.eventually(() -> httpServer.close())
         .onComplete(context.asyncAssertSuccess(res -> {
           context.assertEquals(0, requests.size());
         }));

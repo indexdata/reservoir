@@ -14,7 +14,7 @@ public class Main {
   public static void main(String[] args) {
     Vertx vertx = Vertx.vertx();
     Client.exec(vertx, args)
-        .eventually(x -> vertx.close())
+        .eventually(() -> vertx.close())
         .onFailure(e -> {
           log.error(e.getMessage(), e);
           System.exit(1);
