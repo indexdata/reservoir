@@ -33,7 +33,7 @@ public class ClientTest {
   @After
   public void before(TestContext context) {
     client.close();
-    vertx.close(context.asyncAssertSuccess());
+    vertx.close().onComplete(context.asyncAssertSuccess());
   }
 
   @Test
@@ -93,7 +93,7 @@ public class ClientTest {
     router.post("/_/tenant")
         .handler(BodyHandler.create())
         .handler(c -> {
-          if (Boolean.TRUE.equals(c.getBodyAsJson().getBoolean("purge"))) {
+          if (Boolean.TRUE.equals(c.body().asJsonObject().getBoolean("purge"))) {
             c.response().setStatusCode(204);
             c.response().end();
             return;
@@ -130,7 +130,7 @@ public class ClientTest {
     };
     future = future.compose(x -> Client.exec(client, args));
 
-    future.eventually(x -> httpServer.close())
+    future.eventually(() -> httpServer.close())
         .onComplete(context.asyncAssertSuccess());
   }
 
@@ -146,7 +146,7 @@ public class ClientTest {
     router.put("/reservoir/records")
         .handler(BodyHandler.create())
         .handler(c -> {
-          requests.add(c.getBodyAsJson());
+          requests.add(c.body().asJsonObject());
           c.response().setStatusCode(200);
           c.response().putHeader("Content-Type", "application/json");
           c.response().end("{}");
@@ -227,7 +227,7 @@ public class ClientTest {
     router.put("/reservoir/records")
         .handler(BodyHandler.create())
         .handler(c -> {
-          requests.add(c.getBodyAsJson());
+          requests.add(c.body().asJsonObject());
           c.response().setStatusCode(200);
           c.response().putHeader("Content-Type", "application/json");
           c.response().end("{}");
@@ -275,7 +275,7 @@ public class ClientTest {
     router.put("/reservoir/records")
         .handler(BodyHandler.create())
         .handler(c -> {
-          requests.add(c.getBodyAsJson());
+          requests.add(c.body().asJsonObject());
           c.response().setStatusCode(200);
           c.response().putHeader("Content-Type", "application/json");
           c.response().end("{}");
@@ -312,7 +312,7 @@ public class ClientTest {
     router.put("/reservoir/records")
         .handler(BodyHandler.create())
         .handler(c -> {
-          requests.add(c.getBodyAsJson());
+          requests.add(c.body().asJsonObject());
           c.response().setStatusCode(200);
           c.response().putHeader("Content-Type", "application/json");
           c.response().end("{}");
@@ -349,7 +349,7 @@ public class ClientTest {
     router.put("/reservoir/records")
         .handler(BodyHandler.create())
         .handler(c -> {
-          requests.add(c.getBodyAsJson());
+          requests.add(c.body().asJsonObject());
           c.response().setStatusCode(200);
           c.response().putHeader("Content-Type", "application/json");
           c.response().end("{}");
@@ -386,7 +386,7 @@ public class ClientTest {
     router.put("/reservoir/records")
         .handler(BodyHandler.create())
         .handler(c -> {
-          requests.add(c.getBodyAsJson());
+          requests.add(c.body().asJsonObject());
           c.response().setStatusCode(200);
           c.response().putHeader("Content-Type", "application/json");
           c.response().end("{}");
@@ -422,7 +422,7 @@ public class ClientTest {
     router.put("/reservoir/records")
         .handler(BodyHandler.create())
         .handler(c -> {
-          requests.add(c.getBodyAsJson());
+          requests.add(c.body().asJsonObject());
           c.response().setStatusCode(200);
           c.response().putHeader("Content-Type", "application/json");
           c.response().end("{}");
@@ -458,7 +458,7 @@ public class ClientTest {
     router.put("/reservoir/records")
         .handler(BodyHandler.create())
         .handler(c -> {
-          requests.add(c.getBodyAsJson());
+          requests.add(c.body().asJsonObject());
           c.response().setStatusCode(200);
           c.response().putHeader("Content-Type", "application/json");
           c.response().end("{}");
@@ -507,7 +507,7 @@ public class ClientTest {
     router.put("/reservoir/records")
         .handler(BodyHandler.create())
         .handler(c -> {
-          requests.add(c.getBodyAsJson());
+          requests.add(c.body().asJsonObject());
           c.response().setStatusCode(200);
           c.response().putHeader("Content-Type", "application/json");
           c.response().end("{}");
@@ -557,7 +557,7 @@ public class ClientTest {
     router.put("/reservoir/records")
         .handler(BodyHandler.create())
         .handler(c -> {
-          requests.add(c.getBodyAsJson());
+          requests.add(c.body().asJsonObject());
           c.response().setStatusCode(200);
           c.response().putHeader("Content-Type", "application/json");
           c.response().end("{}");
@@ -607,7 +607,7 @@ public class ClientTest {
     router.put("/reservoir/records")
         .handler(BodyHandler.create())
         .handler(c -> {
-          requests.add(c.getBodyAsJson());
+          requests.add(c.body().asJsonObject());
           c.response().setStatusCode(200);
           c.response().putHeader("Content-Type", "application/json");
           c.response().end("{}");
@@ -653,7 +653,7 @@ public class ClientTest {
     router.put("/reservoir/records")
         .handler(BodyHandler.create())
         .handler(c -> {
-          requests.add(c.getBodyAsJson());
+          requests.add(c.body().asJsonObject());
           c.response().setStatusCode(200);
           c.response().putHeader("Content-Type", "application/json");
           c.response().end("{}");
@@ -692,7 +692,7 @@ public class ClientTest {
     router.put("/reservoir/records")
         .handler(BodyHandler.create())
         .handler(c -> {
-          requests.add(c.getBodyAsJson());
+          requests.add(c.body().asJsonObject());
           c.response().setStatusCode(200);
           c.response().putHeader("Content-Type", "application/json");
           c.response().end("{}");
