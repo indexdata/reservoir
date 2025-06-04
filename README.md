@@ -29,7 +29,7 @@ This project has three subprojects:
 
 Requirements:
 
-* Java 22 (later versions might not work with graalvm)
+* Java 24 (other versions might not work with graalvm)
 * Maven 3.6.3 or later
 * Docker (unless `-DskipTests` is used)
 
@@ -45,9 +45,11 @@ Build all components with: `mvn install`
 You must install [sdkman](https://sdkman.io) first. Then perform
 
     . $HOME/.sdkman/bin/sdkman-init.sh
-    sdk install java 22-graalce
+    sdk install java 24-graalce
     . $HOME/.sdkman/bin/sdkman-init.sh
-    mvn -Pnative clean native:compile
+    mvn -Pnative package
+
+The resulting binary is `server/target/reservoir-native`.
 
 ## Server
 

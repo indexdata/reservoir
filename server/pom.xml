@@ -384,6 +384,7 @@
               <skipNativeTests>true</skipNativeTests>
               <debug>true</debug>
               <verbose>true</verbose>
+              <quickBuild>true</quickBuild>
             </configuration>
           </plugin>
         </plugins>
