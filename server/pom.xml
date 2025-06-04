@@ -1,3 +1,4 @@
+<?xml version="1.0"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
@@ -11,6 +12,8 @@
     <vertx.launcher>com.indexdata.reservoir.server.ReservoirLauncher</vertx.launcher>
     <vertx.verticle>com.indexdata.reservoir.server.MainVerticle</vertx.verticle>
     <graal.compiler.dir>${project.build.directory}/compiler</graal.compiler.dir>
+    <graalvm-maven-plugin.version>0.10.1</graalvm-maven-plugin.version>
+    <main.class>com.indexdata.reservoir.server.Main</main.class>
   </properties>
   <dependencies>
     <dependency>
@@ -147,10 +150,9 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
-
   <build>
     <plugins>
-     <plugin>
+      <plugin>
         <artifactId>maven-resources-plugin</artifactId>
         <inherited>false</inherited>
         <executions>
@@ -215,11 +217,11 @@
                 <filter>
                   <artifact>*:*</artifact>
                   <excludes>
-                   <exclude>META-INF/*.SF</exclude>
-                   <exclude>META-INF/*.DSA</exclude>
-                   <exclude>META-INF/*.RSA</exclude>
-                 </excludes>
-               </filter>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                  </excludes>
+                </filter>
               </filters>
             </configuration>
           </execution>
@@ -295,10 +297,10 @@
               <arguments>
                 <argument>--module-path</argument>
                 <!-- automatically creates the modulepath using all project dependencies, also adding the project build directory -->
-                <modulepath />
+                <modulepath/>
                 <argument>-classpath</argument>
                 <!-- automatically creates the classpath using all project dependencies, also adding the project build directory -->
-                <classpath />
+                <classpath/>
                 <argument>-XX:+UnlockExperimentalVMOptions</argument>
                 <argument>-XX:+EnableJVMCI</argument>
                 <argument>--upgrade-module-path=${graal.compiler.dir}</argument>
@@ -317,10 +319,10 @@
               <arguments>
                 <argument>--module-path</argument>
                 <!-- automatically creates the modulepath using all project dependencies, also adding the project build directory -->
-                <modulepath />
+                <modulepath/>
                 <argument>-classpath</argument>
                 <!-- automatically creates the classpath using all project dependencies, also adding the project build directory -->
-                <classpath />
+                <classpath/>
                 <argument>${vertx.launcher}</argument>
                 <argument>run</argument>
                 <argument>${vertx.verticle}</argument>
@@ -350,5 +352,42 @@
       </plugin>
     </plugins>
   </build>
-
+  <profiles>
+    <profile>
+      <id>native</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.graalvm.buildtools</groupId>
+            <artifactId>native-maven-plugin</artifactId>
+            <version>${graalvm-maven-plugin.version}</version>
+            <extensions>true</extensions>
+            <executions>
+              <execution>
+                <id>build-native</id>
+                <goals>
+                  <goal>compile-no-fork</goal>
+                </goals>
+                <phase>package</phase>
+              </execution>
+              <execution>
+                <id>test-native</id>
+                <goals>
+                  <goal>test</goal>
+                </goals>
+                <phase>test</phase>
+              </execution>
+            </executions>
+            <configuration>
+              <imageName>reservoir-native</imageName>
+              <mainClass>${main.class}</mainClass>
+              <skipNativeTests>true</skipNativeTests>
+              <debug>true</debug>
+              <verbose>true</verbose>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

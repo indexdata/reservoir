@@ -29,7 +29,7 @@ This project has three subprojects:
 
 Requirements:
 
-* Java 21 (later versions might not work with graalvm)
+* Java 22 (later versions might not work with graalvm)
 * Maven 3.6.3 or later
 * Docker (unless `-DskipTests` is used)
 
@@ -39,6 +39,15 @@ You need `JAVA_HOME` set, e.g.:
    * macOS: `export JAVA_HOME=$(/usr/libexec/java_home -v 17)`
 
 Build all components with: `mvn install`
+
+## Native image
+
+You must install [sdkman](https://sdkman.io) first. Then perform
+
+    . $HOME/.sdkman/bin/sdkman-init.sh
+    sdk install java 22-graalce
+    . $HOME/.sdkman/bin/sdkman-init.sh
+    mvn -Pnative clean native:compile
 
 ## Server
 
