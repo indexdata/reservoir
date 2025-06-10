@@ -26,7 +26,6 @@
    <module>server</module>
   </modules>
 
-
   <licenses>
     <license>
       <name>GNU Affero General Public License v3.0</name>
@@ -40,15 +39,15 @@
     <!-- graalvm >= 23.1.0 requires reorganisation: https://medium.com/graalvm/truffle-unchained-13887b77b62c -->
     <graalvm.version>23.1.7</graalvm.version>
     <log4j2.version>2.24.3</log4j2.version>
-    <vertx.version>4.5.14</vertx.version>
+    <vertx.version>4.5.15</vertx.version>
     <okapi.version>6.2.3</okapi.version>
-    <vertxlib.version>3.3.0</vertxlib.version>
+    <vertxlib.version>3.4.0</vertxlib.version>
     <micrometer.version>1.12.13</micrometer.version>
   </properties>
 
   <dependencyManagement>
     <dependencies>
-      <!-- first listed takes precedednce, e.g log4j-bom will override log4j deps from vertx-stack-depchain -->
+      <!-- first listed takes precedence, e.g log4j-bom will override log4j deps from vertx-stack-depchain -->
       <dependency>
         <groupId>org.apache.logging.log4j</groupId>
         <artifactId>log4j-bom</artifactId>

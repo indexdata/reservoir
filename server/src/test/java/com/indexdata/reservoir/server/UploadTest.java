@@ -7,11 +7,11 @@ import static org.hamcrest.Matchers.startsWith;
 
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.file.FileSystem;
+import io.vertx.core.http.HttpResponseExpectation;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.client.WebClient;
-import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.ext.web.multipart.MultipartForm;
 import org.folio.okapi.common.XOkapiHeaders;
 import org.junit.Before;
@@ -52,13 +52,13 @@ public class UploadTest extends TestBase {
         .binaryFileUpload("records", "tiny.mrc", Buffer.buffer("01234"), "application/octet-stream");
 
     webClient.postAbs(OKAPI_URL + "/reservoir/upload")
-        .expect(ResponsePredicate.SC_BAD_REQUEST)
         .putHeader(XOkapiHeaders.TENANT, TENANT_1)
         .putHeader(XOkapiHeaders.PERMISSIONS, "[\"" + PERM_PREFIX + "." + "SOURCE-1" + "\"]")
         .addQueryParam("sourceId", "SOURCE-1")
         .addQueryParam("sourceVersion", "1")
         .addQueryParam("localIdPath", "path")
         .sendMultipartForm(body)
+        .expecting(HttpResponseExpectation.SC_BAD_REQUEST)
         .onComplete(context.asyncAssertSuccess(res -> {
           assertThat(res.bodyAsString(), is("Premature end of file encountered"));
         }));
@@ -67,7 +67,6 @@ public class UploadTest extends TestBase {
   @Test
   public void uploadNonFormOctetStream(TestContext context) {
     webClient.postAbs(OKAPI_URL + "/reservoir/upload")
-        .expect(ResponsePredicate.SC_BAD_REQUEST)
         .putHeader("Content-Type", "application/octet-stream")
         .putHeader(XOkapiHeaders.TENANT, TENANT_1)
         .putHeader(XOkapiHeaders.PERMISSIONS, "[\"" + PERM_PREFIX + "." + "SOURCE-1" + "\"]")
@@ -75,6 +74,7 @@ public class UploadTest extends TestBase {
         .addQueryParam("sourceVersion", "1")
         .addQueryParam("localIdPath", "path")
         .sendBuffer(Buffer.buffer("1234"))
+        .expecting(HttpResponseExpectation.SC_BAD_REQUEST)
         .onComplete(context.asyncAssertSuccess(res -> {
           assertThat(res.bodyAsString(), is("Premature end of file encountered"));
         }));
@@ -83,12 +83,12 @@ public class UploadTest extends TestBase {
   @Test
   public void uploadNonFormIso2709WithIngest(TestContext context) {
     webClient.postAbs(MODULE_URL + "/reservoir/upload")
-        .expect(ResponsePredicate.SC_BAD_REQUEST)
         .putHeader(XOkapiHeaders.TENANT, "badtenant")
         .putHeader(XOkapiHeaders.PERMISSIONS, "[\"" + PERM_PREFIX + "." + "SOURCE-1" + "\"]")
         .addQueryParam("sourceId", "SOURCE-1")
         .addQueryParam("sourceVersion", "1")
         .sendBuffer(marc3marcBuffer)
+        .expecting(HttpResponseExpectation.SC_BAD_REQUEST)
         .onComplete(context.asyncAssertSuccess(res -> {
           assertThat(res.bodyAsString(), containsString("does not exist (42P01)"));
         }));
@@ -97,13 +97,13 @@ public class UploadTest extends TestBase {
   @Test
   public void uploadNonFormNoContentType(TestContext context) {
     webClient.postAbs(OKAPI_URL + "/reservoir/upload")
-        .expect(ResponsePredicate.SC_BAD_REQUEST)
         .putHeader(XOkapiHeaders.TENANT, TENANT_1)
         .putHeader(XOkapiHeaders.PERMISSIONS, "[\"" + PERM_PREFIX + "." + "SOURCE-1" + "\"]")
         .addQueryParam("sourceId", "SOURCE-1")
         .addQueryParam("sourceVersion", "1")
         .addQueryParam("localIdPath", "path")
         .sendBuffer(Buffer.buffer("1234"))
+        .expecting(HttpResponseExpectation.SC_BAD_REQUEST)
         .onComplete(context.asyncAssertSuccess(res -> {
           assertThat(res.bodyAsString(), is("Premature end of file encountered"));
         }));
@@ -116,13 +116,13 @@ public class UploadTest extends TestBase {
         .binaryFileUpload("records", "marc1-delete.xml", marc1xmlBuffer,  "text/xml");
 
     webClient.postAbs(OKAPI_URL + "/reservoir/upload")
-        .expect(ResponsePredicate.SC_OK)
         .putHeader(XOkapiHeaders.TENANT, TENANT_1)
         .putHeader(XOkapiHeaders.PERMISSIONS, "[\"" + PERM_PREFIX + "." + "SOURCE-1" + "\"]")
         .addQueryParam("xmlFixing", "true")
         .addQueryParam("sourceId", "SOURCE-1")
         .addQueryParam("sourceVersion", "1")
         .sendMultipartForm(requestForm)
+        .expecting(HttpResponseExpectation.SC_OK)
         .compose(res -> {
           JsonObject responseBody = res.bodyAsJsonObject();
           assertThat(responseBody.getJsonObject("marc3.mrc").getInteger("processed"), is(3));
@@ -137,9 +137,9 @@ public class UploadTest extends TestBase {
           assertThat(responseBody.getJsonObject("marc1-delete.xml").getInteger("deleted"), is(1));
           return webClient.getAbs(OKAPI_URL + "/reservoir/records")
                 .addQueryParam("query", "sourceId = \"SOURCE-1\"")
-                .expect(ResponsePredicate.SC_OK)
                 .putHeader(XOkapiHeaders.TENANT, TENANT_1)
-                .send();
+                .send()
+                .expecting(HttpResponseExpectation.SC_OK);
         })
         .map(res -> {
           JsonObject responseBody = res.bodyAsJsonObject();
@@ -158,12 +158,12 @@ public class UploadTest extends TestBase {
     // go straight to module without Okapi intercepting
     webClient.postAbs(MODULE_URL + "/reservoir/upload")
         .putHeader(XOkapiHeaders.PERMISSIONS, "[\"" + PERM_PREFIX + "." + "SOURCE-1" + "\"]")
-        .expect(ResponsePredicate.SC_BAD_REQUEST)
         .putHeader(XOkapiHeaders.TENANT, "badtenant")
         .addQueryParam("xmlFixing", "true")
         .addQueryParam("sourceId", "SOURCE-1")
         .addQueryParam("sourceVersion", "1")
         .sendMultipartForm(requestForm)
+        .expecting(HttpResponseExpectation.SC_BAD_REQUEST)
         .onComplete(context.asyncAssertSuccess(res -> {
           assertThat(res.bodyAsString(), containsString("does not exist (42P01)"));
         }));
@@ -175,13 +175,13 @@ public class UploadTest extends TestBase {
         .binaryFileUpload("records", "marc3.mrc", marc3marcBuffer,  "application/marc");
 
     webClient.postAbs(OKAPI_URL + "/reservoir/upload")
-        .expect(ResponsePredicate.SC_OK)
         .putHeader(XOkapiHeaders.TENANT, TENANT_1)
         .putHeader(XOkapiHeaders.PERMISSIONS, "[\"" + PERM_PREFIX + "." + "SOURCE-1" + "\"]")
         .addQueryParam("sourceId", "SOURCE-1")
         .addQueryParam("sourceVersion", "1")
         .addQueryParam("ingest", "false")
         .sendMultipartForm(requestForm)
+        .expecting(HttpResponseExpectation.SC_OK)
         .onComplete(context.asyncAssertSuccess(res -> {
           JsonObject responseBody = res.bodyAsJsonObject();
           assertThat(responseBody.getJsonObject("marc3.mrc").getInteger("processed"), is(3));
@@ -195,7 +195,6 @@ public class UploadTest extends TestBase {
   @Test
   public void uploadNonFormIso2709WithoutIngest(TestContext context) {
     webClient.postAbs(OKAPI_URL + "/reservoir/upload")
-        .expect(ResponsePredicate.SC_OK)
         .putHeader(XOkapiHeaders.TENANT, TENANT_1)
         .putHeader(XOkapiHeaders.PERMISSIONS, "[\"" + PERM_PREFIX + "." + "SOURCE-1" + "\"]")
         .putHeader("Content-Type", "application/octet-stream")
@@ -204,6 +203,7 @@ public class UploadTest extends TestBase {
         .addQueryParam("ingest", "false")
         .addQueryParam("fileName", "marc3.mrc")
         .sendBuffer(marc3marcBuffer)
+        .expecting(HttpResponseExpectation.SC_OK)
         .onComplete(context.asyncAssertSuccess(res -> {
           JsonObject responseBody = res.bodyAsJsonObject();
           assertThat(responseBody.getJsonObject("marc3.mrc").getInteger("processed"), is(3));
@@ -223,7 +223,6 @@ public class UploadTest extends TestBase {
 
     // upload 3 new records
     webClient.postAbs(OKAPI_URL + "/reservoir/upload")
-        .expect(ResponsePredicate.SC_OK)
         .putHeader(XOkapiHeaders.TENANT, TENANT_1)
         .putHeader(XOkapiHeaders.PERMISSIONS, "[\"" + PERM_PREFIX + "." + "SOURCE-2" + "\"]")
         .addQueryParam("xmlFixing", "false")
@@ -231,6 +230,7 @@ public class UploadTest extends TestBase {
         .addQueryParam("sourceVersion", "1")
         .addQueryParam("localIdPath",  "$.marc.fields[*].001")
         .sendMultipartForm(requestForm1)
+        .expecting(HttpResponseExpectation.SC_OK)
         .compose(res -> {
             JsonObject responseBody = res.bodyAsJsonObject();
             assertThat(responseBody.getJsonObject("marc3.xml").getInteger("processed"), is(3));
@@ -240,9 +240,9 @@ public class UploadTest extends TestBase {
             assertThat(responseBody.getJsonObject("marc3.xml").getInteger("deleted"), is(0));
             return webClient.getAbs(OKAPI_URL + "/reservoir/records")
                 .addQueryParam("query", "sourceId = \"SOURCE-2\"")
-                .expect(ResponsePredicate.SC_OK)
                 .putHeader(XOkapiHeaders.TENANT, TENANT_1)
-                .send();
+                .send()
+                .expecting(HttpResponseExpectation.SC_OK);
         })
         .map(res -> {
           JsonObject responseBody = res.bodyAsJsonObject();
@@ -252,15 +252,15 @@ public class UploadTest extends TestBase {
         .compose(c1 ->
             // upload 1 "delete" record
             webClient.postAbs(OKAPI_URL + "/reservoir/upload")
-                .expect(ResponsePredicate.SC_OK)
                 .putHeader(XOkapiHeaders.TENANT, TENANT_1)
                 .putHeader(XOkapiHeaders.PERMISSIONS, "[\"" + PERM_PREFIX + "." + "SOURCE-2" + "\"]")
                 .addQueryParam("xmlFixing", "true")
                 .addQueryParam("sourceId", "SOURCE-2")
                 .addQueryParam("sourceVersion", "1")
                 .addQueryParam("localIdPath",  "$.marc.fields[*].001")
-                .sendMultipartForm(requestForm2))
-        .compose(res -> {
+                .sendMultipartForm(requestForm2)
+                .expecting(HttpResponseExpectation.SC_OK))
+                .compose(res -> {
             JsonObject responseBody = res.bodyAsJsonObject();
             assertThat(responseBody.getJsonObject("marc1-delete.xml").getInteger("processed"), is(1));
             assertThat(responseBody.getJsonObject("marc1-delete.xml").getInteger("ignored"), is(0));
@@ -269,9 +269,9 @@ public class UploadTest extends TestBase {
             assertThat(responseBody.getJsonObject("marc1-delete.xml").getInteger("deleted"), is(1));
             return webClient.getAbs(OKAPI_URL + "/reservoir/records")
                 .addQueryParam("query", "sourceId = \"SOURCE-2\"")
-                .expect(ResponsePredicate.SC_OK)
                 .putHeader(XOkapiHeaders.TENANT, TENANT_1)
-                .send();
+                .send()
+                .expecting(HttpResponseExpectation.SC_OK);
         })
         .map(res -> {
           JsonObject responseBody = res.bodyAsJsonObject();
@@ -288,7 +288,6 @@ public class UploadTest extends TestBase {
 
     // upload 3 new records
     webClient.postAbs(OKAPI_URL + "/reservoir/upload")
-        .expect(ResponsePredicate.SC_OK)
         .putHeader(XOkapiHeaders.TENANT, TENANT_1)
         .putHeader(XOkapiHeaders.PERMISSIONS, "[\"" + PERM_PREFIX + "." + "SOURCE-5" + "\"]")
         .addQueryParam("xmlFixing", "false")
@@ -296,6 +295,7 @@ public class UploadTest extends TestBase {
         .addQueryParam("sourceVersion", "1")
         .addQueryParam("localIdPath",  "$.marc.fields[*].001")
         .sendMultipartForm(requestForm1)
+        .expecting(HttpResponseExpectation.SC_OK)
         .compose(res -> {
             JsonObject responseBody = res.bodyAsJsonObject();
             assertThat(responseBody.getJsonObject("marc3.xml").getInteger("processed"), is(3));
@@ -305,10 +305,10 @@ public class UploadTest extends TestBase {
             assertThat(responseBody.getJsonObject("marc3.xml").getInteger("deleted"), is(0));
             return webClient.getAbs(OKAPI_URL + "/reservoir/records")
                 .addQueryParam("query", "sourceId = \"SOURCE-5\"")
-                .expect(ResponsePredicate.SC_OK)
                 .putHeader(XOkapiHeaders.TENANT, TENANT_1)
-                .send();
-        })
+                .send()
+                .expecting(HttpResponseExpectation.SC_OK);
+              })
         .map(res -> {
           JsonObject responseBody = res.bodyAsJsonObject();
           assertThat(responseBody.getJsonArray("items").size(), is(3));
@@ -317,14 +317,14 @@ public class UploadTest extends TestBase {
         .compose(c1 ->
             // upload 1 "delete" record
             webClient.postAbs(OKAPI_URL + "/reservoir/upload")
-                .expect(ResponsePredicate.SC_OK)
                 .putHeader(XOkapiHeaders.TENANT, TENANT_1)
                 .putHeader(XOkapiHeaders.PERMISSIONS, "[\"" + PERM_PREFIX + "." + "SOURCE-5" + "\"]")
                 .addQueryParam("xmlFixing", "true")
                 .addQueryParam("sourceId", "SOURCE-5")
                 .addQueryParam("sourceVersion", "1")
                 .addQueryParam("localIdPath",  "$.marc.fields[*].001")
-                .sendMultipartForm(requestForm1))
+                .sendMultipartForm(requestForm1)
+                .expecting(HttpResponseExpectation.SC_OK))
         .compose(res -> {
             JsonObject responseBody = res.bodyAsJsonObject();
             assertThat(responseBody.getJsonObject("marc3.xml").getInteger("processed"), is(3));
@@ -334,9 +334,9 @@ public class UploadTest extends TestBase {
             assertThat(responseBody.getJsonObject("marc3.xml").getInteger("deleted"), is(0));
             return webClient.getAbs(OKAPI_URL + "/reservoir/records")
                 .addQueryParam("query", "sourceId = \"SOURCE-5\"")
-                .expect(ResponsePredicate.SC_OK)
                 .putHeader(XOkapiHeaders.TENANT, TENANT_1)
-                .send();
+                .send()
+                .expecting(HttpResponseExpectation.SC_OK);
         })
         .map(res -> {
           JsonObject responseBody = res.bodyAsJsonObject();
@@ -353,12 +353,12 @@ public class UploadTest extends TestBase {
 
     // upload 3 new records, but one without 001
     webClient.postAbs(OKAPI_URL + "/reservoir/upload")
-        .expect(ResponsePredicate.SC_OK)
         .putHeader(XOkapiHeaders.TENANT, TENANT_1)
         .putHeader(XOkapiHeaders.PERMISSIONS, "[\"" + PERM_PREFIX + "." + "SOURCE-3" + "\"]")
         .addQueryParam("sourceId", "SOURCE-3")
         .addQueryParam("sourceVersion", "1")
         .sendMultipartForm(requestForm1)
+        .expecting(HttpResponseExpectation.SC_OK)
         .compose(res -> {
             JsonObject responseBody = res.bodyAsJsonObject();
             assertThat(responseBody.getJsonObject("marc3-no-id.xml").getInteger("processed"), is(3));
@@ -368,9 +368,9 @@ public class UploadTest extends TestBase {
             assertThat(responseBody.getJsonObject("marc3-no-id.xml").getInteger("deleted"), is(0));
             return webClient.getAbs(OKAPI_URL + "/reservoir/records")
                 .addQueryParam("query", "sourceId = \"SOURCE-3\"")
-                .expect(ResponsePredicate.SC_OK)
                 .putHeader(XOkapiHeaders.TENANT, TENANT_1)
-                .send();
+                .send()
+                .expecting(HttpResponseExpectation.SC_OK);
         })
         .map(res -> {
           JsonObject responseBody = res.bodyAsJsonObject();
@@ -387,13 +387,13 @@ public class UploadTest extends TestBase {
 
     // upload 3 new records, but provide idPath that returns empty
     webClient.postAbs(OKAPI_URL + "/reservoir/upload")
-        .expect(ResponsePredicate.SC_OK)
         .putHeader(XOkapiHeaders.TENANT, TENANT_1)
         .putHeader(XOkapiHeaders.PERMISSIONS, "[\"" + PERM_PREFIX + "." + "SOURCE-4" + "\"]")
         .addQueryParam("sourceId", "SOURCE-4")
         .addQueryParam("sourceVersion", "1")
         .addQueryParam("localIdPath", "empty")
         .sendMultipartForm(requestForm1)
+        .expecting(HttpResponseExpectation.SC_OK)
         .compose(res -> {
             JsonObject responseBody = res.bodyAsJsonObject();
             assertThat(responseBody.getJsonObject("marc3.xml").getInteger("processed"), is(3));
@@ -403,9 +403,9 @@ public class UploadTest extends TestBase {
             assertThat(responseBody.getJsonObject("marc3.xml").getInteger("deleted"), is(0));
             return webClient.getAbs(OKAPI_URL + "/reservoir/records")
                 .addQueryParam("query", "sourceId = \"SOURCE-4\"")
-                .expect(ResponsePredicate.SC_OK)
                 .putHeader(XOkapiHeaders.TENANT, TENANT_1)
-                .send();
+                .send()
+                .expecting(HttpResponseExpectation.SC_OK);
         })
         .map(res -> {
           JsonObject responseBody = res.bodyAsJsonObject();
@@ -421,13 +421,13 @@ public class UploadTest extends TestBase {
         .binaryFileUpload("records", "marc3.xml", marc3xmlBuffer,  "text/xml");
 
     webClient.postAbs(OKAPI_URL + "/reservoir/upload")
-        .expect(ResponsePredicate.SC_BAD_REQUEST)
         .putHeader(XOkapiHeaders.TENANT, TENANT_1)
         .putHeader(XOkapiHeaders.PERMISSIONS, "[\"" + PERM_PREFIX + "." + "SOURCE-4" + "\"]")
         .addQueryParam("sourceId", "SOURCE-4")
         .addQueryParam("sourceVersion", "1")
         .addQueryParam("localIdPath", "empt[y")
         .sendMultipartForm(requestForm1)
+        .expecting(HttpResponseExpectation.SC_BAD_REQUEST)
         .map(res -> {
           String responseBody = res.bodyAsString();
           assertThat(responseBody, startsWith("malformed 'localIdPath'"));
@@ -444,13 +444,13 @@ public class UploadTest extends TestBase {
         .binaryFileUpload("records", "records.mrc", Buffer.buffer("0"),  "application/pdf");
 
     webClient.postAbs(OKAPI_URL + "/reservoir/upload")
-        .expect(ResponsePredicate.SC_BAD_REQUEST)
         .putHeader(XOkapiHeaders.TENANT, TENANT_1)
         .putHeader(XOkapiHeaders.PERMISSIONS, "[\"" + PERM_PREFIX + "." + "SOURCE-1" + "\"]")
         .addQueryParam("sourceId", "SOURCE-1")
         .addQueryParam("sourceVersion", "1")
         .addQueryParam("localIdPath", "path")
         .sendMultipartForm(body)
+        .expecting(HttpResponseExpectation.SC_BAD_REQUEST)
         .onComplete(context.asyncAssertSuccess(res ->
             assertThat(res.bodyAsString(), containsString("Unsupported content-type: application/pdf"))
         ));
@@ -462,7 +462,6 @@ public class UploadTest extends TestBase {
         .binaryFileUpload("records", "marc3.mrc", marc3marcBuffer,  "application/marc");
 
     webClient.postAbs(OKAPI_URL + "/reservoir/upload")
-        .expect(ResponsePredicate.SC_OK)
         .putHeader(XOkapiHeaders.TENANT, TENANT_1)
         .putHeader(XOkapiHeaders.PERMISSIONS, "[\"" + PERM_PREFIX + "." + "SOURCE-1" + "\"]")
         .addQueryParam("sourceId", "SOURCE-1")
@@ -470,6 +469,7 @@ public class UploadTest extends TestBase {
         .addQueryParam("localIdPath", "path")
         .addQueryParam("raw", "true")
         .sendMultipartForm(requestForm)
+        .expecting(HttpResponseExpectation.SC_OK)
         .onComplete(context.asyncAssertSuccess(res ->
             assertThat(res.bodyAsString(), is("{}"))
         ));
@@ -481,9 +481,9 @@ public class UploadTest extends TestBase {
         .binaryFileUpload("records", "marc3.mrc", marc3marcBuffer,  "application/marc");
 
     webClient.postAbs(OKAPI_URL + "/reservoir/upload")
-        .expect(ResponsePredicate.SC_BAD_REQUEST)
         .putHeader(XOkapiHeaders.TENANT, TENANT_1)
         .sendMultipartForm(requestForm)
+        .expecting(HttpResponseExpectation.SC_BAD_REQUEST)
         .onComplete(context.asyncAssertSuccess(res -> {
           assertThat(res.bodyAsString(), is("sourceId is a required parameter"));
         }));
@@ -495,11 +495,11 @@ public class UploadTest extends TestBase {
         .binaryFileUpload("records", "marc3.mrc", marc3marcBuffer,  "application/marc");
 
     webClient.postAbs(MODULE_URL + "/reservoir/upload")
-        .expect(ResponsePredicate.SC_BAD_REQUEST)
         .putHeader(XOkapiHeaders.PERMISSIONS, "[\"reservoir-upload.all-sources\"]")
         .addQueryParam("sourceId", "SOURCE-1")
         .addQueryParam("sourceVersion", "1")
         .sendMultipartForm(requestForm)
+        .expecting(HttpResponseExpectation.SC_BAD_REQUEST)
         .onComplete(context.asyncAssertSuccess(res -> {
           assertThat(res.bodyAsString(), is("X-Okapi-Tenant header is missing"));
         }));
@@ -512,11 +512,11 @@ public class UploadTest extends TestBase {
         .binaryFileUpload("records", "marc3.mrc", marc3marcBuffer,  "application/marc");
 
     webClient.postAbs(MODULE_URL + "/reservoir/upload")
-        .expect(ResponsePredicate.SC_BAD_REQUEST)
         .putHeader(XOkapiHeaders.PERMISSIONS, "[\"" + PERM_PREFIX + "." + "SOURCE-1" + "\"]")
         .addQueryParam("sourceId", "SOURCE-1")
         .addQueryParam("sourceVersion", "1")
         .sendMultipartForm(requestForm)
+        .expecting(HttpResponseExpectation.SC_BAD_REQUEST)
         .onComplete(context.asyncAssertSuccess(res -> {
           assertThat(res.bodyAsString(), is("X-Okapi-Tenant header is missing"));
         }));
@@ -528,10 +528,10 @@ public class UploadTest extends TestBase {
         .binaryFileUpload("records", "marc3.mrc", marc3marcBuffer,  "application/marc");
 
     webClient.postAbs(MODULE_URL + "/reservoir/upload")
-        .expect(ResponsePredicate.SC_FORBIDDEN)
         .addQueryParam("sourceId", "SOURCE-1")
         .addQueryParam("sourceVersion", "1")
         .sendMultipartForm(requestForm)
+        .expecting(HttpResponseExpectation.SC_FORBIDDEN)
         .onComplete(context.asyncAssertSuccess(res -> {
           assertThat(res.bodyAsString(), is("Insufficient permissions to upload records for source 'SOURCE-1'"));
         }));
@@ -543,11 +543,11 @@ public class UploadTest extends TestBase {
         .binaryFileUpload("records", "marc3.mrc", marc3marcBuffer,  "application/marc");
 
     webClient.postAbs(MODULE_URL + "/reservoir/upload")
-        .expect(ResponsePredicate.SC_FORBIDDEN)
         .putHeader(XOkapiHeaders.PERMISSIONS, "reservoir-upload.all-sources")
         .addQueryParam("sourceId", "SOURCE-1")
         .addQueryParam("sourceVersion", "1")
         .sendMultipartForm(requestForm)
+        .expecting(HttpResponseExpectation.SC_FORBIDDEN)
         .onComplete(context.asyncAssertSuccess(res -> {
           assertThat(res.bodyAsString(), is("Cannot verify permissions to upload records for source 'SOURCE-1'"));
         }));
