@@ -45,7 +45,7 @@ Build all components with: `mvn install`
 You must install [sdkman](https://sdkman.io) first. Then perform
 
     . $HOME/.sdkman/bin/sdkman-init.sh
-    sdk install java 24-graalce
+    sdk install java 24.0.1-graalce
     . $HOME/.sdkman/bin/sdkman-init.sh
     mvn -Pnative package
 
