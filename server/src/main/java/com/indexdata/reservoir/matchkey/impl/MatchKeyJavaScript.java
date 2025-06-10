@@ -3,9 +3,9 @@ package com.indexdata.reservoir.matchkey.impl;
 import com.indexdata.reservoir.matchkey.MatchKeyMethod;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpResponseExpectation;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
-import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import java.util.Collection;
 import org.folio.okapi.common.WebClientFactory;
 import org.graalvm.polyglot.Context;
@@ -26,8 +26,8 @@ public class MatchKeyJavaScript implements MatchKeyMethod {
     WebClient webClient = WebClientFactory.getWebClient(vertx);
     String moduleName = url.substring(url.lastIndexOf("/") + 1);
     return webClient.getAbs(url)
-        .expect(ResponsePredicate.SC_OK)
         .send()
+        .expecting(HttpResponseExpectation.SC_OK)
         .map(response -> context.eval(Source
           .newBuilder("js", response.bodyAsString(), moduleName)
           .buildLiteral()));

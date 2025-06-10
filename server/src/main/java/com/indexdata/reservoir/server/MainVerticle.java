@@ -33,7 +33,7 @@ public class MainVerticle extends AbstractVerticle {
         new HealthApi(),
     };
 
-    RouterCreator.mountAll(vertx, routerCreators)
+    RouterCreator.mountAll(vertx, routerCreators, "reservoir")
         .compose(router -> {
           HttpServerOptions so = new HttpServerOptions()
               .setCompressionSupported(true)
@@ -45,9 +45,9 @@ public class MainVerticle extends AbstractVerticle {
               .listen(port).mapEmpty();
         })
         .compose(x ->
-          vertx.executeBlocking(e -> {
+          vertx.executeBlocking(() -> {
             JavaScriptCheck.check();
-            e.complete();
+            return null;
           })
         )
         .onComplete(x -> promise.handle(x.mapEmpty()));

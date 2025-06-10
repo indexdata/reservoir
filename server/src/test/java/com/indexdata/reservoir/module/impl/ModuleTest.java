@@ -179,7 +179,7 @@ public class ModuleTest {
     CodeModuleEntity entity = new CodeModuleBuilder(config).build();
 
     ModuleCache.getInstance().lookup(vertx, TENANT, entity)
-      .compose(m -> m.execute(null, input).eventually(x -> m.terminate()))
+      .compose(m -> m.execute(null, input).eventually(() -> m.terminate()))
       .onComplete(context.asyncAssertSuccess(output -> context.assertEquals(recordOut, output))
     );
   }
@@ -194,7 +194,7 @@ public class ModuleTest {
     CodeModuleEntity entity = new CodeModuleBuilder(config).build();
 
     ModuleCache.getInstance().lookup(vertx, TENANT, entity)
-      .compose(m -> m.execute(null, null).eventually(x -> m.terminate()))
+      .compose(m -> m.execute(null, null).eventually(() -> m.terminate()))
       .onComplete(context.asyncAssertFailure(output -> context.assertEquals(
         "JS url modules require 'function' defined in config or by caller", output.getMessage()))
     );
@@ -270,7 +270,7 @@ public class ModuleTest {
 
     ModuleCache.getInstance().lookup(vertx, TENANT, entity)
       .compose(m -> new ModuleExecutable(m, new ModuleInvocation("marc-transformer::transform"))
-                        .execute(input).eventually(x -> m.terminate()))
+                        .execute(input).eventually(() -> m.terminate()))
       .onComplete(context.asyncAssertSuccess(output -> context.assertEquals(recordOut, output))
     );
   }
@@ -289,7 +289,7 @@ public class ModuleTest {
     CodeModuleEntity entity = new CodeModuleBuilder(config).build();
 
     ModuleCache.getInstance().lookup(vertx, TENANT, entity)
-        .compose(m -> m.execute(null, input).eventually(x -> m.terminate()))
+        .compose(m -> m.execute(null, input).eventually(() -> m.terminate()))
         .onComplete(context.asyncAssertFailure(
             e -> assertThat(e.getMessage(), containsString("must return JSON string"))));
   }
@@ -308,7 +308,7 @@ public class ModuleTest {
     CodeModuleEntity entity = new CodeModuleBuilder(config).build();
 
     ModuleCache.getInstance().lookup(vertx, TENANT, entity)
-        .compose(m -> m.execute(null, input).eventually(x -> m.terminate()))
+        .compose(m -> m.execute(null, input).eventually(() -> m.terminate()))
         .onComplete(context.asyncAssertFailure(
             e -> {
               assertThat(e.getClass(), is(PolyglotException.class));
@@ -330,7 +330,7 @@ public class ModuleTest {
     CodeModuleEntity entity = new CodeModuleBuilder(config).build();
 
     ModuleCache.getInstance().lookup(vertx, TENANT, entity)
-        .compose(m -> m.execute(null, input).eventually(x -> m.terminate()))
+        .compose(m -> m.execute(null, input).eventually(() -> m.terminate()))
         .onComplete(context.asyncAssertFailure(
             e -> {
               assertThat(e.getClass(), is(DecodeException.class));
@@ -416,7 +416,7 @@ public class ModuleTest {
     CodeModuleEntity entity1 = new CodeModuleBuilder(config1).build();
 
     ModuleCache.getInstance().lookup(vertx, TENANT, entity1)
-        .compose(m -> m.execute(null, null).eventually(x -> m.terminate()))
+        .compose(m -> m.execute(null, null).eventually(() -> m.terminate()))
         .onComplete(context.asyncAssertFailure(e ->
             assertThat(e.getMessage(), containsString("does not include function transform1"))));
   }
