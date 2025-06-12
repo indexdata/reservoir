@@ -1,9 +1,9 @@
 package com.indexdata.reservoir.server;
 
 import io.vertx.core.Vertx;
-import io.vertx.core.logging.Log4j2LogDelegateFactory;
 import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Main {
   /**
@@ -14,10 +14,13 @@ public class Main {
 
   public static void main(String[] args) {
     System.out.println("Starting Reservoir server (standard output message)");
-    System.setProperty("vertx.logger-delegate-factory-class-name",
-        Log4j2LogDelegateFactory.class.getName());
-    Logger log = LogManager.getLogger(Main.class);
-    log.info("Starting Reservoir server...");
+
+    final org.apache.logging.log4j.Logger log2 = LogManager.getLogger(Main.class);
+
+    final Logger log = LoggerFactory.getLogger(Main.class);
+
+    log.info("Starting Reservoir server (SLF4J message)");
+    log2.info("Starting Reservoir server (Log4j2 message)");
 
     Vertx.vertx()
         .deployVerticle(new MainVerticle())

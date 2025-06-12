@@ -112,12 +112,10 @@
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-slf4j-impl</artifactId>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-jul</artifactId>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.folio</groupId>
@@ -152,6 +150,15 @@
   </dependencies>
   <build>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <exclude>org/folio/okapi/common/logging/FolioLoggingContext.java</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
       <plugin>
         <artifactId>maven-resources-plugin</artifactId>
         <inherited>false</inherited>
@@ -199,9 +206,7 @@
               <transformers>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                   <manifestEntries>
-                    <Main-Class>${vertx.launcher}</Main-Class>
-                    <Main-Verticle>${vertx.verticle}</Main-Verticle>
-                    <Main-Command>run</Main-Command>
+                    <Main-Class>${main.class}</Main-Class>
                     <Multi-Release>true</Multi-Release>
                   </manifestEntries>
                 </transformer>

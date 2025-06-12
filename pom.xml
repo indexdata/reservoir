@@ -35,7 +35,8 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <!-- graalvm >= 23.1.0 requires reorganisation: https://medium.com/graalvm/truffle-unchained-13887b77b62c -->
     <graalvm.version>24.2.1</graalvm.version>
-    <log4j2.version>2.24.3</log4j2.version>
+    <log4j2.version>2.25.0-SNAPSHOT</log4j2.version>
+    <slf4j-api.version>1.7.21</slf4j-api.version>
     <vertx.version>4.5.15</vertx.version>
     <okapi.version>6.2.3</okapi.version>
     <vertxlib.version>3.4.0</vertxlib.version>
@@ -57,6 +58,11 @@
         <version>${vertx.version}</version>
         <type>pom</type>
         <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-api</artifactId>
+        <version>${slf4j-api.version}</version>
       </dependency>
       <dependency>
         <groupId>io.micrometer</groupId>
@@ -361,7 +367,16 @@
       <name>Index Data</name>
       <url>https://maven.indexdata.com/</url>
     </repository>
+    <repository>
+      <id>apache-snapshots</id>
+      <name>Apache Snapshot Repository</name>
+      <url>https://repository.apache.org/content/repositories/snapshots</url>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </repository>
   </repositories>
+
   <distributionManagement>
     <repository>
       <id>folio-nexus</id>
