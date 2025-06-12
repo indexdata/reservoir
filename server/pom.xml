@@ -12,7 +12,6 @@
     <vertx.launcher>com.indexdata.reservoir.server.ReservoirLauncher</vertx.launcher>
     <vertx.verticle>com.indexdata.reservoir.server.MainVerticle</vertx.verticle>
     <graal.compiler.dir>${project.build.directory}/compiler</graal.compiler.dir>
-    <graalvm-maven-plugin.version>0.10.1</graalvm-maven-plugin.version>
     <main.class>com.indexdata.reservoir.server.Main</main.class>
   </properties>
   <dependencies>

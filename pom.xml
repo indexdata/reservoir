@@ -20,6 +20,7 @@
     <tag>HEAD</tag>
   </scm>
   <modules>
+    <module>example</module>
     <module>util</module>
     <module>client</module>
     <module>server</module>
@@ -35,6 +36,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <!-- graalvm >= 23.1.0 requires reorganisation: https://medium.com/graalvm/truffle-unchained-13887b77b62c -->
     <graalvm.version>24.2.1</graalvm.version>
+    <graalvm-maven-plugin.version>0.10.6</graalvm-maven-plugin.version>
     <log4j2.version>2.25.0-SNAPSHOT</log4j2.version>
     <slf4j-api.version>1.7.21</slf4j-api.version>
     <vertx.version>4.5.15</vertx.version>
