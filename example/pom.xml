@@ -27,8 +27,8 @@
     </dependency>
 
     <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
+      <groupId>org.folio.okapi</groupId>
+      <artifactId>okapi-common</artifactId>
     </dependency>
 
     <!-- Log4j2 dependencies -->
