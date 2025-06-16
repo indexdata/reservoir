@@ -49,7 +49,9 @@ You must install [sdkman](https://sdkman.io) first. Then perform
     . $HOME/.sdkman/bin/sdkman-init.sh
     mvn -Pnative package
 
-The resulting binary is `server/target/reservoir-native`.
+Start the generated program with:
+
+    server/target/reservoir-native -Dlog4j.configurationFile=log4j2.xml
 
 ## Server
 
