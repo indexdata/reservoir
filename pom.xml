@@ -20,7 +20,6 @@
     <tag>HEAD</tag>
   </scm>
   <modules>
-    <module>example</module>
     <module>util</module>
     <module>client</module>
     <module>server</module>
