@@ -391,7 +391,7 @@
               <quickBuild>true</quickBuild>
               <buildArgs>
                 <buildArg>--no-fallback</buildArg>
-                <buildArg>-H:ResourceConfigurationFiles=resource-config.json</buildArg>
+                <buildArg>-H:ResourceConfigurationFiles=${project.basedir}/resource-config.json</buildArg>
               </buildArgs>
             </configuration>
           </plugin>
