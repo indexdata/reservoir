@@ -51,7 +51,7 @@ You must install [sdkman](https://sdkman.io) first. Then perform
 
 Start the generated program with:
 
-    server/target/reservoir-native -Dlog4j.configurationFile=log4j2.xml
+    server/target/reservoir-native
 
 ## Server
 
