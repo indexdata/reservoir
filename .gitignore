@@ -3,3 +3,5 @@ target/
 .vscode/
 *.code-workspace
 .DS_Store
+pom.xml.versionsBackup
+dependency-reduced-pom.xml
