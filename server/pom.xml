@@ -389,6 +389,10 @@
               <debug>true</debug>
               <verbose>true</verbose>
               <quickBuild>true</quickBuild>
+              <buildArgs>
+                <buildArg>--no-fallback</buildArg>
+                <buildArg>-H:ResourceConfigurationFiles=resource-config.json</buildArg>
+              </buildArgs>
             </configuration>
           </plugin>
         </plugins>
