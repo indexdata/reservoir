@@ -14,6 +14,7 @@ COPY server/ server
 COPY util/ util
 COPY xsl/ xsl
 
+RUN mvn -DskipTests package
 RUN mvn -DskipTests -Pnative package
 
 ENTRYPOINT ["/bin/sh"]
