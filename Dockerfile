@@ -26,6 +26,7 @@ COPY server/ server
 COPY util/ util
 COPY xsl/ xsl
 
+# Twice so that artifact(s) is step 1 and cached for native image build
 RUN mvn -DskipTests package
 RUN mvn -DskipTests -Pnative package
 
@@ -46,12 +47,13 @@ COPY --from=build /etc/group /etc/group
 
 COPY --from=build /app/tmp /tmp
 COPY --from=build /app/server/target/reservoir-native /reservoir-native
+COPY --from=build /app/client/target/client-native /client-native
 COPY --from=build /app/deps /
 
 EXPOSE 8081
 
 # Get Exception in thread "main" java.lang.IllegalStateException: Unable to create folder at path '/tmp/vertx-cache'
-# USER myuser:myuser
 # despite /tmp/vertx-cache being created with 777 permissions
+# USER myuser:myuser
 
 CMD ["/reservoir-native"]

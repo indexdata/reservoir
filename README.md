@@ -49,9 +49,10 @@ You must install [sdkman](https://sdkman.io) first. Then perform
     . $HOME/.sdkman/bin/sdkman-init.sh
     mvn -Pnative package
 
-Start the generated program with:
+Two images are created in the native profile:
 
     server/target/reservoir-native
+    client/target/client-native
 
 ## Server
 
@@ -84,7 +85,7 @@ JMX metrics are exposed for domain `reservoir` if `-Dmetrics.jmx=true` option is
 
 ## Running with Docker
 
-If you feel adventurous and want to run Reservoir in a docker container, build the container first:
+If you feel adventurous and want to run Reservoir in a Docker container, build the container first:
 
 ```
 docker build -t mod-reservoir:latest .
