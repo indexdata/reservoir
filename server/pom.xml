@@ -392,6 +392,8 @@
               <buildArgs>
                 <buildArg>--no-fallback</buildArg>
                 <buildArg>-H:ResourceConfigurationFiles=${project.basedir}/resource-config.json</buildArg>
+                <buildArg>-H:ReflectionConfigurationFiles=${project.basedir}/reflection-config.json</buildArg>
+                <buildArg>--enable-url-protocols=https</buildArg>
               </buildArgs>
             </configuration>
           </plugin>
