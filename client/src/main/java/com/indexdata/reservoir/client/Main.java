@@ -13,6 +13,7 @@ public class Main {
    */
   public static void main(String[] args) {
     Vertx vertx = Vertx.vertx();
+    System.setProperty("org.marc4j.marc.MarcFactory", "org.marc4j.marc.impl.MarcFactoryImpl");
     Client.exec(vertx, args)
         .eventually(() -> vertx.close())
         .onFailure(e -> {

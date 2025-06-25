@@ -14,6 +14,7 @@ public class Main {
   public static void main(String[] args) {
     final Logger log = LogManager.getLogger(Main.class);
 
+    System.setProperty("org.marc4j.marc.MarcFactory", "org.marc4j.marc.impl.MarcFactoryImpl");
     log.info("Starting Reservoir server");
     Vertx.vertx()
         .deployVerticle(new MainVerticle())

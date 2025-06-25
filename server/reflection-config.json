@@ -1,25 +1,10 @@
 [
   {
-    "name": "org.marc4j.marc.MarcFactory",
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": []
-      }
-    ],
-    "allDeclaredConstructors": true,
-    "allPublicConstructors": true,
-    "allDeclaredMethods": true,
+    "name": "org.marc4j.marc.impl.MarcFactoryImpl",
     "allPublicMethods": true
   },
   {
     "name": "org.xmlresolver.loaders.XmlLoader",
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": []
-      }
-    ],
     "allDeclaredConstructors": true,
     "allPublicConstructors": true,
     "allDeclaredMethods": true,
@@ -27,12 +12,6 @@
   },
   {
     "name": "net.sf.saxon.Configuration",
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": []
-      }
-    ],
     "allDeclaredConstructors": true,
     "allPublicConstructors": true,
     "allDeclaredMethods": true,
