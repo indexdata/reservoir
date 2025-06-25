@@ -414,6 +414,8 @@
                 <buildArg>-H:ResourceConfigurationFiles=${project.basedir}/resource-config.json</buildArg>
                 <buildArg>-H:ReflectionConfigurationFiles=${project.basedir}/reflection-config.json</buildArg>
                 <buildArg>--enable-url-protocols=https</buildArg>
+                <buildArg>--enable-native-access=ALL-UNNAMED</buildArg>
+                <buildArg>--enable-native-access=org.graalvm.truffle</buildArg>
               </buildArgs>
             </configuration>
           </plugin>
