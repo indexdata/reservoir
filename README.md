@@ -29,7 +29,7 @@ This project has three subprojects:
 
 Requirements:
 
-* Java 21 (later versions might not work with graalvm)
+* Java 24 (other versions might not work with graalvm)
 * Maven 3.6.3 or later
 * Docker (unless `-DskipTests` is used)
 
@@ -39,6 +39,20 @@ You need `JAVA_HOME` set, e.g.:
    * macOS: `export JAVA_HOME=$(/usr/libexec/java_home -v 17)`
 
 Build all components with: `mvn install`
+
+## Native image
+
+You must install [sdkman](https://sdkman.io) first. Then perform
+
+    . $HOME/.sdkman/bin/sdkman-init.sh
+    sdk install java 24.0.1-graalce
+    . $HOME/.sdkman/bin/sdkman-init.sh
+    mvn -Pnative package
+
+Two images are created in the native profile:
+
+    server/target/reservoir-native
+    client/target/client-native
 
 ## Server
 
@@ -71,7 +85,7 @@ JMX metrics are exposed for domain `reservoir` if `-Dmetrics.jmx=true` option is
 
 ## Running with Docker
 
-If you feel adventurous and want to run Reservoir in a docker container, build the container first:
+If you feel adventurous and want to run Reservoir in a Docker container, build the container first:
 
 ```
 docker build -t mod-reservoir:latest .

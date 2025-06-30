@@ -8,7 +8,7 @@ import io.vertx.core.json.JsonObject;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class ClusterBuilderTest {
   @Test

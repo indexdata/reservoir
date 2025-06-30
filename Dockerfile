@@ -1,22 +1,59 @@
-# https://github.com/folio-org/folio-tools/tree/master/folio-java-docker/openjdk21
-FROM folioci/alpine-jre-openjdk21:latest
+FROM ghcr.io/graalvm/native-image-community:24.0.1 AS build
+# Note that this is based on Red Hat Enterprise Linux release 9.5 (Plow)
 
-# Install latest patch versions of packages: https://pythonspeed.com/articles/security-updates-in-docker/
-USER root
-RUN apk upgrade --no-cache
-USER folio
+RUN microdnf install -y maven
 
-ENV VERTICLE_FILE mod-reservoir-server-fat.jar
+WORKDIR /app
 
-# Set the location of the verticles
-ENV VERTICLE_HOME /usr/verticles
+# create runtime user
+RUN useradd \
+  --home-dir /nonexistent \
+  --shell /sbin/nologin \
+  --no-create-home \
+  --uid 65532 \
+  myuser
 
-# Copy your fat jar to the container
-COPY server/target/${VERTICLE_FILE} ${VERTICLE_HOME}/${VERTICLE_FILE}
+# Needed for git-commit-id-plugin
+COPY .git/ .git
 
-COPY server/target/compiler/*.jar ${VERTICLE_HOME}/compiler/
+# Reamining files are copied for building the native image
+COPY pom.xml .
+COPY checkstyle/ checkstyle
+COPY client/ client
+COPY descriptors/ descriptors
+COPY js/ js
+COPY server/ server
+COPY util/ util
+COPY xsl/ xsl
 
-# Expose this port locally in the container.
+# Twice so that artifact(s) is step 1 and cached for native image build
+RUN mvn -DskipTests package
+RUN mvn -DskipTests -Pnative package
+
+# Save list of shared lib deps
+RUN ldd server/target/reservoir-native | tr -s '[:blank:]' '\n' | grep '^/' | \
+  xargs -I % sh -c 'mkdir -p $(dirname deps%); cp % deps%;'
+
+RUN mkdir -p /app/tmp/vertx-cache
+RUN chmod -R 777 /app/tmp
+RUN chown -R myuser:myuser /app/tmp
+
+FROM scratch
+
+# user, group, and timezone data
+COPY --from=build /usr/share/zoneinfo /usr/share/zoneinfo
+COPY --from=build /etc/passwd /etc/passwd
+COPY --from=build /etc/group /etc/group
+
+COPY --from=build /app/tmp /tmp
+COPY --from=build /app/server/target/reservoir-native /reservoir-native
+COPY --from=build /app/client/target/client-native /client-native
+COPY --from=build /app/deps /
+
 EXPOSE 8081
 
-ENV JAVA_OPTIONS "--upgrade-module-path=compiler -XX:+UnlockExperimentalVMOptions -XX:+EnableJVMCI"
+# Get Exception in thread "main" java.lang.IllegalStateException: Unable to create folder at path '/tmp/vertx-cache'
+# despite /tmp/vertx-cache being created with 777 permissions
+# USER myuser:myuser
+
+CMD ["/reservoir-native"]

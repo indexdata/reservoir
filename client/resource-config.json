@@ -1,0 +1,10 @@
+{
+  "resources": {
+    "includes": [
+      {"pattern": ".*"}
+    ],
+    "excludes": [
+      {"pattern": "log4j2.*\\.properties"}
+    ]
+  }
+}

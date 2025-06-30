@@ -1,0 +1,13 @@
+{
+  "resources": [
+    {
+      "glob": "git.properties"
+    },
+    {
+      "glob": "openapi/**"
+    },
+    {
+      "glob": "webroot/**"
+    }
+  ]
+}

@@ -7,6 +7,9 @@
   </parent>
   <artifactId>mod-reservoir-client</artifactId>
   <name>Reservoir command-line client</name>
+  <properties>
+    <main.class>com.indexdata.reservoir.client.Main</main.class>
+  </properties>
 
   <dependencies>
     <dependency>
@@ -66,12 +69,10 @@
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-slf4j-impl</artifactId>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-jul</artifactId>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.folio.okapi</groupId>
@@ -106,7 +107,7 @@
               <transformers>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                   <manifestEntries>
-                    <Main-Class>com.indexdata.reservoir.client.Main</Main-Class>
+                    <Main-Class>${main.class}</Main-Class>
                     <Multi-Release>true</Multi-Release>
                   </manifestEntries>
                 </transformer>
@@ -145,5 +146,49 @@
       </plugin>
     </plugins>
   </build>
+  <profiles>
+    <profile>
+      <id>native</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.graalvm.buildtools</groupId>
+            <artifactId>native-maven-plugin</artifactId>
+            <version>${graalvm-maven-plugin.version}</version>
+            <extensions>true</extensions>
+            <executions>
+              <execution>
+                <id>build-native</id>
+                <goals>
+                  <goal>compile-no-fork</goal>
+                </goals>
+                <phase>package</phase>
+              </execution>
+              <execution>
+                <id>test-native</id>
+                <goals>
+                  <goal>test</goal>
+                </goals>
+                <phase>test</phase>
+              </execution>
+            </executions>
+            <configuration>
+              <imageName>client-native</imageName>
+              <mainClass>${main.class}</mainClass>
+              <skipNativeTests>true</skipNativeTests>
+              <debug>true</debug>
+              <verbose>true</verbose>
+              <quickBuild>true</quickBuild>
+              <buildArgs>
+                <buildArg>--no-fallback</buildArg>
+                <buildArg>-H:ResourceConfigurationFiles=${project.basedir}/resource-config.json</buildArg>
+                <buildArg>-H:ReflectionConfigurationFiles=${project.basedir}/reflection-config.json</buildArg>
+              </buildArgs>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 
 </project>
