@@ -11,6 +11,8 @@ env:
 jobs:
   build:
 
+    runs-on: ubuntu-latest
+
     steps:
       - name: checkout module
         uses: actions/checkout@v3
