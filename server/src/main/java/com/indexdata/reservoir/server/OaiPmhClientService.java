@@ -599,7 +599,7 @@ public class OaiPmhClientService {
 
   private Future<Void> listRecordsResponse(Storage storage, OaiPmhStatus job,
       JsonArray matchKeyConfigs, HttpClientResponse res) {
-    job.setTotalRequests(job.getTotalRequests() + 1);
+    job.incrementTotalRequests();
     if (res.statusCode() != 200) {
       return handleBadResponse(res);
     }
