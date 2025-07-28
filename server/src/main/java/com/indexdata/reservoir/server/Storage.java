@@ -288,11 +288,9 @@ public class Storage {
     return pool
       .withConnection(c ->
           updateMatchKeyValues(vertx, c, globalId, payload, matchKeyConfig))
-      .recover(e -> {
-        log.info("update recover: {}", e.getMessage());
-        return pool.withConnection(c ->
-            updateMatchKeyValues(vertx, c, globalId, payload, matchKeyConfig));
-      });
+      .recover(x ->
+        pool.withConnection(c ->
+            updateMatchKeyValues(vertx, c, globalId, payload, matchKeyConfig)));
   }
 
   Future<Void> updateMatchKeyValues(Vertx vertx, SqlConnection conn, UUID globalId,
