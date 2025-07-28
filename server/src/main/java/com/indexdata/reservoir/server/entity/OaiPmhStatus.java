@@ -182,6 +182,16 @@ public class OaiPmhStatus {
     this.totalRequests = totalRequests;
   }
 
+  /**
+   * Increment total requests by one.
+   */
+  public void incrementTotalRequests() {
+    if (totalRequests == null) {
+      totalRequests = 0;
+    }
+    totalRequests++;
+  }
+
   @JsonIgnore
   public JsonObject getConfig() {
     return config;
