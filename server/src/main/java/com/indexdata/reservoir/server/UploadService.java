@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.GenericCompositeFuture;
+import org.folio.okapi.common.HttpResponse;
 import org.folio.okapi.common.XOkapiHeaders;
 
 public class UploadService {
@@ -47,8 +48,8 @@ public class UploadService {
   public Future<Void> uploadRecords(RoutingContext ctx) {
     try {
       enforcePermissionsBySource(ctx);
-      HttpServerRequest request = ctx.request();
       IngestParams params = new IngestParams(ctx.request());
+      HttpServerRequest request = ctx.request();
       Future<IngestStatsByFile> future;
       if (params.contentType != null && params.contentType.startsWith("multipart/form-data")) {
         request.setExpectMultipart(true);
@@ -67,22 +68,9 @@ public class UploadService {
         future = uploadContent(ctx, request, params, params.fileName, params.contentType)
             .map(IngestStatsByFile::new);
       }
-      return future
-        .compose(res -> {
-          if (!ctx.response().headWritten()) {
-            ctx.response().putHeader("Content-Type", "application/json");
-            ctx.response().setStatusCode(200);
-          }
-          log.info("Upload completed: {}", res);
-          return ctx.response().end(res.toJson().encode());
-        })
-        .recover(e -> {
-          if (!ctx.response().headWritten()) {
-            return Future.failedFuture(e);
-          }
-          return ctx.response().end(new JsonObject()
-            .put("error", "Upload failed: " + e.getMessage()).encode());
-        });
+      return future.onSuccess(res ->
+        HttpResponse.responseJson(ctx, 200).end(res.toJson().encode()))
+        .mapEmpty();
     } catch (Exception e) {
       return Future.failedFuture(e);
     }
@@ -107,7 +95,7 @@ public class UploadService {
           params.getSummary(fileName), params.getDetails(contentType),
           queueSize, storage.getTenant());
       return uploadContent(readStream,
-          new IngestWriteStream(ctx, storage, params, fileName, contentType),
+          new IngestWriteStream(ctx.vertx(), storage, params, fileName, contentType),
           contentType, queueSize, params.xmlFixing);
     } catch (Exception e) {
       return Future.failedFuture(e);
