@@ -40,7 +40,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.tlib.postgres.PgCqlQuery;
 import org.folio.tlib.postgres.TenantPgPool;
 import org.folio.tlib.util.TenantUtil;
@@ -208,37 +207,69 @@ public class Storage {
   Future<Boolean> upsertGlobalRecord(Vertx vertx, String localIdentifier,
       SourceId sourceId, int sourceVersion, JsonObject payload, JsonArray matchKeyConfigs) {
 
-    UUID startId = UUID.randomUUID();
-    return pool.preparedQuery(
-            "INSERT INTO " + globalRecordTable
-                + " (id, local_id, source_id, source_version, payload)"
-                + " VALUES ($1, $2, $3, $4, $5)"
-                + " ON CONFLICT (local_id, source_id, source_version) DO UPDATE "
-                + " SET payload = $5"
-                + " RETURNING id"
-        )
-        .execute(Tuple.of(startId, localIdentifier, sourceId.toString(), sourceVersion, payload))
-        .map(rowSet -> rowSet.iterator().next().getUUID("id")
-      )
-      .compose(id -> updateMatchKeyValues(vertx, id, payload, matchKeyConfigs)
-        .map(x -> id.equals(startId)));
+    if (matchKeyConfigs == null || matchKeyConfigs.isEmpty()) {
+      JsonObject noConf = null;
+      return upsertGlobalRecord(vertx, localIdentifier, sourceId, sourceVersion, payload, noConf);
+    }
+    Future<Boolean> future = null;
+    for (int i = 0; i < matchKeyConfigs.size(); i++) {
+      JsonObject matchKeyConfig = matchKeyConfigs.getJsonObject(i);
+      Future<Boolean> f = upsertGlobalRecordWithRecover(vertx, localIdentifier, sourceId,
+          sourceVersion, payload, matchKeyConfig);
+      // we want the first result as boolean result
+      future = future == null ? f : future.compose(x -> f.map(x));
+    }
+    return future;
   }
 
-  Future<Void> deleteGlobalRecord(String localIdentifier, SourceId sourceId, int sourceVersion) {
-    return pool.withConnection(conn -> {
-      String q = "UPDATE " + clusterMetaTable + " AS m"
-            + " SET datestamp = $4"
-            + " FROM " + globalRecordTable + ", " + clusterRecordTable + " AS r"
-            + " WHERE m.cluster_id = r.cluster_id AND r.record_id = id"
-            + " AND local_id = $1 AND source_id = $2 and source_version = $3";
-      return conn.preparedQuery(q)
-              .execute(Tuple.of(localIdentifier, sourceId.toString(), sourceVersion,
-                  LocalDateTime.now(ZoneOffset.UTC)))
-              .compose(x -> conn.preparedQuery("DELETE FROM " + globalRecordTable
-                      + " WHERE local_id = $1 AND source_id = $2 and source_version = $3")
-              .execute(Tuple.of(localIdentifier, sourceId.toString(), sourceVersion))
-              .mapEmpty());
+  Future<Boolean> upsertGlobalRecord(Vertx vertx, String localIdentifier,
+      SourceId sourceId, int sourceVersion, JsonObject payload, JsonObject matchKeyConfig) {
+
+    return pool.withTransaction(conn -> {
+      UUID startId = UUID.randomUUID();
+      return conn.preparedQuery(
+          "INSERT INTO " + globalRecordTable
+              + " (id, local_id, source_id, source_version, payload)"
+              + " VALUES ($1, $2, $3, $4, $5)"
+              + " ON CONFLICT (local_id, source_id, source_version) DO UPDATE "
+              + " SET payload = $5"
+              + " RETURNING id")
+          .execute(Tuple.of(startId, localIdentifier, sourceId.toString(), sourceVersion, payload))
+          .map(rowSet -> rowSet.iterator().next().getUUID("id"))
+          .compose(id -> updateMatchKeyValues(vertx, conn, id, payload, matchKeyConfig)
+              .map(x -> id.equals(startId)));
     });
+  }
+
+  Future<Boolean> upsertGlobalRecordWithRecover(Vertx vertx, String localIdentifier,
+      SourceId sourceId, int sourceVersion, JsonObject payload, JsonObject matchKeyConfig) {
+
+    return upsertGlobalRecord(vertx, localIdentifier, sourceId,
+        sourceVersion, payload, matchKeyConfig)
+        // addValuesToCluster may fail if for same new match key for parallel operations
+        // we recover just once for that. 2nd will find the new value for the one that
+        // succeeded.
+        .recover(x -> {
+          return upsertGlobalRecord(vertx, localIdentifier, sourceId,
+              sourceVersion, payload, matchKeyConfig);
+
+        });
+  }
+
+  Future<Void> deleteGlobalRecord(String localIdentifier, SourceId sourceId,
+      int sourceVersion) {
+    String q = "UPDATE " + clusterMetaTable + " AS m"
+        + " SET datestamp = $4"
+        + " FROM " + globalRecordTable + ", " + clusterRecordTable + " AS r"
+        + " WHERE m.cluster_id = r.cluster_id AND r.record_id = id"
+        + " AND local_id = $1 AND source_id = $2 and source_version = $3";
+    return pool.withConnection(conn -> conn.preparedQuery(q)
+        .execute(Tuple.of(localIdentifier, sourceId.toString(), sourceVersion,
+            LocalDateTime.now(ZoneOffset.UTC)))
+        .compose(x -> conn.preparedQuery("DELETE FROM " + globalRecordTable
+            + " WHERE local_id = $1 AND source_id = $2 and source_version = $3")
+            .execute(Tuple.of(localIdentifier, sourceId.toString(), sourceVersion))
+            .mapEmpty()));
   }
 
   /**
@@ -250,8 +281,9 @@ public class Storage {
    * @param matchKeyConfigs match key configrations in use
    * @return async result with TRUE=inserted, FALSE=updated, null=deleted
    */
-  Future<Boolean> ingestGlobalRecord(Vertx vertx, SourceId sourceId,
-      int sourceVersion, JsonObject globalRecord, JsonArray matchKeyConfigs) {
+  Future<Boolean> ingestGlobalRecord(Vertx vertx,
+      SourceId sourceId, int sourceVersion, JsonObject globalRecord,
+      JsonArray matchKeyConfigs) {
 
     final String localIdentifier = globalRecord.getString("localId");
     if (localIdentifier == null) {
@@ -272,30 +304,12 @@ public class Storage {
         sourceVersion, payload, matchKeyConfigs);
   }
 
-
-  Future<Void> updateMatchKeyValues(Vertx vertx, UUID globalId,
-      JsonObject payload, JsonArray matchKeyConfigs) {
-    List<Future<Void>> futures = new ArrayList<>(matchKeyConfigs.size());
-    for (int i = 0; i < matchKeyConfigs.size(); i++) {
-      JsonObject matchKeyConfig = matchKeyConfigs.getJsonObject(i);
-      futures.add(updateMatchKeyValues(vertx, globalId, payload, matchKeyConfig));
-    }
-    return GenericCompositeFuture.all(futures).mapEmpty();
-  }
-
-  Future<Void> updateMatchKeyValues(Vertx vertx, UUID globalId,
-      JsonObject payload, JsonObject matchKeyConfig) {
-    return pool
-      .withConnection(c ->
-          updateMatchKeyValues(vertx, c, globalId, payload, matchKeyConfig))
-      .recover(x ->
-        pool.withConnection(c ->
-            updateMatchKeyValues(vertx, c, globalId, payload, matchKeyConfig)));
-  }
-
   Future<Void> updateMatchKeyValues(Vertx vertx, SqlConnection conn, UUID globalId,
       JsonObject payload, JsonObject matchKeyConfig) {
 
+    if (matchKeyConfig == null) {
+      return Future.succeededFuture();
+    }
     String update = matchKeyConfig.getString("update");
     if ("manual".equals(update)) {
       return Future.succeededFuture();
