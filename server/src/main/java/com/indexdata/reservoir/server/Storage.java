@@ -207,17 +207,21 @@ public class Storage {
   Future<Boolean> upsertGlobalRecord(Vertx vertx, String localIdentifier,
       SourceId sourceId, int sourceVersion, JsonObject payload, JsonArray matchKeyConfigs) {
 
-    if (matchKeyConfigs == null || matchKeyConfigs.isEmpty()) {
-      JsonObject noConf = null;
-      return upsertGlobalRecord(vertx, localIdentifier, sourceId, sourceVersion, payload, noConf);
-    }
     Future<Boolean> future = null;
     for (int i = 0; i < matchKeyConfigs.size(); i++) {
       JsonObject matchKeyConfig = matchKeyConfigs.getJsonObject(i);
+      String update = matchKeyConfig.getString("update");
+      if ("manual".equals(update)) {
+        continue;
+      }
       Future<Boolean> f = upsertGlobalRecordWithRecover(vertx, localIdentifier, sourceId,
           sourceVersion, payload, matchKeyConfig);
       // we want the first result as boolean result
       future = future == null ? f : future.compose(x -> f.map(x));
+    }
+    if (future == null) {
+      JsonObject noConf = null;
+      return upsertGlobalRecord(vertx, localIdentifier, sourceId, sourceVersion, payload, noConf);
     }
     return future;
   }
@@ -308,10 +312,6 @@ public class Storage {
       JsonObject payload, JsonObject matchKeyConfig) {
 
     if (matchKeyConfig == null) {
-      return Future.succeededFuture();
-    }
-    String update = matchKeyConfig.getString("update");
-    if ("manual".equals(update)) {
       return Future.succeededFuture();
     }
     String matchkeyId = matchKeyConfig.getString("id");
