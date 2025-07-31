@@ -178,7 +178,7 @@
               <skipNativeTests>true</skipNativeTests>
               <debug>true</debug>
               <verbose>true</verbose>
-              <quickBuild>true</quickBuild>
+              <quickBuild>false</quickBuild>
               <buildArgs>
                 <buildArg>--no-fallback</buildArg>
                 <buildArg>-H:ResourceConfigurationFiles=${project.basedir}/resource-config.json</buildArg>
