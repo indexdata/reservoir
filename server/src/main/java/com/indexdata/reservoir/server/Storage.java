@@ -250,6 +250,7 @@ public class Storage {
 
   Future<Boolean> ingestGlobalRecord(Vertx vertx, SourceId sourceId,
       int sourceVersion, JsonObject globalRecord, JsonArray matchKeyConfigs) {
+    // There is at most one retry per match key config, so we can use the size
     return ingestGlobalRecord(vertx, matchKeyConfigs.size(), sourceId, sourceVersion,
       globalRecord, matchKeyConfigs);
   }
@@ -257,14 +258,14 @@ public class Storage {
   /**
    * Insert/update/delete global record.
    * @param vertx Vert.x handle
-   * @param cnt retry count
+   * @param retryCount retry count
    * @param sourceId source identifier
    * @param sourceVersion source version
    * @param globalRecord global record JSON object
    * @param matchKeyConfigs match key configrations in use
    * @return async result with TRUE=inserted, FALSE=updated, null=deleted
    */
-  private Future<Boolean> ingestGlobalRecord(Vertx vertx, int cnt, SourceId sourceId,
+  private Future<Boolean> ingestGlobalRecord(Vertx vertx, int retryCount, SourceId sourceId,
       int sourceVersion, JsonObject globalRecord, JsonArray matchKeyConfigs) {
 
     return pool.withTransaction(conn ->
@@ -274,10 +275,10 @@ public class Storage {
         // we recover just once for that. 2nd will find the new value for the one that
         // succeeded.
         .recover(e -> {
-          if (cnt == 0) {
+          if (retryCount == 0) {
             return Future.failedFuture(e);
           }
-          return ingestGlobalRecord(vertx, cnt - 1, sourceId, sourceVersion,
+          return ingestGlobalRecord(vertx, retryCount - 1, sourceId, sourceVersion,
               globalRecord, matchKeyConfigs);
         });
   }
