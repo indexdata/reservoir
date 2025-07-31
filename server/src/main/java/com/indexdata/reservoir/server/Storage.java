@@ -40,7 +40,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.tlib.postgres.PgCqlQuery;
 import org.folio.tlib.postgres.TenantPgPool;
 import org.folio.tlib.util.TenantUtil;
@@ -260,6 +259,10 @@ public class Storage {
         .recover(x ->
             pool.withTransaction(conn ->
                 ingestGlobalRecord(vertx, conn, sourceId, sourceVersion,
+                    globalRecord, matchKeyConfigs)))
+        .recover(x ->
+            pool.withTransaction(conn ->
+                ingestGlobalRecord(vertx, conn, sourceId, sourceVersion,
                     globalRecord, matchKeyConfigs)));
   }
 
@@ -298,12 +301,14 @@ public class Storage {
 
   Future<Void> updateMatchKeyValues(Vertx vertx, SqlConnection conn, UUID globalId,
       JsonObject payload, JsonArray matchKeyConfigs) {
+    Future<Void> future = Future.succeededFuture();
     List<Future<Void>> futures = new ArrayList<>(matchKeyConfigs.size());
     for (int i = 0; i < matchKeyConfigs.size(); i++) {
       JsonObject matchKeyConfig = matchKeyConfigs.getJsonObject(i);
-      futures.add(updateMatchKeyValues(vertx, conn, globalId, payload, matchKeyConfig));
+      future = future.compose(
+          x -> updateMatchKeyValues(vertx, conn, globalId, payload, matchKeyConfig));
     }
-    return GenericCompositeFuture.all(futures).mapEmpty();
+    return future;
   }
 
   Future<Void> updateMatchKeyValues(Vertx vertx, SqlConnection conn, UUID globalId,
