@@ -247,8 +247,25 @@ public class Storage {
    * @param matchKeyConfigs match key configrations in use
    * @return async result with TRUE=inserted, FALSE=updated, null=deleted
    */
-  Future<Boolean> ingestGlobalRecord(Vertx vertx, SourceId sourceId, int sourceVersion,
-      JsonObject globalRecord, JsonArray matchKeyConfigs) {
+
+  Future<Boolean> ingestGlobalRecord(Vertx vertx, SourceId sourceId,
+      int sourceVersion, JsonObject globalRecord, JsonArray matchKeyConfigs) {
+    return ingestGlobalRecord(vertx, matchKeyConfigs.size(), sourceId, sourceVersion,
+      globalRecord, matchKeyConfigs);
+  }
+
+  /**
+   * Insert/update/delete global record.
+   * @param vertx Vert.x handle
+   * @param cnt retry count
+   * @param sourceId source identifier
+   * @param sourceVersion source version
+   * @param globalRecord global record JSON object
+   * @param matchKeyConfigs match key configrations in use
+   * @return async result with TRUE=inserted, FALSE=updated, null=deleted
+   */
+  private Future<Boolean> ingestGlobalRecord(Vertx vertx, int cnt, SourceId sourceId,
+      int sourceVersion, JsonObject globalRecord, JsonArray matchKeyConfigs) {
 
     return pool.withTransaction(conn ->
             ingestGlobalRecord(vertx, conn, sourceId, sourceVersion,
@@ -256,14 +273,13 @@ public class Storage {
         // addValuesToCluster may fail if for same new match key for parallel operations
         // we recover just once for that. 2nd will find the new value for the one that
         // succeeded.
-        .recover(x ->
-            pool.withTransaction(conn ->
-                ingestGlobalRecord(vertx, conn, sourceId, sourceVersion,
-                    globalRecord, matchKeyConfigs)))
-        .recover(x ->
-            pool.withTransaction(conn ->
-                ingestGlobalRecord(vertx, conn, sourceId, sourceVersion,
-                    globalRecord, matchKeyConfigs)));
+        .recover(e -> {
+          if (cnt == 0) {
+            return Future.failedFuture(e);
+          }
+          return ingestGlobalRecord(vertx, cnt - 1, sourceId, sourceVersion,
+              globalRecord, matchKeyConfigs);
+        });
   }
 
   /**
@@ -302,7 +318,6 @@ public class Storage {
   Future<Void> updateMatchKeyValues(Vertx vertx, SqlConnection conn, UUID globalId,
       JsonObject payload, JsonArray matchKeyConfigs) {
     Future<Void> future = Future.succeededFuture();
-    List<Future<Void>> futures = new ArrayList<>(matchKeyConfigs.size());
     for (int i = 0; i < matchKeyConfigs.size(); i++) {
       JsonObject matchKeyConfig = matchKeyConfigs.getJsonObject(i);
       future = future.compose(
