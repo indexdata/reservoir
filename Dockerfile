@@ -1,4 +1,4 @@
-FROM ghcr.io/graalvm/native-image-community:24.0.1 AS build
+FROM ghcr.io/graalvm/native-image-community:24.0.2 AS build
 # Note that this is based on Red Hat Enterprise Linux release 9.5 (Plow)
 
 RUN microdnf install -y maven
