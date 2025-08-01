@@ -26,7 +26,7 @@ COPY server/ server
 COPY util/ util
 COPY xsl/ xsl
 
-RUN mvn -DskipTests package
+RUN mvn -B -q -DskipTests package
 
 EXPOSE 8081
 
