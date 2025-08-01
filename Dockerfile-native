@@ -27,8 +27,8 @@ COPY util/ util
 COPY xsl/ xsl
 
 # Twice so that artifact(s) is step 1 and cached for native image build
-RUN mvn -DskipTests package
-RUN mvn -DskipTests -Pnative package
+RUN mvn -B -q -DskipTests package
+RUN mvn -B -q -DskipTests -Pnative package
 
 # Save list of shared lib deps
 RUN ldd server/target/reservoir-native | tr -s '[:blank:]' '\n' | grep '^/' | \

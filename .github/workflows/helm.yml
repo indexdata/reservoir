@@ -9,9 +9,13 @@ on:
   # a full build when chart templates are changed, this is slightly suboptimal
   # TODO automatically bump chart version during build
   workflow_run:
-    workflows: ["publish-image"]
-    types: [completed]
-    branches: ["master"]
+    workflows:
+      - publish-image
+    types:
+      - completed
+    branches:
+      - master
+      - RSRVR-12-jit-native-image
 
 jobs:
   publish-chart:
@@ -21,7 +25,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - chart_name: reservoir
+          - chart_name: reservoir-jit
             chart_base_version: "0.1.0-master.${{ github.run_number }}"
             chart_path: ./chart
             md_path: ./descriptors/ModuleDescriptor-template.json
@@ -39,7 +43,7 @@ jobs:
       - name: Process MD for okapi-hooks
         if: ${{ matrix.md_path }}
         run: |
-          sed -i "s/\${artifactId}/mod-reservoir/" ${{ matrix.md_path }}
+          sed -i "s/\${artifactId}/${{ matrix.chart_name }}/" ${{ matrix.md_path }}
           sed -i "s/\${version}/$CHART_VERSION/" ${{ matrix.md_path }}
           sed 's/^/    /' ${{ matrix.md_path }} > indented.json
           sed -i -e '/@descriptor@/{
@@ -63,6 +67,6 @@ jobs:
         run: |
           helm package ${{ matrix.chart_path }} --version "$CHART_VERSION" --app-version "$APP_VERSION"
 
-      - name: helm push
-        run: |
-          helm push "${{ matrix.chart_name }}-$CHART_VERSION.tgz" oci://ghcr.io/${{ github.repository_owner }}/charts
+      # - name: helm push
+      #   run: |
+      #     helm push "${{ matrix.chart_name }}-$CHART_VERSION.tgz" oci://ghcr.io/${{ github.repository_owner }}/charts
