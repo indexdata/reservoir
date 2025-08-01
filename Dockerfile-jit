@@ -1,0 +1,35 @@
+FROM ghcr.io/graalvm/native-image-community:24.0.2
+# Note that this is based on Red Hat Enterprise Linux release 9.5 (Plow)
+
+RUN microdnf install -y maven
+
+WORKDIR /app
+
+# create runtime user
+RUN useradd \
+  --home-dir /nonexistent \
+  --shell /sbin/nologin \
+  --no-create-home \
+  --uid 65532 \
+  myuser
+
+# Needed for git-commit-id-plugin
+COPY .git/ .git
+
+# Reamining files are copied for building the native image
+COPY pom.xml .
+COPY checkstyle/ checkstyle
+COPY client/ client
+COPY descriptors/ descriptors
+COPY js/ js
+COPY server/ server
+COPY util/ util
+COPY xsl/ xsl
+
+RUN mvn -DskipTests package
+COPY server/target/ server/target
+
+EXPOSE 8081
+
+ENTRYPOINT ["/usr/lib64/graalvm/graalvm-community-java24/bin/java"]
+CMD ["--enable-native-access=ALL-UNNAMED", "--upgrade-module-path=server/target/compiler", "-XX:+UnlockExperimentalVMOptions", "-XX:+EnableJVMCI", "-jar", "server/target/mod-reservoir-server-fat.jar"]

@@ -4,16 +4,25 @@ on:
   push:
     branches:
       - master
+      - RSRVR-12-jit-native-image
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
   CURRENT_BRANCH: ${{ github.ref_name }}
 
 jobs:
   build:
 
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - dockerfile: ./Dockerfile-jit
+            image: ${{ github.repository }}-jit
+          - dockerfile: ./Dockerfile-native
+            image: ${{ github.repository }}-native
 
     steps:
       - name: checkout module
@@ -32,7 +41,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ matrix.image }}
           tags: |
             type=ref,event=branch
             type=ref,event=tag
@@ -43,6 +52,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          push: true
+          file:  ${{ matrix.dockerfile }}
+          push: false
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
