@@ -18,9 +18,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - dockerfile: ./Dockerfile-jit
+          - module: jit
+            dockerfile: ./Dockerfile-jit
             image: ${{ github.repository }}-jit
-          - dockerfile: ./Dockerfile-native
+          - module: native
+            dockerfile: ./Dockerfile-native
             image: ${{ github.repository }}-native
 
     steps:
