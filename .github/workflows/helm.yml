@@ -11,8 +11,6 @@ on:
   workflow_run:
     workflows:
       - publish-image
-    types:
-      - completed
     branches:
       - master
       - RSRVR-12-jit-native-image
