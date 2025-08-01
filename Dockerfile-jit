@@ -27,7 +27,6 @@ COPY util/ util
 COPY xsl/ xsl
 
 RUN mvn -DskipTests package
-COPY server/target/ server/target
 
 EXPOSE 8081
 
