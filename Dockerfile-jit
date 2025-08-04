@@ -1,6 +1,5 @@
-FROM ghcr.io/graalvm/native-image-community:24.0.2
-# Note that this is based on Red Hat Enterprise Linux release 9.5 (Plow)
-
+FROM container-registry.oracle.com/graalvm/jdk:24
+# Red Hat Enterprise Linux release 10.0 (CentOS Stream)
 RUN microdnf install -y maven
 
 WORKDIR /app
@@ -26,9 +25,8 @@ COPY server/ server
 COPY util/ util
 COPY xsl/ xsl
 
-RUN mvn -B -q -DskipTests package
+RUN mvn -B -DskipTests package
 
 EXPOSE 8081
 
-ENTRYPOINT ["/usr/lib64/graalvm/graalvm-community-java24/bin/java"]
-CMD ["--enable-native-access=ALL-UNNAMED", "--upgrade-module-path=server/target/compiler", "-XX:+UnlockExperimentalVMOptions", "-XX:+EnableJVMCI", "-jar", "server/target/mod-reservoir-server-fat.jar"]
+CMD ["sh", "-c", "/usr/lib64/graalvm/graalvm-java24/bin/java $JAVA_OPTS --enable-native-access=ALL-UNNAMED --upgrade-module-path=server/target/compiler -XX:+UnlockExperimentalVMOptions -XX:+EnableJVMCI -jar server/target/mod-reservoir-server-fat.jar"]
