@@ -1,5 +1,5 @@
 apiVersion: v2
-name: reservoir-jit
+name: reservoir
 description: A service that provides a clustering storage of metadata for Data Integration purposes
 type: application
 

@@ -14,7 +14,7 @@ image:
   tag: ""
 
 okapi-hooks:
-  moduleUrl: http://reservoir-jit:80
+  moduleUrl: http://reservoir:80
   moduleDescriptor: |
     @descriptor@
 
