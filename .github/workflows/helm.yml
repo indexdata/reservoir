@@ -15,7 +15,6 @@ on:
       - completed
     branches:
       - master
-      - RSRVR-12-jit-native-image
 
 jobs:
   publish-chart:
