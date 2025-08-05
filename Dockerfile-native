@@ -1,6 +1,5 @@
-FROM ghcr.io/graalvm/native-image-community:24.0.2 AS build
-# Note that this is based on Red Hat Enterprise Linux release 9.5 (Plow)
-
+FROM container-registry.oracle.com/graalvm/native-image:24 AS build
+# Red Hat Enterprise Linux release 10.0 (CentOS Stream)
 RUN microdnf install -y maven
 
 WORKDIR /app
@@ -27,8 +26,8 @@ COPY util/ util
 COPY xsl/ xsl
 
 # Twice so that artifact(s) is step 1 and cached for native image build
-RUN mvn -DskipTests package
-RUN mvn -DskipTests -Pnative package
+RUN mvn -B -DskipTests package
+RUN mvn -B -DskipTests -Pnative package
 
 # Save list of shared lib deps
 RUN ldd server/target/reservoir-native | tr -s '[:blank:]' '\n' | grep '^/' | \
@@ -56,4 +55,4 @@ EXPOSE 8081
 # despite /tmp/vertx-cache being created with 777 permissions
 # USER myuser:myuser
 
-CMD ["/reservoir-native"]
+ENTRYPOINT ["/reservoir-native"]
