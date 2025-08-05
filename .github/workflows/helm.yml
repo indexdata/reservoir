@@ -66,6 +66,6 @@ jobs:
         run: |
           helm package ${{ matrix.chart_path }} --version "$CHART_VERSION" --app-version "$APP_VERSION"
 
-      # - name: helm push
-      #   run: |
-      #     helm push "${{ matrix.chart_name }}-$CHART_VERSION.tgz" oci://ghcr.io/${{ github.repository_owner }}/charts
+      - name: helm push
+        run: |
+          helm push "${{ matrix.chart_name }}-$CHART_VERSION.tgz" oci://ghcr.io/${{ github.repository_owner }}/charts
