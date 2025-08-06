@@ -278,7 +278,8 @@ public class Storage {
       return Future.failedFuture("localId required");
     }
     if (Boolean.TRUE.equals(globalRecord.getBoolean("delete"))) {
-      return deleteGlobalRecord(localIdentifier, sourceId, sourceVersion).mapEmpty();
+      return deleteGlobalRecord(localIdentifier, sourceId, sourceVersion)
+        .map(x -> null);
     }
     final JsonObject payload = globalRecord.getJsonObject("payload");
     if (payload == null) {
