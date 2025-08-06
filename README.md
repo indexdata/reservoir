@@ -38,15 +38,25 @@ You need `JAVA_HOME` set, e.g.:
    * Linux: `export JAVA_HOME=$(readlink -f /usr/bin/javac | sed "s:bin/javac::")`
    * macOS: `export JAVA_HOME=$(/usr/libexec/java_home -v 17)`
 
-Build all components with: `mvn install`
+It is easier to select preferred JVM with [sdkman](https://sdkman.io).
 
-## Native image
-
-You must install [sdkman](https://sdkman.io) first. Then perform
+Use something like:
 
     . $HOME/.sdkman/bin/sdkman-init.sh
     sdk install java 24.0.2-graal
-    . $HOME/.sdkman/bin/sdkman-init.sh
+
+Then build reservoir with:
+
+    mvn package
+
+If you choose to use another JVM than GraalVM, compile with:
+
+    mvn -Pregular-jvm package
+
+## Native image
+
+For this to work, GraalVM *must* be use . Built with `native` profile:
+
     mvn -Pnative package
 
 Two images are created in the native profile:
