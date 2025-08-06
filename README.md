@@ -29,7 +29,7 @@ This project has three subprojects:
 
 Requirements:
 
-* Java 24 (other versions might not work with graalvm)
+* Java 24, preferably GraalVM
 * Maven 3.6.3 or later
 * Docker (unless `-DskipTests` is used)
 
@@ -38,15 +38,25 @@ You need `JAVA_HOME` set, e.g.:
    * Linux: `export JAVA_HOME=$(readlink -f /usr/bin/javac | sed "s:bin/javac::")`
    * macOS: `export JAVA_HOME=$(/usr/libexec/java_home -v 17)`
 
-Build all components with: `mvn install`
+It is easier to select preferred JVM with [sdkman](https://sdkman.io).
+
+Use something like:
+
+    . $HOME/.sdkman/bin/sdkman-init.sh
+    sdk install java 24.0.2-graal
+
+Then build reservoir with:
+
+    mvn package
+
+If you choose to use another JVM than GraalVM, compile with:
+
+    mvn -Pregular-jvm package
 
 ## Native image
 
-You must install [sdkman](https://sdkman.io) first. Then perform
+For this to work, GraalVM *must* be use . Built with `native` profile:
 
-    . $HOME/.sdkman/bin/sdkman-init.sh
-    sdk install java 24.0.1-graalce
-    . $HOME/.sdkman/bin/sdkman-init.sh
     mvn -Pnative package
 
 Two images are created in the native profile:
@@ -70,7 +80,14 @@ The server's database connection is then configured by setting environment varia
 `DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD`, `DB_DATABASE`,
 `DB_MAXPOOLSIZE`, `DB_SERVER_PEM`.
 
-Once configured, start the server with:
+If using GraalVM java, start the server with:
+
+```
+java -Dport=8081 --enable-native-access=ALL-UNNAMED \
+   -jar server/target/mod-reservoir-server-fat.jar
+```
+
+Otherwise, use:
 
 ```
 java -Dport=8081 --upgrade-module-path=server/target/compiler \

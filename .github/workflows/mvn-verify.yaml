@@ -5,12 +5,16 @@ jobs:
   mvn-verify:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up JDK 24
-      uses: actions/setup-java@v4
-      with:
-        java-version: '24'
-        distribution: 'temurin'
-        cache: maven
-    - name: Run the Maven verify phase
-      run: mvn --batch-mode verify
+      - uses: actions/checkout@v4
+      - uses: graalvm/setup-graalvm@v1 # https://github.com/graalvm/setup-graalvm
+        with:
+          java-version: '24.0.2'
+          distribution: 'graalvm'
+      - name: Show GraalVM and Java versions
+        run: |
+          echo "GRAALVM_HOME: $GRAALVM_HOME"
+          echo "JAVA_HOME: $JAVA_HOME"
+          java --version
+          native-image --version
+      - name: Run the Maven verify phase
+        run: mvn -B verify
