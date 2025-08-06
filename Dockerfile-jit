@@ -29,4 +29,4 @@ RUN mvn -B -DskipTests package
 
 EXPOSE 8081
 
-CMD ["sh", "-c", "/usr/lib64/graalvm/graalvm-java24/bin/java $JAVA_OPTS --enable-native-access=ALL-UNNAMED --upgrade-module-path=server/target/compiler -XX:+UnlockExperimentalVMOptions -XX:+EnableJVMCI -jar server/target/mod-reservoir-server-fat.jar"]
+CMD ["sh", "-c", "/usr/lib64/graalvm/graalvm-java24/bin/java $JAVA_OPTS --enable-native-access=ALL-UNNAMED -jar server/target/mod-reservoir-server-fat.jar"]

@@ -29,7 +29,7 @@ This project has three subprojects:
 
 Requirements:
 
-* Java 24 (other versions might not work with graalvm)
+* Java 24, preferably GraalVM
 * Maven 3.6.3 or later
 * Docker (unless `-DskipTests` is used)
 
@@ -45,7 +45,7 @@ Build all components with: `mvn install`
 You must install [sdkman](https://sdkman.io) first. Then perform
 
     . $HOME/.sdkman/bin/sdkman-init.sh
-    sdk install java 24.0.1-graalce
+    sdk install java 24.0.2-graal
     . $HOME/.sdkman/bin/sdkman-init.sh
     mvn -Pnative package
 
@@ -70,7 +70,14 @@ The server's database connection is then configured by setting environment varia
 `DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD`, `DB_DATABASE`,
 `DB_MAXPOOLSIZE`, `DB_SERVER_PEM`.
 
-Once configured, start the server with:
+If using GraalVM java, start the server with:
+
+```
+java -Dport=8081 --enable-native-access=ALL-UNNAMED \
+   -jar server/target/mod-reservoir-server-fat.jar
+```
+
+Otherwise, use:
 
 ```
 java -Dport=8081 --upgrade-module-path=server/target/compiler \
