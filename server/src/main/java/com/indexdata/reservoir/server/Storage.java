@@ -516,7 +516,7 @@ public class Storage {
    * @return async result
    */
   public Future<Void> updateGlobalRecords(Vertx vertx, LargeJsonReadStream request) {
-    return pool.withConnection(this::getAvailableMatchConfigs).compose(matchKeyConfigs ->
+    return getAvailableMatchConfigs().compose(matchKeyConfigs ->
         new ReadStreamConsumer<JsonObject, Void>()
             .consume(request, r ->
                 ingestGlobalRecord(
@@ -527,11 +527,10 @@ public class Storage {
 
   /**
    * Get available match key configurations.
-   * @param conn connection to use for selecting them
    * @return async result with array of configurations
    */
-  public Future<JsonArray> getAvailableMatchConfigs(SqlConnection conn) {
-    return conn.query("SELECT * FROM " + matchKeyConfigTable)
+  public Future<JsonArray> getAvailableMatchConfigs() {
+    return pool.query("SELECT * FROM " + matchKeyConfigTable)
         .execute()
         .map(res -> {
           JsonArray matchConfigs = new JsonArray();
@@ -545,10 +544,6 @@ public class Storage {
               ));
           return matchConfigs;
         });
-  }
-
-  public Future<JsonArray> getAvailableMatchConfigs() {
-    return pool.withConnection(this::getAvailableMatchConfigs);
   }
 
   /**
