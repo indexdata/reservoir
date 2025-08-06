@@ -680,7 +680,7 @@
     "env": [
       {
         "name": "JAVA_OPTIONS",
-        "value": "-XX:MaxRAMPercentage=66.0 --module-path=compiler/ --upgrade-module-path=compiler/compiler.jar:compiler/compiler-management.jar -XX:+UnlockExperimentalVMOptions -XX:+EnableJVMCI -Dmetrics.prometheus.port=9090"
+        "value": "-XX:MaxRAMPercentage=66.0 -Dmetrics.prometheus.port=9090"
       },
       {
         "name": "DB_HOST",
