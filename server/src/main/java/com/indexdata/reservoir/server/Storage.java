@@ -204,9 +204,31 @@ public class Storage {
     ).mapEmpty();
   }
 
+  private Future<Boolean> upsertGlobalRecord(Vertx vertx, String localIdentifier, SourceId sourceId,
+      int sourceVersion, JsonObject payload, JsonArray matchKeyConfigs) {
+    return upsertGlobalRecord(vertx, matchKeyConfigs.size(), localIdentifier, sourceId,
+        sourceVersion, payload, matchKeyConfigs);
+  }
+
+  private Future<Boolean> upsertGlobalRecord(Vertx vertx, int retryCount, String localIdentifier,
+      SourceId sourceId, int sourceVersion, JsonObject payload, JsonArray matchKeyConfigs) {
+    return pool.withTransaction(conn ->
+            upsertGlobalRecord(vertx, conn, localIdentifier, sourceId, sourceVersion,
+                payload, matchKeyConfigs))
+        // addValuesToCluster may fail if for same new match key for parallel operations
+        // we recover just once for that. 2nd will find the new value for the one that
+        // succeeded.
+        .recover(e -> {
+          if (retryCount == 0) {
+            return Future.failedFuture(e);
+          }
+          return upsertGlobalRecord(vertx, retryCount - 1, localIdentifier, sourceId, sourceVersion,
+              payload, matchKeyConfigs);
+        });
+  }
+
   Future<Boolean> upsertGlobalRecord(Vertx vertx, SqlConnection conn, String localIdentifier,
       SourceId sourceId, int sourceVersion, JsonObject payload, JsonArray matchKeyConfigs) {
-
     UUID startId = UUID.randomUUID();
     return conn.preparedQuery(
             "INSERT INTO " + globalRecordTable
@@ -222,78 +244,32 @@ public class Storage {
             .map(x -> id.equals(startId)));
   }
 
-  Future<Void> deleteGlobalRecord(SqlConnection conn, String localIdentifier, SourceId sourceId,
-      int sourceVersion) {
+  Future<Void> deleteGlobalRecord(String localIdentifier, SourceId sourceId, int sourceVersion) {
     String q = "UPDATE " + clusterMetaTable + " AS m"
         + " SET datestamp = $4"
         + " FROM " + globalRecordTable + ", " + clusterRecordTable + " AS r"
         + " WHERE m.cluster_id = r.cluster_id AND r.record_id = id"
         + " AND local_id = $1 AND source_id = $2 and source_version = $3";
-    return conn.preparedQuery(q)
-        .execute(Tuple.of(localIdentifier, sourceId.toString(), sourceVersion,
-            LocalDateTime.now(ZoneOffset.UTC)))
-        .compose(x -> conn.preparedQuery("DELETE FROM " + globalRecordTable
-                + " WHERE local_id = $1 AND source_id = $2 and source_version = $3")
-        .execute(Tuple.of(localIdentifier, sourceId.toString(), sourceVersion))
-        .mapEmpty());
-  }
-
-  /**
-   * Insert/update/delete global record.
-   * @param vertx Vert.x handle
-   * @param sourceId source identifier
-   * @param sourceVersion source version
-   * @param globalRecord global record JSON object
-   * @param matchKeyConfigs match key configrations in use
-   * @return async result with TRUE=inserted, FALSE=updated, null=deleted
-   */
-
-  Future<Boolean> ingestGlobalRecord(Vertx vertx, SourceId sourceId,
-      int sourceVersion, JsonObject globalRecord, JsonArray matchKeyConfigs) {
-    // There is at most one retry per match key config, so we can use the size
-    return ingestGlobalRecord(vertx, matchKeyConfigs.size(), sourceId, sourceVersion,
-      globalRecord, matchKeyConfigs);
-  }
-
-  /**
-   * Insert/update/delete global record.
-   * @param vertx Vert.x handle
-   * @param retryCount retry count
-   * @param sourceId source identifier
-   * @param sourceVersion source version
-   * @param globalRecord global record JSON object
-   * @param matchKeyConfigs match key configrations in use
-   * @return async result with TRUE=inserted, FALSE=updated, null=deleted
-   */
-  private Future<Boolean> ingestGlobalRecord(Vertx vertx, int retryCount, SourceId sourceId,
-      int sourceVersion, JsonObject globalRecord, JsonArray matchKeyConfigs) {
-
     return pool.withTransaction(conn ->
-            ingestGlobalRecord(vertx, conn, sourceId, sourceVersion,
-                globalRecord, matchKeyConfigs))
-        // addValuesToCluster may fail if for same new match key for parallel operations
-        // we recover just once for that. 2nd will find the new value for the one that
-        // succeeded.
-        .recover(e -> {
-          if (retryCount == 0) {
-            return Future.failedFuture(e);
-          }
-          return ingestGlobalRecord(vertx, retryCount - 1, sourceId, sourceVersion,
-              globalRecord, matchKeyConfigs);
-        });
+        conn.preparedQuery(q)
+          .execute(Tuple.of(localIdentifier, sourceId.toString(), sourceVersion,
+              LocalDateTime.now(ZoneOffset.UTC)))
+          .compose(x -> conn.preparedQuery("DELETE FROM " + globalRecordTable
+                  + " WHERE local_id = $1 AND source_id = $2 and source_version = $3")
+          .execute(Tuple.of(localIdentifier, sourceId.toString(), sourceVersion))
+          .mapEmpty()));
   }
 
   /**
    * Insert/update/delete global record.
    * @param vertx Vert.x handle
-   * @param conn connection
    * @param sourceId source identifier
    * @param sourceVersion source version
    * @param globalRecord global record JSON object
    * @param matchKeyConfigs match key configrations in use
    * @return async result with TRUE=inserted, FALSE=updated, null=deleted
    */
-  Future<Boolean> ingestGlobalRecord(Vertx vertx, SqlConnection conn,
+  Future<Boolean> ingestGlobalRecord(Vertx vertx,
       SourceId sourceId, int sourceVersion, JsonObject globalRecord,
       JsonArray matchKeyConfigs) {
 
@@ -302,8 +278,7 @@ public class Storage {
       return Future.failedFuture("localId required");
     }
     if (Boolean.TRUE.equals(globalRecord.getBoolean("delete"))) {
-      return deleteGlobalRecord(conn, localIdentifier, sourceId, sourceVersion)
-          .map(x -> null);
+      return deleteGlobalRecord(localIdentifier, sourceId, sourceVersion).mapEmpty();
     }
     final JsonObject payload = globalRecord.getJsonObject("payload");
     if (payload == null) {
@@ -312,7 +287,7 @@ public class Storage {
     if (sourceId == null) {
       return Future.failedFuture("sourceId required");
     }
-    return upsertGlobalRecord(vertx, conn, localIdentifier, sourceId,
+    return upsertGlobalRecord(vertx, localIdentifier, sourceId,
         sourceVersion, payload, matchKeyConfigs);
   }
 
