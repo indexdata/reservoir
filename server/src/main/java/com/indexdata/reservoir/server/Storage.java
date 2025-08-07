@@ -342,19 +342,22 @@ public class Storage {
                       + "' does not exist for '" + invocation + "'");
             }
             return ModuleCache.getInstance().lookup(vertx, tenant, entity)
-            .compose(module -> {
-              ingestMatcher.moduleExecutable = new ModuleExecutable(module, invocation);
-              return Future.succeededFuture(ingestMatcher);
-            });
+              .compose(module -> {
+                ingestMatcher.moduleExecutable = new ModuleExecutable(module, invocation);
+                return Future.succeededFuture(ingestMatcher);
+              });
           });
     }
     String methodName = matchKeyConfig.getString("method");
-    JsonObject params = matchKeyConfig.getJsonObject("params");
-    return MatchKeyMethod.get(vertx, tenant, ingestMatcher.matchKeyId, methodName, params)
-        .compose(matchKeyMethod -> {
-          ingestMatcher.matchKeyMethod = matchKeyMethod;
-          return Future.succeededFuture(ingestMatcher);
-        });
+    if (methodName != null) {
+      JsonObject params = matchKeyConfig.getJsonObject("params");
+      return MatchKeyMethod.get(vertx, tenant, ingestMatcher.matchKeyId, methodName, params)
+          .compose(matchKeyMethod -> {
+            ingestMatcher.matchKeyMethod = matchKeyMethod;
+            return Future.succeededFuture(ingestMatcher);
+          });
+    }
+    return Future.failedFuture("match key config must include 'method' or 'matcher'");
   }
 
   Future<List<IngestMatcher>> createIngestMatchers(JsonArray matchKeyConfigs, Vertx vertx) {
