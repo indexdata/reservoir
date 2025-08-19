@@ -104,7 +104,7 @@ public class XmlParserTest {
           xmlParser.endHandler(end -> promise.tryComplete());
           xmlParser.handler(event -> events.add(event.getEventType()));
           xmlParser.pause();
-          xmlParser.fetch(2);
+          xmlParser.fetch(5);
           vertx.setTimer(50, x -> {
             assertThat(events, hasSize(2));
             xmlParser.end();
@@ -113,7 +113,7 @@ public class XmlParserTest {
           return promise.future();
         })
         .onComplete(context.asyncAssertSuccess(
-            end -> assertThat(events, hasSize(2))));
+            end -> assertThat(events, hasSize(4))));
   }
 
   @Test

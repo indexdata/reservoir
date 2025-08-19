@@ -104,10 +104,18 @@ public class MappingReadStream<T,V> implements ReadStream<T>, Handler<V> {
       return;
     }
     emitting = true;
+    boolean endedBegin = this.ended;
     try {
       while (demand > 0L) {
         T t = mapper.poll();
         if (t == null) {
+          if (ended) {
+            Handler<Void> handler = endHandler;
+            endHandler = null;
+            if (handler != null) {
+              handler.handle(null);
+            }
+          }
           break;
         }
         if (demand != Long.MAX_VALUE) {
@@ -117,18 +125,10 @@ public class MappingReadStream<T,V> implements ReadStream<T>, Handler<V> {
           eventHandler.handle(t);
         }
       }
-      if (ended) {
-        Handler<Void> handler = endHandler;
-        endHandler = null;
-        if (handler != null) {
-          handler.handle(null);
-        }
+      if (demand == 0L) {
+        stream.pause();
       } else {
-        if (demand == 0L) {
-          stream.pause();
-        } else {
-          stream.resume();
-        }
+        stream.resume();
       }
     } catch (Exception e) {
       // unregister so no more errors may be raised
@@ -149,6 +149,9 @@ public class MappingReadStream<T,V> implements ReadStream<T>, Handler<V> {
       }
     } finally {
       emitting = false;
+      if (endedBegin != ended) {
+        checkPending();
+      }
     }
   }
 
