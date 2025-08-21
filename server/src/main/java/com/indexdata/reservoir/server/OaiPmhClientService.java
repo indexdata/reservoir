@@ -344,7 +344,7 @@ public class OaiPmhClientService {
             rowSet.forEach(x -> {
               String id2 = x.getString("id");
               OaiPmhStatus job = getJob(x, id2);
-              futures.add(startJob(storage, id2, job));
+              futures.add(startJob(ctx.vertx(), storage, id2, job));
             });
             return GenericCompositeFuture.all(futures);
           })
@@ -355,7 +355,7 @@ public class OaiPmhClientService {
             if (job == null) {
               return Future.succeededFuture(false);
             }
-            return startJob(storage, id, job).map(true);
+            return startJob(ctx.vertx(), storage, id, job).map(true);
           });
     }
     return future
@@ -368,7 +368,7 @@ public class OaiPmhClientService {
         }).mapEmpty();
   }
 
-  Future<Void> startJob(Storage storage, String id, OaiPmhStatus job) {
+  Future<Void> startJob(Vertx vertx, Storage storage, String id, OaiPmhStatus job) {
     job.setStatusRunning();
     job.setError(null);
     job.setLastTotalRecords(0L);
@@ -376,7 +376,7 @@ public class OaiPmhClientService {
     job.setLastStartedTimestampRaw(LocalDateTime.now(ZoneOffset.UTC));
     UUID owner = UUID.randomUUID();
     return updateJob(storage, id, null, job, Boolean.FALSE, owner)
-        .onSuccess(x -> oaiHarvestLoop(storage, id, job, owner, 0))
+        .onSuccess(x -> oaiHarvestLoop(vertx, storage, id, job, owner, 0))
         .mapEmpty();
   }
 
@@ -513,7 +513,7 @@ public class OaiPmhClientService {
 
   Future<Boolean> ingestRecord(
       Storage storage, OaiRecord<JsonObject> oaiRecord,
-      SourceId sourceId, int sourceVersion, JsonArray matchKeyConfigs) {
+      SourceId sourceId, int sourceVersion, List<IngestMatcher> ingestMatches) {
     try {
       JsonObject globalRecord = new JsonObject();
       globalRecord.put("localId", oaiRecord.getIdentifier());
@@ -523,7 +523,7 @@ public class OaiPmhClientService {
         globalRecord.put("payload", new JsonObject().put("marc", oaiRecord.getMetadata()));
       }
       return storage.ingestGlobalRecord(vertx, sourceId, sourceVersion,
-          globalRecord, matchKeyConfigs);
+          globalRecord, ingestMatches);
     } catch (Exception e) {
       log.error("{}", e.getMessage(), e);
       return Future.failedFuture(e);
@@ -598,7 +598,7 @@ public class OaiPmhClientService {
   }
 
   private Future<Void> listRecordsResponse(Storage storage, OaiPmhStatus job,
-      JsonArray matchKeyConfigs, HttpClientResponse res) {
+      List<IngestMatcher> ingestMatches, HttpClientResponse res) {
     job.incrementTotalRequests();
     if (res.statusCode() != 200) {
       return handleBadResponse(res);
@@ -628,7 +628,7 @@ public class OaiPmhClientService {
             xmlParser.pause();
           }
           ingestRecord(storage, oaiRecord, sourceId, sourceVersion,
-              matchKeyConfigs)
+              ingestMatches)
               .map(upd -> {
                 job.setTotalRecords(job.getTotalRecords() + 1);
                 job.setLastTotalRecords(job.getLastTotalRecords() + 1);
@@ -672,7 +672,8 @@ public class OaiPmhClientService {
     return promise.future();
   }
 
-  void oaiHarvestLoop(Storage storage, String id, OaiPmhStatus job, UUID owner, int retries) {
+  void oaiHarvestLoop(Vertx vertx, Storage storage, String id, OaiPmhStatus job, UUID owner,
+      int retries) {
     job.setError(null);
     job.setLastActiveTimestampRaw(LocalDateTime.now(ZoneOffset.UTC));
     JsonObject config = job.getConfig();
@@ -689,11 +690,11 @@ public class OaiPmhClientService {
             job.setStatusIdle();
             return updateJob(storage, id, config, job, null, null);
           }
-          return storage.getAvailableMatchConfigs()
-              .compose(matchKeyConfigs ->
+          return storage.availableIngestMatchers(vertx)
+              .compose(ingestMatches ->
                   listRecordsRequest(config)
                       .compose(res ->
-                          listRecordsResponse(storage, job, matchKeyConfigs, res)))
+                          listRecordsResponse(storage, job, ingestMatches, res)))
               .map(0)
               .recover(e -> {
                 if (e instanceof VertxException && "Connection was closed".equals(e.getMessage())
@@ -713,7 +714,7 @@ public class OaiPmhClientService {
                   // continue harvesting
                   updateJob(storage, id, config, job, null, null)
                       // only continue if we can also save job
-                      .onSuccess(x1 -> oaiHarvestLoop(storage, id, job, owner, newRetries))
+                      .onSuccess(x1 -> oaiHarvestLoop(vertx, storage, id, job, owner, newRetries))
               );
         })
         .recover(e -> {

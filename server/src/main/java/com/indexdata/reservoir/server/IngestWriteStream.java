@@ -5,11 +5,11 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.streams.WriteStream;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -25,7 +25,7 @@ public class IngestWriteStream implements WriteStream<JsonObject> {
   Handler<AsyncResult<Void>> endHandler;
   boolean ended;
   Handler<Void> drainHandler;
-  JsonArray matchKeyConfigs;
+  List<IngestMatcher> ingestMatches;
   AtomicInteger ops = new AtomicInteger();
   int queueSize = 5;
   boolean ingest;
@@ -59,16 +59,17 @@ public class IngestWriteStream implements WriteStream<JsonObject> {
           Future<Void> future = Future.succeededFuture();
           String localId = rec.getString(LOCAL_ID);
           if (ingest && localId != null) {
-            if (matchKeyConfigs == null) {
-              future = storage.getAvailableMatchConfigs().map(x -> {
-                matchKeyConfigs = x;
-                return null;
-              });
+            if (ingestMatches == null) {
+              future = storage.availableIngestMatchers(vertx)
+                .map(x -> {
+                  ingestMatches = x;
+                  return null;
+                });
             }
             future = future
                 .compose(x -> storage
                   .ingestGlobalRecord(
-                    vertx, params.sourceId, params.sourceVersion, rec, matchKeyConfigs)
+                    vertx, params.sourceId, params.sourceVersion, rec, ingestMatches)
                   .onSuccess(r -> {
                     if (r == null) {
                       stats.incrementDeleted();
