@@ -69,12 +69,16 @@ spec:
               protocol: TCP
           livenessProbe:
             httpGet:
-              path: /healthz
+              path: /admin/health
               port: http
+            periodSeconds: 30
+            initialDelaySeconds: 1
           readinessProbe:
             httpGet:
-              path: /healthz
+              path: /admin/health
               port: http
+            periodSeconds: 30
+            initialDelaySeconds: 1
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           {{- with .Values.volumeMounts }}
