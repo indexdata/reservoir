@@ -1,13 +1,21 @@
-# Stage 1: The builder stage with JDK and Maven
 FROM container-registry.oracle.com/graalvm/jdk:24 AS builder
+# Red Hat Enterprise Linux release 10.0 (CentOS Stream)
 RUN microdnf install -y maven
 
 WORKDIR /app
 
+# create runtime user
+RUN useradd \
+  --home-dir /nonexistent \
+  --shell /sbin/nologin \
+  --no-create-home \
+  --uid 65532 \
+  myuser
+
 # Needed for git-commit-id-plugin
 COPY .git/ .git
 
-# Copy all source files needed for the build
+# Reamining files are copied for building the native image
 COPY pom.xml .
 COPY checkstyle/ checkstyle
 COPY client/ client
@@ -17,29 +25,17 @@ COPY server/ server
 COPY util/ util
 COPY xsl/ xsl
 
-# Build the application, creating the fat JAR
 RUN mvn -B -DskipTests package
 
-# Stage 2: The final, smaller runtime image
-FROM container-registry.oracle.com/graalvm/jre:24
+FROM container-registry.oracle.com/graalvm/jdk:24 AS runtime
 
 WORKDIR /app
+COPY --from=builder /app/server/target/mod-reservoir-server-fat.jar app.jar
 
-# Create a non-root user for security
-RUN useradd \
-  --home-dir /nonexistent \
-  --shell /sbin/nologin \
-  --no-create-home \
-  --uid 65532 \
-  myuser
-
-# Copy only the application JAR from the builder stage
-COPY --from=builder /app/server/target/mod-reservoir-server-fat.jar .
-
-# Switch to the non-root user
-USER myuser
+# (Optional) Strip unused GraalVM languages
+RUN rm -rf $JAVA_HOME/lib/polyglot/{llvm,r,python,wasm,ruby}
 
 EXPOSE 8081
+USER 65532:65532
 
-# Set the command to run the application
-CMD ["/usr/lib64/graalvm/graalvm-java24/bin/java", "$JAVA_OPTS", "--sun-misc-unsafe-memory-access=allow", "--enable-native-access=ALL-UNNAMED", "-jar", "mod-reservoir-server-fat.jar"]
+CMD ["sh", "-c", "/usr/lib64/graalvm/graalvm-java24/bin/java $JAVA_OPTS --sun-misc-unsafe-memory-access=allow --enable-native-access=ALL-UNNAMED -jar app.jar"]
