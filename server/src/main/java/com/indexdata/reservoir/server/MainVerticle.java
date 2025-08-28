@@ -34,7 +34,8 @@ public class MainVerticle extends AbstractVerticle {
         new Healthz(),
     };
 
-    RouterCreator.mountAll(vertx, routerCreators, "reservoir")
+    Healthz.checkDb(vertx)
+        .compose(x -> RouterCreator.mountAll(vertx, routerCreators, "reservoir"))
         .compose(router -> {
           HttpServerOptions so = new HttpServerOptions()
               .setCompressionSupported(true)

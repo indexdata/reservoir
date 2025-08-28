@@ -11,10 +11,14 @@ import org.folio.tlib.postgres.TenantPgPool;
 
 public class Healthz implements RouterCreator {
 
+  public static Future<Void> checkDb(Vertx vertx) {
+    TenantPgPool pool = TenantPgPool.pool(vertx, "x"); // not using the tenant for anything
+    return pool.query("SELECT 1").execute().mapEmpty();
+  }
+
   void healthHandler(Vertx vertx, RoutingContext ctx) {
     ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "text/plain");
-    TenantPgPool pool = TenantPgPool.pool(vertx, "x"); // not using the tenant for anything
-    pool.query("SELECT 1").execute()
+    checkDb(vertx)
         .onSuccess(x -> {
           ctx.response().end("OK");
         })

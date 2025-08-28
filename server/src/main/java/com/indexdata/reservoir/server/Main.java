@@ -23,6 +23,7 @@ public class Main {
             log.info("Reservoir server started successfully.");
           } else {
             log.error("Failed to start Reservoir server.", x.cause());
+            System.exit(1);
           }
         });
   }
