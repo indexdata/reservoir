@@ -204,9 +204,31 @@ public class Storage {
     ).mapEmpty();
   }
 
-  Future<Boolean> upsertGlobalRecord(Vertx vertx, SqlConnection conn, String localIdentifier,
-      SourceId sourceId, int sourceVersion, JsonObject payload, JsonArray matchKeyConfigs) {
+  private Future<Boolean> upsertGlobalRecord(Vertx vertx, String localIdentifier, SourceId sourceId,
+      int sourceVersion, JsonObject payload, List<IngestMatcher> ingestMatches) {
+    return upsertGlobalRecord(vertx, ingestMatches.size(), localIdentifier, sourceId,
+        sourceVersion, payload, ingestMatches);
+  }
 
+  private Future<Boolean> upsertGlobalRecord(Vertx vertx, int retryCount, String localIdentifier,
+      SourceId sourceId, int sourceVersion, JsonObject payload, List<IngestMatcher> ingestMatches) {
+    return pool.withTransaction(conn ->
+            upsertGlobalRecord(vertx, conn, localIdentifier, sourceId, sourceVersion,
+                payload, ingestMatches))
+        // addValuesToCluster may fail if for same new match key for parallel operations
+        // we recover just once for that. 2nd will find the new value for the one that
+        // succeeded.
+        .recover(e -> {
+          if (retryCount == 0) {
+            return Future.failedFuture(e);
+          }
+          return upsertGlobalRecord(vertx, retryCount - 1, localIdentifier, sourceId, sourceVersion,
+              payload, ingestMatches);
+        });
+  }
+
+  Future<Boolean> upsertGlobalRecord(Vertx vertx, SqlConnection conn, String localIdentifier,
+      SourceId sourceId, int sourceVersion, JsonObject payload, List<IngestMatcher> ingestMatches) {
     UUID startId = UUID.randomUUID();
     return conn.preparedQuery(
             "INSERT INTO " + globalRecordTable
@@ -218,92 +240,46 @@ public class Storage {
         )
         .execute(Tuple.of(startId, localIdentifier, sourceId.toString(), sourceVersion, payload))
         .map(rowSet -> rowSet.iterator().next().getUUID("id"))
-        .compose(id -> updateMatchKeyValues(vertx, conn, id, payload, matchKeyConfigs)
+        .compose(id -> updateMatchKeyValues(vertx, conn, id, payload, ingestMatches)
             .map(x -> id.equals(startId)));
   }
 
-  Future<Void> deleteGlobalRecord(SqlConnection conn, String localIdentifier, SourceId sourceId,
-      int sourceVersion) {
+  Future<Void> deleteGlobalRecord(String localIdentifier, SourceId sourceId, int sourceVersion) {
     String q = "UPDATE " + clusterMetaTable + " AS m"
         + " SET datestamp = $4"
         + " FROM " + globalRecordTable + ", " + clusterRecordTable + " AS r"
         + " WHERE m.cluster_id = r.cluster_id AND r.record_id = id"
         + " AND local_id = $1 AND source_id = $2 and source_version = $3";
-    return conn.preparedQuery(q)
-        .execute(Tuple.of(localIdentifier, sourceId.toString(), sourceVersion,
-            LocalDateTime.now(ZoneOffset.UTC)))
-        .compose(x -> conn.preparedQuery("DELETE FROM " + globalRecordTable
-                + " WHERE local_id = $1 AND source_id = $2 and source_version = $3")
-        .execute(Tuple.of(localIdentifier, sourceId.toString(), sourceVersion))
-        .mapEmpty());
-  }
-
-  /**
-   * Insert/update/delete global record.
-   * @param vertx Vert.x handle
-   * @param sourceId source identifier
-   * @param sourceVersion source version
-   * @param globalRecord global record JSON object
-   * @param matchKeyConfigs match key configrations in use
-   * @return async result with TRUE=inserted, FALSE=updated, null=deleted
-   */
-
-  Future<Boolean> ingestGlobalRecord(Vertx vertx, SourceId sourceId,
-      int sourceVersion, JsonObject globalRecord, JsonArray matchKeyConfigs) {
-    // There is at most one retry per match key config, so we can use the size
-    return ingestGlobalRecord(vertx, matchKeyConfigs.size(), sourceId, sourceVersion,
-      globalRecord, matchKeyConfigs);
-  }
-
-  /**
-   * Insert/update/delete global record.
-   * @param vertx Vert.x handle
-   * @param retryCount retry count
-   * @param sourceId source identifier
-   * @param sourceVersion source version
-   * @param globalRecord global record JSON object
-   * @param matchKeyConfigs match key configrations in use
-   * @return async result with TRUE=inserted, FALSE=updated, null=deleted
-   */
-  private Future<Boolean> ingestGlobalRecord(Vertx vertx, int retryCount, SourceId sourceId,
-      int sourceVersion, JsonObject globalRecord, JsonArray matchKeyConfigs) {
-
     return pool.withTransaction(conn ->
-            ingestGlobalRecord(vertx, conn, sourceId, sourceVersion,
-                globalRecord, matchKeyConfigs))
-        // addValuesToCluster may fail if for same new match key for parallel operations
-        // we recover just once for that. 2nd will find the new value for the one that
-        // succeeded.
-        .recover(e -> {
-          if (retryCount == 0) {
-            return Future.failedFuture(e);
-          }
-          return ingestGlobalRecord(vertx, retryCount - 1, sourceId, sourceVersion,
-              globalRecord, matchKeyConfigs);
-        });
+        conn.preparedQuery(q)
+          .execute(Tuple.of(localIdentifier, sourceId.toString(), sourceVersion,
+              LocalDateTime.now(ZoneOffset.UTC)))
+          .compose(x -> conn.preparedQuery("DELETE FROM " + globalRecordTable
+                  + " WHERE local_id = $1 AND source_id = $2 and source_version = $3")
+          .execute(Tuple.of(localIdentifier, sourceId.toString(), sourceVersion))
+          .mapEmpty()));
   }
 
   /**
    * Insert/update/delete global record.
    * @param vertx Vert.x handle
-   * @param conn connection
    * @param sourceId source identifier
    * @param sourceVersion source version
    * @param globalRecord global record JSON object
-   * @param matchKeyConfigs match key configrations in use
+   * @param ingestMatches match key configurations in use
    * @return async result with TRUE=inserted, FALSE=updated, null=deleted
    */
-  Future<Boolean> ingestGlobalRecord(Vertx vertx, SqlConnection conn,
+  Future<Boolean> ingestGlobalRecord(Vertx vertx,
       SourceId sourceId, int sourceVersion, JsonObject globalRecord,
-      JsonArray matchKeyConfigs) {
+      List<IngestMatcher> ingestMatches) {
 
     final String localIdentifier = globalRecord.getString("localId");
     if (localIdentifier == null) {
       return Future.failedFuture("localId required");
     }
     if (Boolean.TRUE.equals(globalRecord.getBoolean("delete"))) {
-      return deleteGlobalRecord(conn, localIdentifier, sourceId, sourceVersion)
-          .map(x -> null);
+      return deleteGlobalRecord(localIdentifier, sourceId, sourceVersion)
+        .map(x -> null);
     }
     final JsonObject payload = globalRecord.getJsonObject("payload");
     if (payload == null) {
@@ -312,54 +288,33 @@ public class Storage {
     if (sourceId == null) {
       return Future.failedFuture("sourceId required");
     }
-    return upsertGlobalRecord(vertx, conn, localIdentifier, sourceId,
-        sourceVersion, payload, matchKeyConfigs);
+    return upsertGlobalRecord(vertx, localIdentifier, sourceId,
+        sourceVersion, payload, ingestMatches);
   }
 
   Future<Void> updateMatchKeyValues(Vertx vertx, SqlConnection conn, UUID globalId,
-      JsonObject payload, JsonArray matchKeyConfigs) {
+      JsonObject payload, List<IngestMatcher> ingestMatches) {
     Future<Void> future = Future.succeededFuture();
-    for (int i = 0; i < matchKeyConfigs.size(); i++) {
-      JsonObject matchKeyConfig = matchKeyConfigs.getJsonObject(i);
+    for (IngestMatcher ingestMatch : ingestMatches) {
       future = future.compose(
-          x -> updateMatchKeyValues(vertx, conn, globalId, payload, matchKeyConfig));
+          x -> updateMatchKeyValues(vertx, conn, globalId, payload, ingestMatch));
     }
     return future;
   }
 
   Future<Void> updateMatchKeyValues(Vertx vertx, SqlConnection conn, UUID globalId,
-      JsonObject payload, JsonObject matchKeyConfig) {
+      JsonObject payload, IngestMatcher ingestMatch) {
 
-    String update = matchKeyConfig.getString("update");
-    if ("manual".equals(update)) {
-      return Future.succeededFuture();
+    if (ingestMatch.moduleExecutable != null) {
+      return ingestMatch.moduleExecutable.executeAsCollection(payload)
+          .compose(values -> updateMatchKeyValues(conn, globalId, ingestMatch.matchKeyId, values));
     }
-    String matchkeyId = matchKeyConfig.getString("id");
-    String matcherProp = matchKeyConfig.getString("matcher");
-    if (matcherProp != null) {
-      ModuleInvocation invocation = new ModuleInvocation(matcherProp);
-      return selectCodeModuleEntity(conn, invocation.getModuleName())
-          .compose(entity -> {
-            if (entity == null) {
-              return Future.failedFuture(
-                  "Module '" + invocation.getModuleName()
-                      + "' does not exist for '" + invocation + "'");
-            }
-            return ModuleCache.getInstance().lookup(vertx, tenant, entity);
-          })
-          .compose(module -> new ModuleExecutable(module, invocation).executeAsCollection(payload))
-          .compose(values -> updateMatchKeyValues(conn, globalId, matchkeyId, values));
-    } else {
-      String methodName = matchKeyConfig.getString("method");
-      JsonObject params = matchKeyConfig.getJsonObject("params");
-      return MatchKeyMethod.get(vertx, tenant, matchkeyId, methodName, params)
-          .compose(matchKeyMethod -> {
-            Set<String> keys = new HashSet<>();
-            matchKeyMethod.getKeys(payload, keys);
-            String matchKeyConfigId = matchKeyConfig.getString("id");
-            return updateMatchKeyValues(conn, globalId, matchKeyConfigId, keys);
-          });
+    if (ingestMatch.matchKeyMethod != null) {
+      Set<String> keys = new HashSet<>();
+      ingestMatch.matchKeyMethod.getKeys(payload, keys);
+      return updateMatchKeyValues(conn, globalId, ingestMatch.matchKeyId, keys);
     }
+    return Future.succeededFuture();
   }
 
   Future<Void> updateMatchKeyValues(SqlConnection conn, UUID globalId,
@@ -370,6 +325,63 @@ public class Storage {
           ? k.substring(0, MATCHVALUE_MAX_LENGTH) : k));
 
     return updateClusterForRecord(conn, globalId, matchKeyConfigId, truncatedKeys);
+  }
+
+  Future<IngestMatcher> createIngestMatcher(JsonObject matchKeyConfig, Vertx vertx) {
+    IngestMatcher ingestMatcher = new IngestMatcher();
+
+    ingestMatcher.matchKeyId = matchKeyConfig.getString("id");
+    String matcherProp = matchKeyConfig.getString("matcher");
+    if (matcherProp != null) {
+      ModuleInvocation invocation = new ModuleInvocation(matcherProp);
+      return selectCodeModuleEntity(invocation.getModuleName())
+          .compose(entity -> {
+            if (entity == null) {
+              return Future.failedFuture(
+                  "Module '" + invocation.getModuleName()
+                      + "' does not exist for '" + invocation + "'");
+            }
+            return ModuleCache.getInstance().lookup(vertx, tenant, entity)
+              .compose(module -> {
+                ingestMatcher.moduleExecutable = new ModuleExecutable(module, invocation);
+                return Future.succeededFuture(ingestMatcher);
+              });
+          });
+    }
+    String methodName = matchKeyConfig.getString("method");
+    if (methodName != null) {
+      JsonObject params = matchKeyConfig.getJsonObject("params");
+      return MatchKeyMethod.get(vertx, tenant, ingestMatcher.matchKeyId, methodName, params)
+          .compose(matchKeyMethod -> {
+            ingestMatcher.matchKeyMethod = matchKeyMethod;
+            return Future.succeededFuture(ingestMatcher);
+          });
+    }
+    return Future.failedFuture("match key config must include 'method' or 'matcher'");
+  }
+
+  Future<List<IngestMatcher>> createIngestMatchers(JsonArray matchKeyConfigs, Vertx vertx) {
+    List<Future<IngestMatcher>> futures = new ArrayList<>();
+    for (int i = 0; i < matchKeyConfigs.size(); i++) {
+      JsonObject matchKeyConfig = matchKeyConfigs.getJsonObject(i);
+      String update = matchKeyConfig.getString("update");
+      if ("manual".equals(update)) {
+        continue;
+      }
+      futures.add(createIngestMatcher(matchKeyConfig, vertx));
+    }
+    return Future.all(futures).map(composite -> {
+      List<IngestMatcher> ingestMatchers = new ArrayList<>();
+      for (int i = 0; i < composite.size(); i++) {
+        ingestMatchers.add(composite.resultAt(i));
+      }
+      return ingestMatchers;
+    });
+  }
+
+  Future<List<IngestMatcher>> availableIngestMatchers(Vertx vertx) {
+    return getAvailableMatchConfigs()
+       .compose(matchKeyConfigs -> createIngestMatchers(matchKeyConfigs, vertx));
   }
 
   Future<Set<UUID>> updateClusterValues(SqlConnection conn, UUID newClusterId,
@@ -540,22 +552,22 @@ public class Storage {
    * @return async result
    */
   public Future<Void> updateGlobalRecords(Vertx vertx, LargeJsonReadStream request) {
-    return pool.withConnection(this::getAvailableMatchConfigs).compose(matchKeyConfigs ->
-        new ReadStreamConsumer<JsonObject, Void>()
-            .consume(request, r ->
-                ingestGlobalRecord(
-                    vertx, new SourceId(request.topLevelObject().getString("sourceId")),
-                    request.topLevelObject().getInteger("sourceVersion", 1), r, matchKeyConfigs)
-                    .mapEmpty()));
+    return availableIngestMatchers(vertx)
+       .compose(ingestMatches ->
+              new ReadStreamConsumer<JsonObject, Void>()
+                .consume(request, r ->
+                    ingestGlobalRecord(
+                      vertx, new SourceId(request.topLevelObject().getString("sourceId")),
+                      request.topLevelObject().getInteger("sourceVersion", 1), r, ingestMatches)
+                      .mapEmpty()));
   }
 
   /**
    * Get available match key configurations.
-   * @param conn connection to use for selecting them
    * @return async result with array of configurations
    */
-  public Future<JsonArray> getAvailableMatchConfigs(SqlConnection conn) {
-    return conn.query("SELECT * FROM " + matchKeyConfigTable)
+  public Future<JsonArray> getAvailableMatchConfigs() {
+    return pool.query("SELECT * FROM " + matchKeyConfigTable)
         .execute()
         .map(res -> {
           JsonArray matchConfigs = new JsonArray();
@@ -569,10 +581,6 @@ public class Storage {
               ));
           return matchConfigs;
         });
-  }
-
-  public Future<JsonArray> getAvailableMatchConfigs() {
-    return pool.withConnection(this::getAvailableMatchConfigs);
   }
 
   /**
