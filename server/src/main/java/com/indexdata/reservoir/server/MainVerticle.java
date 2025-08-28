@@ -31,6 +31,7 @@ public class MainVerticle extends AbstractVerticle {
         reservoirService,
         new Tenant2Api(reservoirService),
         new HealthApi(),
+        new Healthz(),
     };
 
     RouterCreator.mountAll(vertx, routerCreators, "reservoir")
