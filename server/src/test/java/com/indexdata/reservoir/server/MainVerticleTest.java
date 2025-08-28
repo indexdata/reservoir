@@ -173,6 +173,15 @@ public class MainVerticleTest extends TestBase {
   }
 
   @Test
+  public void testHealthz() {
+    RestAssured.given()
+        .baseUri(MODULE_URL)
+        .get("/healthz")
+        .then().statusCode(200)
+        .header("Content-Type", is("text/plain"));
+  }
+
+  @Test
   public void testGetUploadForm() {
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
