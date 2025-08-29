@@ -124,6 +124,16 @@ If it's not defined you can specify it by passing `--add-host=host.docker.intern
 
 **Note**: Those docker build and run commands do work as-is with [Colima](https://github.com/abiosoft/colima).
 
+## Installing with Helm
+
+Reservoir Helm chart is published to the GitHub packages repository so simplify installation on Kubernetes. The chart uses the GraalVM JIT image.
+
+You can install the chart to your current cluster context/namespace with:
+
+```
+helm install reservoir oci://ghcr.io/indexdata/charts/reservoir --devel
+```
+
 ## Server metrics
 
 Reservoir can produce Prometheus and JMX metrics. Prometheus metrics are exposed on the path `/metrics` and port `PORT` if the `-Dmetrics.prometheus.port=PORT` option is specified.
