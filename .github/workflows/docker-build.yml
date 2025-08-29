@@ -9,7 +9,6 @@ on:
       - completed
     branches:
       - master
-      - cache-docker-maven
 
 env:
   REGISTRY: ghcr.io
