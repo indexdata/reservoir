@@ -39,7 +39,7 @@ RUN $JAVA_HOME/bin/jlink \
 
 FROM oraclelinux:9-slim
 
-# Create non-root user
+# Create non-root user, home dir is needed so Graal can write attach files for JIT-enabled JS.
 RUN useradd -u 1000 -m -s /sbin/nologin reservoir
 
 # Copy slim runtime
