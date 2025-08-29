@@ -27,7 +27,7 @@ public class IngestWriteStream implements WriteStream<JsonObject> {
   Handler<Void> drainHandler;
   List<IngestMatcher> ingestMatches;
   AtomicInteger ops = new AtomicInteger();
-  int queueSize = 5;
+  int queueSize = 40;
   boolean ingest;
   Throwable failure;
   private static final Logger log = LogManager.getLogger(IngestWriteStream.class);
