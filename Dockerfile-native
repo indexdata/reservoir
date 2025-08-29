@@ -47,11 +47,12 @@ COPY --from=build /app/server/target/reservoir-native /reservoir-native
 COPY --from=build /app/client/target/client-native /client-native
 COPY --from=build /app/deps /
 
+EXPOSE 8081
+
 USER reservoir:reservoir
 
-ENV JAVA_OPTS=""
-ENV HTTP_PORT=8081
-EXPOSE $HTTP_PORT
-
-ENTRYPOINT ["sh", "-c", "/reservoir-native -Dport=$HTTP_PORT $JAVA_OPTS \"$@\"", "reservoir-native"]
+#TODO scratch does not have a shell
+#there's no way to pass HTTP_PORT env from the chart
+ENTRYPOINT ["/reservoir-native"]
+# Handle SIGTERM
 CMD []
