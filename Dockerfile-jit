@@ -53,11 +53,14 @@ RUN chown reservoir:reservoir /reservoir.jar
 # Switch to non-root user
 USER reservoir
 
+ENV JAVA_OPTS=""
 ENV JAVA_HOME=/opt/graalvm-slim
 ENV PATH="$JAVA_HOME/bin:${PATH}"
 ENV GRAAL_OPTS="\
 --sun-misc-unsafe-memory-access=allow \
 --enable-native-access=ALL-UNNAMED"
 
-EXPOSE 8081
-ENTRYPOINT ["sh", "-c", "$JAVA_HOME/bin/java $JAVA_OPTS $GRAAL_OPTS -jar /reservoir.jar"]
+ENV HTTP_PORT=8081
+EXPOSE $HTTP_PORT
+
+ENTRYPOINT ["sh", "-c", "$JAVA_HOME/bin/java -Dport=$HTTP_PORT $JAVA_OPTS $GRAAL_OPTS -jar /reservoir.jar"]
