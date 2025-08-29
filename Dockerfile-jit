@@ -16,7 +16,7 @@ COPY server/ server
 COPY util/ util
 COPY xsl/ xsl
 
-RUN mvn -B -DskipTests package
+RUN --mount=type=cache,sharing=shared,target=/root/.m2/repository mvn -B -DskipTests package
 
 FROM container-registry.oracle.com/graalvm/jdk:24 AS slim
 
