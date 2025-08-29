@@ -55,7 +55,9 @@ USER reservoir
 
 ENV JAVA_HOME=/opt/graalvm-slim
 ENV PATH="$JAVA_HOME/bin:${PATH}"
-ENV GRAAL_OPTS="--sun-misc-unsafe-memory-access=allow --enable-native-access=ALL-UNNAMED"
+ENV GRAAL_OPTS="\
+--sun-misc-unsafe-memory-access=allow \
+--enable-native-access=ALL-UNNAMED"
 
 EXPOSE 8081
 ENTRYPOINT ["sh", "-c", "$JAVA_HOME/bin/java $JAVA_OPTS $GRAAL_OPTS -jar /reservoir.jar"]
