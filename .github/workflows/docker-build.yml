@@ -26,9 +26,10 @@ jobs:
           - module: jit
             dockerfile: ./Dockerfile-jit
             image: ${{ github.repository }}-jit
-          - module: native
-            dockerfile: ./Dockerfile-native
-            image: ${{ github.repository }}-native
+          # native build is extremely slow in CI (20m), only enable if the chart uses the  native image
+          # - module: native
+          #   dockerfile: ./Dockerfile-native
+          #   image: ${{ github.repository }}-native
 
     steps:
       - name: checkout module
