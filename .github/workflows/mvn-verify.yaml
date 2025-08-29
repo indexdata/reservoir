@@ -10,6 +10,7 @@ jobs:
         with:
           java-version: '24.0.2'
           distribution: 'graalvm'
+          cache: 'maven'
       - name: Show GraalVM and Java versions
         run: |
           echo "GRAALVM_HOME: $GRAALVM_HOME"
