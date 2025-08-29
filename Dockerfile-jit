@@ -1,21 +1,12 @@
 FROM container-registry.oracle.com/graalvm/jdk:24 AS builder
-# Red Hat Enterprise Linux release 10.0 (CentOS Stream)
+
 RUN microdnf install -y maven
 
 WORKDIR /app
 
-# create runtime user
-RUN useradd \
-  --home-dir /nonexistent \
-  --shell /sbin/nologin \
-  --no-create-home \
-  --uid 65532 \
-  myuser
-
 # Needed for git-commit-id-plugin
 COPY .git/ .git
 
-# Reamining files are copied for building the native image
 COPY pom.xml .
 COPY checkstyle/ checkstyle
 COPY client/ client
@@ -27,15 +18,43 @@ COPY xsl/ xsl
 
 RUN mvn -B -DskipTests package
 
-FROM container-registry.oracle.com/graalvm/jdk:24 AS runtime
+FROM container-registry.oracle.com/graalvm/jdk:24 AS slim
 
-WORKDIR /app
-COPY --from=builder /app/server/target/mod-reservoir-server-fat.jar app.jar
+ENV JAVA_MODULES=\
+java.base,\
+java.desktop,\
+java.logging,\
+java.sql,\
+java.xml,\
+jdk.graal.compiler,\
+jdk.internal.vm.ci,\
+jdk.unsupported,\
+org.graalvm.truffle.compiler
 
-# (Optional) Strip unused GraalVM languages
-RUN rm -rf $JAVA_HOME/lib/polyglot/{llvm,r,python,wasm,ruby}
+# Build a slim runtime image with just what's needed
+RUN $JAVA_HOME/bin/jlink \
+    --strip-debug --no-header-files --no-man-pages --compress=2 \
+    --add-modules $JAVA_MODULES \
+    --output /opt/graalvm-slim
+
+FROM oraclelinux:9-slim
+
+# Create non-root user
+RUN useradd -u 1000 -m -s /sbin/nologin reservoir
+
+# Copy slim runtime
+COPY --from=slim /opt/graalvm-slim /opt/graalvm-slim
+
+# Copy app JAR
+COPY --from=builder /app/server/target/mod-reservoir-server-fat.jar /reservoir.jar
+RUN chown reservoir:reservoir /reservoir.jar
+
+# Switch to non-root user
+USER reservoir
+
+ENV JAVA_HOME=/opt/graalvm-slim
+ENV PATH="$JAVA_HOME/bin:${PATH}"
+ENV GRAAL_OPTS="--sun-misc-unsafe-memory-access=allow --enable-native-access=ALL-UNNAMED"
 
 EXPOSE 8081
-USER 65532:65532
-
-CMD ["sh", "-c", "/usr/lib64/graalvm/graalvm-java24/bin/java $JAVA_OPTS --sun-misc-unsafe-memory-access=allow --enable-native-access=ALL-UNNAMED -jar app.jar"]
+ENTRYPOINT ["sh", "-c", "$JAVA_HOME/bin/java $JAVA_OPTS $GRAAL_OPTS -jar /reservoir.jar"]
