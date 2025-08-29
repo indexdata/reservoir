@@ -1,5 +1,5 @@
 name: mvn-verify
-on: [push, pull_request]
+on: [push]
 
 jobs:
   mvn-verify:
