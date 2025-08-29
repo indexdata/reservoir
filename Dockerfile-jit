@@ -26,6 +26,7 @@ java.desktop,\
 java.logging,\
 java.sql,\
 java.xml,\
+java.security.sasl,\
 jdk.graal.compiler,\
 jdk.internal.vm.ci,\
 jdk.unsupported,\
