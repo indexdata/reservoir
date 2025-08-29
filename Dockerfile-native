@@ -8,9 +8,9 @@ WORKDIR /app
 RUN useradd \
   --home-dir /nonexistent \
   --shell /sbin/nologin \
-  --no-create-home \
   --uid 65532 \
-  myuser
+  --no-create-home \
+  reservoir
 
 # Needed for git-commit-id-plugin
 COPY .git/ .git
@@ -25,17 +25,15 @@ COPY server/ server
 COPY util/ util
 COPY xsl/ xsl
 
-# Twice so that artifact(s) is step 1 and cached for native image build
-RUN mvn -B -DskipTests package
-RUN mvn -B -DskipTests -Pnative package
+# Run native image build
+RUN --mount=type=cache,sharing=shared,target=/root/.m2/repository mvn -B -DskipTests -Pnative package
 
 # Save list of shared lib deps
 RUN ldd server/target/reservoir-native | tr -s '[:blank:]' '\n' | grep '^/' | \
   xargs -I % sh -c 'mkdir -p $(dirname deps%); cp % deps%;'
 
 RUN mkdir -p /app/tmp/vertx-cache
-RUN chmod -R 777 /app/tmp
-RUN chown -R myuser:myuser /app/tmp
+RUN chown -R reservoir:reservoir /app/tmp
 
 FROM scratch
 
@@ -44,15 +42,15 @@ COPY --from=build /usr/share/zoneinfo /usr/share/zoneinfo
 COPY --from=build /etc/passwd /etc/passwd
 COPY --from=build /etc/group /etc/group
 
-COPY --from=build /app/tmp /tmp
+COPY --from=build --chown=reservoir:reservoir /app/tmp /tmp
 COPY --from=build /app/server/target/reservoir-native /reservoir-native
 COPY --from=build /app/client/target/client-native /client-native
 COPY --from=build /app/deps /
 
 EXPOSE 8081
 
-# Get Exception in thread "main" java.lang.IllegalStateException: Unable to create folder at path '/tmp/vertx-cache'
-# despite /tmp/vertx-cache being created with 777 permissions
-# USER myuser:myuser
+USER reservoir:reservoir
 
 ENTRYPOINT ["/reservoir-native"]
+# Handle SIGTERM
+CMD []

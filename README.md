@@ -36,7 +36,7 @@ Requirements:
 You need `JAVA_HOME` set, e.g.:
 
    * Linux: `export JAVA_HOME=$(readlink -f /usr/bin/javac | sed "s:bin/javac::")`
-   * macOS: `export JAVA_HOME=$(/usr/libexec/java_home -v 17)`
+   * macOS: `export JAVA_HOME=$(/usr/libexec/java_home -v 24)`
 
 It is easier to select preferred JVM with [sdkman](https://sdkman.io).
 
@@ -55,11 +55,11 @@ If you choose to use another JVM than GraalVM, compile with:
 
 ## Native image
 
-For this to work, GraalVM *must* be use . Built with `native` profile:
+For this to work, GraalVM *must* be used. Build with `native` profile:
 
     mvn -Pnative package
 
-Two images are created in the native profile:
+Two binaries are created when using the native profile:
 
     server/target/reservoir-native
     client/target/client-native
@@ -87,7 +87,7 @@ java -Dport=8081 --enable-native-access=ALL-UNNAMED \
    -jar server/target/mod-reservoir-server-fat.jar
 ```
 
-Otherwise, use:
+If using regular JVM, you must pass additional arguments to embed the Graal JS compiler:
 
 ```
 java -Dport=8081 --upgrade-module-path=server/target/compiler \
@@ -95,17 +95,18 @@ java -Dport=8081 --upgrade-module-path=server/target/compiler \
    -jar server/target/mod-reservoir-server-fat.jar
 ```
 
-## Server metrics
-
-Reservoir can produce Prometheus and JMX metrics. Prometheus metrics are exposed on the path `/metrics` and port `PORT` if the `-Dmetrics.prometheus.port=PORT` option is specified.
-JMX metrics are exposed for domain `reservoir` if `-Dmetrics.jmx=true` option is specified.
-
 ## Running with Docker
 
 If you feel adventurous and want to run Reservoir in a Docker container, build the container first:
 
 ```
-docker build -t mod-reservoir:latest .
+docker build -t reservoir-jit:latest -f Dockerfile-jit .
+```
+
+or container that use the native image:
+
+```
+docker build -t reservoir-native:latest -f Dockerfile-native .
 ```
 
 And run with the server port exposed (`8081` by default):
@@ -115,7 +116,7 @@ docker run -e DB_HOST=host.docker.internal \
   -e DB_USERNAME=folio \
   -e DB_PASSWORD=folio \
   -e DB_DATABASE=folio_modules \
-  -p 8081:8081 --name reservoir mod-reservoir:latest
+  -p 8081:8081 --name reservoir reservoir-jit:latest
 ```
 
 **Note**: The magic host `host.docker.internal` is required to access the DB and may be only available in Docker Desktop.
@@ -123,66 +124,10 @@ If it's not defined you can specify it by passing `--add-host=host.docker.intern
 
 **Note**: Those docker build and run commands do work as-is with [Colima](https://github.com/abiosoft/colima).
 
-## Command-line client
+## Server metrics
 
-Note: the CLI is no longer developed and the file upload functionality is now available from
-curl (see below) so please use this instead.
-
-The client is a command-line tool for sending records to the mod-reservoir server.
-
-Run the client with:
-
-```
-java -jar client/target/mod-reservoir-client-fat.jar [options] [files...]
-```
-
-To see list options use `--help`. The client uses environment variables
-`OKAPI_URL`, `OKAPI_TENANT`, `OKAPI_TOKEN` for Okapi URL, tenant and
-token respectively.
-
-Before records can be pushed, the database needs to be prepared for the tenant.
-If Okapi is used, then the usual `install` command will do it, but if the
-mod-reservoir module is being run on its own, then that must be done manually.
-
-For example, to prepare the database for tenant `diku` on server running on localhost:8081, use:
-
-```
-export OKAPI_TENANT=diku
-export OKAPI_URL=http://localhost:8081
-java -jar client/target/mod-reservoir-client-fat.jar --init
-```
-
-**Note**: The above-mentioned commands are for the server running on localhost.
-For a secured server, the `-HX-Okapi-Token:$OKAPI_TOKEN` is required rather
-than `X-Okapi-Tenant`.
-
-To purge the data, use:
-
-```
-export OKAPI_TENANT=diku
-export OKAPI_URL=http://localhost:8081
-java -jar client/target/mod-reservoir-client-fat.jar --purge
-```
-
-To send MARCXML to the same server with defined `sourceId`, use:
-
-```
-export OKAPI_TENANT=diku
-export OKAPI_URL=http://localhost:8081
-export sourceid=lib1
-java -jar client/target/mod-reservoir-client-fat.jar \
-  --source $sourceid \
-  --xsl xsl/localid.xsl \
-  client/src/test/resources/record10.xml
-```
-
-The option `--xsl` may be repeated for a sequence of transformations.
-
-Once records are loaded, they can be retrieved with:
-
-```
-curl -HX-Okapi-Tenant:$OKAPI_TENANT $OKAPI_URL/reservoir/records
-```
+Reservoir can produce Prometheus and JMX metrics. Prometheus metrics are exposed on the path `/metrics` and port `PORT` if the `-Dmetrics.prometheus.port=PORT` option is specified.
+JMX metrics are exposed for domain `reservoir` if `-Dmetrics.jmx=true` option is specified.
 
 ## Ingest record files
 
@@ -282,6 +227,67 @@ When running behind Okapi you need to use the `invoke` URL:
 ```
 
 in order to pass the tenant identifier (trailing slash is important).
+
+## Command-line client (legacy)
+
+Note: the CLI is no longer developed and the file upload functionality is now available from
+curl (see below) so please use this instead.
+
+The client is a command-line tool for sending records to the mod-reservoir server.
+
+Run the client with:
+
+```
+java -jar client/target/mod-reservoir-client-fat.jar [options] [files...]
+```
+
+To see list options use `--help`. The client uses environment variables
+`OKAPI_URL`, `OKAPI_TENANT`, `OKAPI_TOKEN` for Okapi URL, tenant and
+token respectively.
+
+Before records can be pushed, the database needs to be prepared for the tenant.
+If Okapi is used, then the usual `install` command will do it, but if the
+mod-reservoir module is being run on its own, then that must be done manually.
+
+For example, to prepare the database for tenant `diku` on server running on localhost:8081, use:
+
+```
+export OKAPI_TENANT=diku
+export OKAPI_URL=http://localhost:8081
+java -jar client/target/mod-reservoir-client-fat.jar --init
+```
+
+**Note**: The above-mentioned commands are for the server running on localhost.
+For a secured server, the `-HX-Okapi-Token:$OKAPI_TOKEN` is required rather
+than `X-Okapi-Tenant`.
+
+To purge the data, use:
+
+```
+export OKAPI_TENANT=diku
+export OKAPI_URL=http://localhost:8081
+java -jar client/target/mod-reservoir-client-fat.jar --purge
+```
+
+To send MARCXML to the same server with defined `sourceId`, use:
+
+```
+export OKAPI_TENANT=diku
+export OKAPI_URL=http://localhost:8081
+export sourceid=lib1
+java -jar client/target/mod-reservoir-client-fat.jar \
+  --source $sourceid \
+  --xsl xsl/localid.xsl \
+  client/src/test/resources/record10.xml
+```
+
+The option `--xsl` may be repeated for a sequence of transformations.
+
+Once records are loaded, they can be retrieved with:
+
+```
+curl -HX-Okapi-Tenant:$OKAPI_TENANT $OKAPI_URL/reservoir/records
+```
 
 ## Configuring matchers
 
@@ -623,5 +629,3 @@ API descriptions:
  * [Schemas](server/src/main/resources/openapi/schemas/)
 
 Generated [API documentation](https://s3.amazonaws.com/indexdata-docs/api/reservoir/reservoir.html).
-
-
