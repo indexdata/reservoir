@@ -511,7 +511,8 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     UploadService uploadService = new UploadService();
     return RouterBuilder.create(vertx, "openapi/reservoir.yaml")
         .map(routerBuilder -> {
-          routerBuilder.rootHandler(BodyHandler.create().setBodyLimit(65536));
+          routerBuilder.rootHandler(BodyHandler.create().setBodyLimit(65536)
+              .setHandleFileUploads(false));
           add(routerBuilder, "getGlobalRecords", this::getGlobalRecords);
           add(routerBuilder, "deleteGlobalRecords", this::deleteGlobalRecords);
           add(routerBuilder, "getGlobalRecord", this::getGlobalRecord);
