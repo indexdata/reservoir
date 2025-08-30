@@ -29,11 +29,23 @@ env: {}
 #   key: secret-key
 envSecrets: {}
 
+# list of secretRef passed to the envFrom
+# e.g
+# envSecretRefs:
+# - db-secrets
+envSecretRefs: []
+
 # envvars passed to the container as configMapKeyRef, format
 # VARIABLE:
 #   name: config-map-name
 #   key: config-map-key
 envConfigMaps: {}
+
+# list of configMapRef passed to the envFrom
+# e.g
+# configMapRefs:
+# - db-config
+configMapRefs: []
 
 imagePullSecrets:
   - name: ghcr-secret

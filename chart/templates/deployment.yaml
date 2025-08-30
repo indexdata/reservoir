@@ -59,6 +59,17 @@ spec:
                   key: "{{ $v.key }}"
             {{- end }}
             {{- end }}
+          {{- if or .Values.envSecretRefs .Values.envConfigMapRefs }}
+          envFrom:
+            {{- range .Values.envSecretRefs }}
+            - secretRef:
+                name: {{ . }}
+            {{- end }}
+            {{- range .Values.envConfigMapRefs }}
+            - configMapRef:
+                name: {{ . }}
+            {{- end }}
+          {{- end }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
