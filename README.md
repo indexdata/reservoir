@@ -131,7 +131,7 @@ Reservoir Helm chart is published to the GitHub packages repository so simplify 
 You can install the chart to your current cluster context/namespace with:
 
 ```
-helm install reservoir oci://ghcr.io/indexdata/charts/reservoir --devel
+helm install reservoir oci://ghcr.io/indexdata/charts/reservoir --set envSecretRefs="{db-config-secrets}" --devel
 ```
 
 ## Server metrics
