@@ -1,11 +1,8 @@
 FROM container-registry.oracle.com/graalvm/jdk:24 AS builder
 
-RUN microdnf install -y maven
+RUN microdnf install -y maven && microdnf clean all
 
 WORKDIR /app
-
-# Needed for git-commit-id-plugin
-COPY .git/ .git
 
 COPY pom.xml .
 COPY checkstyle/ checkstyle
@@ -15,8 +12,10 @@ COPY js/ js
 COPY server/ server
 COPY util/ util
 COPY xsl/ xsl
+ARG GIT_COMMIT=master
+RUN echo "git.commit.id=${GIT_COMMIT}" > server/src/main/resources/git.properties
 
-RUN --mount=type=cache,sharing=shared,target=/root/.m2/repository mvn -B -DskipTests package
+RUN --mount=type=cache,sharing=shared,target=/root/.m2/repository mvn -B -DskipTests -Pdocker-build package
 
 FROM container-registry.oracle.com/graalvm/jdk:24 AS slim
 
