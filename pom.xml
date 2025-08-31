@@ -36,9 +36,9 @@
     <!-- graalvm >= 23.1.0 requires reorganisation: https://medium.com/graalvm/truffle-unchained-13887b77b62c -->
     <graalvm.version>24.2.2</graalvm.version>
     <graalvm-maven-plugin.version>0.10.6</graalvm-maven-plugin.version>
-    <log4j2.version>2.25.0</log4j2.version>
-    <slf4j-api.version>1.7.21</slf4j-api.version>
-    <vertx.version>4.5.15</vertx.version>
+    <log4j2.version>2.25.1</log4j2.version>
+    <slf4j-api.version>2.0.17</slf4j-api.version>
+    <vertx.version>4.5.20</vertx.version>
     <okapi.version>6.2.3</okapi.version>
     <vertxlib.version>3.4.0</vertxlib.version>
     <micrometer.version>1.12.13</micrometer.version>
@@ -152,7 +152,7 @@
       <dependency>
         <groupId>net.sf.saxon</groupId>
         <artifactId>Saxon-HE</artifactId>
-        <version>12.7</version>
+        <version>12.8</version>
       </dependency>
       <dependency>
         <groupId>org.graalvm.polyglot</groupId>
