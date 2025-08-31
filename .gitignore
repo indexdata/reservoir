@@ -5,3 +5,6 @@ target/
 .DS_Store
 pom.xml.versionsBackup
 dependency-reduced-pom.xml
+chart/Chart.lock
+chart/charts/
+chart/*.tgz
