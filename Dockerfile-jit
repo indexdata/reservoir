@@ -2,9 +2,10 @@ FROM container-registry.oracle.com/graalvm/jdk:24 AS builder
 
 RUN microdnf install -y maven && microdnf clean all
 
-# Docker with GitHub Actions does not persist cache mounts
-# as a workaround, we fetch maven deps first and rely on layer caching
-# also, we allow overriding the mount to a BIND mount to inject graalvm-setup managed Maven cache
+# Docker on GitHub Actions does not persist cache mounts so they are only useful locally
+# as a GHA workaround, we fetch maven deps first and rely on Docker layer caching
+# we allow overriding the mount type and source here, so e.g one can BIND mount $HOME/.m2/repository
+# but this is not possible for GH runner's maven repo due to isolation
 ARG MAVEN_MOUNT_TYPE=cache
 ARG MAVEN_MOUNT_SOURCE=""
 
