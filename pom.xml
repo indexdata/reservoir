@@ -36,7 +36,8 @@
     <!-- graalvm >= 23.1.0 requires reorganisation: https://medium.com/graalvm/truffle-unchained-13887b77b62c -->
     <graalvm.version>24.2.2</graalvm.version>
     <graalvm-maven-plugin.version>0.10.6</graalvm-maven-plugin.version>
-    <log4j2.version>2.25.1</log4j2.version>
+    <log4j2.version>3.0.0-beta2</log4j2.version>
+    <snakeyaml.version>2.5</snakeyaml.version>
     <slf4j-api.version>2.0.17</slf4j-api.version>
     <vertx.version>4.5.20</vertx.version>
     <okapi.version>6.2.3</okapi.version>
@@ -52,6 +53,11 @@
         <version>${log4j2.version}</version>
         <type>pom</type>
         <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.yaml</groupId>
+        <artifactId>snakeyaml</artifactId>
+        <version>${snakeyaml.version}</version>
       </dependency>
       <dependency>
         <groupId>io.vertx</groupId>
