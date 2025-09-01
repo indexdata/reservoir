@@ -1,10 +1,9 @@
 package com.indexdata.reservoir.server;
 
 import com.indexdata.reservoir.util.EncodeXmlText;
-import io.vertx.codegen.annotations.Nullable;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.streams.WriteStream;
 import io.vertx.sqlclient.Row;
@@ -24,7 +23,7 @@ public class ClusterRecordStream implements WriteStream<Row> {
 
   Handler<Void> drainHandler;
 
-  Handler<AsyncResult<Void>> endHandler;
+  Promise<Void> endHandler;
 
   Handler<Throwable> exceptionHandler;
 
@@ -42,6 +41,7 @@ public class ClusterRecordStream implements WriteStream<Row> {
     this.response = response;
     this.connection = connection;
     this.recordProcessor = recordProcessor;
+    this.endHandler = Promise.promise();
   }
 
   @Override
@@ -71,26 +71,9 @@ public class ClusterRecordStream implements WriteStream<Row> {
         drainHandler.handle(null);
       }
       if (work.isEmpty() && ended) {
-        this.endHandler.handle(Future.succeededFuture());
+        endHandler.complete();
       }
     });
-  }
-
-  @Override
-  public void write(Row row, Handler<AsyncResult<Void>> handler) {
-    write(row).onComplete(handler);
-  }
-
-  @Override
-  public void end(Handler<AsyncResult<Void>> handler) {
-    if (ended) {
-      throw new IllegalStateException("already ended");
-    }
-    ended = true;
-    this.endHandler = handler;
-    if (work.isEmpty()) {
-      this.endHandler.handle(Future.succeededFuture());
-    }
   }
 
   @Override
@@ -105,10 +88,20 @@ public class ClusterRecordStream implements WriteStream<Row> {
   }
 
   @Override
-  public WriteStream<Row> drainHandler(@Nullable Handler<Void> handler) {
+  public WriteStream<Row> drainHandler(Handler<Void> handler) {
     this.drainHandler = handler;
     return this;
   }
 
-
+  @Override
+  public Future<Void> end() {
+    if (ended) {
+      throw new IllegalStateException("already ended");
+    }
+    ended = true;
+    if (work.isEmpty()) {
+      endHandler.complete();
+    }
+    return endHandler.future();
+  }
 }

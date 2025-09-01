@@ -42,7 +42,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.okapi.common.HttpResponse;
 
 public class OaiPmhClientService {
@@ -71,9 +70,8 @@ public class OaiPmhClientService {
   public OaiPmhClientService(Vertx vertx) {
     this.vertx = vertx;
     var opts = new HttpClientOptions()
-        .setTcpKeepAlive(true);
-    opts.setTcpKeepAliveIdleSeconds(45);
-    opts.setTcpKeepAliveIntervalSeconds(45);
+        .setTcpKeepAlive(true)
+        .setKeepAliveTimeout(45);
     this.httpClient = vertx.createHttpClient(opts);
   }
 
@@ -346,7 +344,7 @@ public class OaiPmhClientService {
               OaiPmhStatus job = getJob(x, id2);
               futures.add(startJob(ctx.vertx(), storage, id2, job));
             });
-            return GenericCompositeFuture.all(futures);
+            return Future.all(futures);
           })
           .map(true);
     } else {
@@ -414,7 +412,7 @@ public class OaiPmhClientService {
                 futures.add(updateJob(storage, id2, null, null, Boolean.TRUE, null).mapEmpty());
               }
             });
-            return GenericCompositeFuture.all(futures);
+            return Future.all(futures);
           })
           .onSuccess(x -> ctx.response().setStatusCode(204).end())
           .mapEmpty();

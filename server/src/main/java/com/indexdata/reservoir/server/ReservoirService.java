@@ -16,9 +16,11 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.StaticHandler;
-import io.vertx.ext.web.openapi.RouterBuilder;
+import io.vertx.ext.web.openapi.router.OpenAPIRoute;
+import io.vertx.ext.web.openapi.router.RouterBuilder;
 import io.vertx.ext.web.validation.RequestParameters;
 import io.vertx.ext.web.validation.ValidationHandler;
+import io.vertx.openapi.contract.OpenAPIContract;
 import java.util.UUID;
 import java.util.function.Function;
 import org.apache.logging.log4j.LogManager;
@@ -493,24 +495,32 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
 
   private void add(RouterBuilder routerBuilder, String operationId,
       Function<RoutingContext, Future<Void>> function) {
+
+    if (routerBuilder.getRoute(operationId) == null) {
+      throw new IllegalArgumentException("Unknown operationId: " + operationId);
+    }
+
+
     routerBuilder
-        .operation(operationId)
-        .handler(ctx -> {
+        .getRoute(operationId)
+        .addHandler(ctx -> {
           try {
             function.apply(ctx)
                 .onFailure(cause -> failHandler(400, ctx, cause));
           } catch (Exception t) {
             failHandler(400, ctx, t);
           }
-        }).failureHandler(ReservoirService::failHandler);
+        })
+        .addFailureHandler(ReservoirService::failHandler);
   }
 
   @Override
   public Future<Router> createRouter(Vertx vertx) {
     OaiPmhClientService oaiPmhClient = new OaiPmhClientService(vertx);
     UploadService uploadService = new UploadService();
-    return RouterBuilder.create(vertx, "openapi/reservoir.yaml")
-        .map(routerBuilder -> {
+    return OpenAPIContract.from(vertx, "openapi/reservoir.yaml")
+        .map(contract -> {
+          RouterBuilder routerBuilder = RouterBuilder.create(vertx, contract);
           routerBuilder.rootHandler(BodyHandler.create().setBodyLimit(65536)
               .setHandleFileUploads(false));
           add(routerBuilder, "getGlobalRecords", this::getGlobalRecords);
@@ -526,7 +536,6 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
           add(routerBuilder, "getClusters", this::getClusters);
           add(routerBuilder, "touchClusters", this::touchClusters);
           add(routerBuilder, "getCluster", this::getCluster);
-          add(routerBuilder, "oaiService", OaiService::get);
           add(routerBuilder, "postCodeModule", this::postCodeModule);
           add(routerBuilder, "getCodeModule", this::getCodeModule);
           add(routerBuilder, "putCodeModule", this::putCodeModule);
@@ -544,8 +553,14 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
           add(routerBuilder, "startOaiPmhClient", oaiPmhClient::start);
           add(routerBuilder, "stopOaiPmhClient", oaiPmhClient::stop);
           add(routerBuilder, "statusOaiPmhClient", oaiPmhClient::status);
-          add(routerBuilder, "sruService", SruService::get);
-          Router router = Router.router(vertx);
+          Router router = routerBuilder.createRouter();
+
+          router.get("/reservoir/oai").handler(ctx ->
+              OaiService.get(ctx).onFailure(cause -> failHandler(400, ctx, cause)));
+
+          router.get("/reservoir/sru").handler(ctx ->
+              SruService.get(ctx).onFailure(cause -> failHandler(400, ctx, cause)));
+
           // this endpoint is streaming, and we handle it without OpenAPI and validation
           router.put("/reservoir/records").handler(ctx ->
               putGlobalRecords(ctx).onFailure(cause -> failHandler(400, ctx, cause)));
