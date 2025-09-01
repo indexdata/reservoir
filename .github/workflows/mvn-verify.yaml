@@ -1,5 +1,8 @@
 name: mvn-verify
-on: [push]
+on:
+  push:
+    branches: [master]
+  pull_request:
 
 jobs:
   mvn-verify:
