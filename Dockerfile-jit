@@ -2,20 +2,30 @@ FROM container-registry.oracle.com/graalvm/jdk:24 AS builder
 
 RUN microdnf install -y maven && microdnf clean all
 
+# Docker on GitHub Actions does not persist cache mounts so they are only useful locally
+# as a GHA workaround, we fetch maven deps first and rely on Docker layer caching
+# we allow overriding the mount type and source here, so e.g one can BIND mount $HOME/.m2/repository
+# but this is not possible for GH runner's maven repo due to isolation
+ARG MAVEN_MOUNT_TYPE=cache
+ARG MAVEN_MOUNT_SOURCE=""
+
 WORKDIR /app
 
 COPY pom.xml .
-COPY checkstyle/ checkstyle
-COPY client/ client
-COPY descriptors/ descriptors
-COPY js/ js
+COPY client/pom.xml client/pom.xml
+COPY server/pom.xml server/pom.xml
+COPY util/pom.xml util/pom.xml
+
+RUN --mount=type=${MAVEN_MOUNT_TYPE},source=${MAVEN_MOUNT_SOURCE},target=/root/.m2/repository mvn -B dependency:go-offline
+
+COPY client/ client/
 COPY server/ server
 COPY util/ util
-COPY xsl/ xsl
+COPY descriptors/ descriptors
 ARG GIT_COMMIT=master
 RUN echo "git.commit.id=${GIT_COMMIT}" > server/src/main/resources/git.properties
 
-RUN --mount=type=cache,sharing=shared,target=/root/.m2/repository mvn -B -DskipTests -Pdocker-build package
+RUN --mount=type=${MAVEN_MOUNT_TYPE},source=${MAVEN_MOUNT_SOURCE},target=/root/.m2/repository mvn -B -DskipTests -Pdocker-build package
 
 FROM container-registry.oracle.com/graalvm/jdk:24 AS slim
 
