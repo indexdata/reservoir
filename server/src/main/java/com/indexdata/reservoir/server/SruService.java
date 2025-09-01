@@ -3,7 +3,6 @@ package com.indexdata.reservoir.server;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.validation.ValidationHandler;
 import org.folio.tlib.postgres.PgCqlDefinition;
 import org.folio.tlib.postgres.PgCqlQuery;
 import org.folio.tlib.postgres.cqlfield.PgCqlFieldAlwaysMatches;
@@ -56,11 +55,15 @@ public class SruService {
       return Future.succeededFuture();
     }
 
-    // no need to check for null as default value is given in API spec
-    final int startRecord = Integer.parseInt(
-        Util.getQueryParameter(ctx, "startRecord", "1"));
-    final int maximumRecords = Integer.parseInt(
-        Util.getQueryParameter(ctx, "maximumRecords", "10"));
+    int startRecord;
+    int maximumRecords;
+    try {
+      startRecord = Integer.parseInt(Util.getQueryParameter(ctx, "startRecord", "1"));
+      maximumRecords = Integer.parseInt(Util.getQueryParameter(ctx, "maximumRecords", "10"));
+    } catch (NumberFormatException e) {
+      returnDiagnostics(response, "6", "Unsupported parameter value", e.getMessage());
+      return Future.succeededFuture();
+    }
 
     // should use createDefinitionBase
     PgCqlDefinition definition = PgCqlDefinition.create();

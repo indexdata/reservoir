@@ -14,10 +14,11 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.StaticHandler;
 import io.vertx.ext.web.openapi.router.RouterBuilder;
 import io.vertx.openapi.contract.OpenAPIContract;
+import io.vertx.openapi.validation.RequestParameter;
+import io.vertx.openapi.validation.ValidatedRequest;
 import java.util.UUID;
 import java.util.function.Function;
 import org.apache.logging.log4j.LogManager;
@@ -135,7 +136,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
   }
 
   Future<Void> getGlobalRecord(RoutingContext ctx) {
-    String id = Util.getQueryParameter(ctx, "globalId");
+    String id = Util.getPathParameter(ctx, "globalId");
     Storage storage = new Storage(ctx);
     return storage.getGlobalRecord(id)
         .onSuccess(res -> {
@@ -168,7 +169,9 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
         new PgCqlFieldNumber().withColumn(CqlFields.SOURCE_VERSION.getQualifiedSqlName()));
 
     PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameterQuery(ctx));
-    String matchKeyId = Util.getQueryParameter(ctx, "matchkeyid");
+    ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
+    RequestParameter requestParameter = validatedRequest.getQuery().get("matchkeyid");
+    String matchKeyId = requestParameter.getString();
     Storage storage = new Storage(ctx);
     return storage.selectMatchKeyConfig(matchKeyId).compose(conf -> {
       if (conf == null) {
@@ -195,17 +198,22 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     Storage storage = new Storage(ctx);
     return storage.touchClusters(pgCqlQuery)
         .map(count -> new JsonObject().put("count", count))
-        .onSuccess(res -> ctx.response().end(res.encode()))
+        .onSuccess(res -> {
+          ctx.response().putHeader("Content-Type", "application/json");
+          ctx.response().end(res.encode());
+        })
         .mapEmpty();
   }
 
   Future<Void> getCluster(RoutingContext ctx) {
-    String id = Util.getPathParameter(ctx, "clusterId");
+    ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
+    RequestParameter requestParameter = validatedRequest.getPathParameters().get("clusterId");
+    String clusterId = requestParameter.getString();
     Storage storage = new Storage(ctx);
-    return storage.getClusterById(UUID.fromString(id))
+    return storage.getClusterById(UUID.fromString(clusterId))
         .onSuccess(res -> {
           if (res.getJsonArray("records").isEmpty()) {
-            HttpResponse.responseError(ctx, 404, id);
+            HttpResponse.responseError(ctx, 404, clusterId);
             return;
           }
           HttpResponse.responseJson(ctx, 200).end(res.encode());
@@ -240,7 +248,8 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
 
   Future<Void> postConfigMatchKey(RoutingContext ctx) {
     Storage storage = new Storage(ctx);
-    JsonObject request = ctx.body().asJsonObject();
+    ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
+    JsonObject request = validatedRequest.getBody().getJsonObject();
     String id = request.getString("id");
     String method = getMethod(request);
     String update = request.getString("update", "ingest");
@@ -256,7 +265,8 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
   }
 
   Future<Void> getConfigMatchKey(RoutingContext ctx) {
-    String id = Util.getPathParameter(ctx, "id");
+    ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
+    String id = validatedRequest.getPathParameters().get("id").getString();
     Storage storage = new Storage(ctx);
     return storage.selectMatchKeyConfig(id)
         .onSuccess(res -> {
@@ -271,7 +281,8 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
 
   Future<Void> putConfigMatchKey(RoutingContext ctx) {
     Storage storage = new Storage(ctx);
-    JsonObject request = ctx.body().asJsonObject();
+    ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
+    JsonObject request = validatedRequest.getBody().getJsonObject();
     String id = request.getString("id");
     String method = getMethod(request);
     String update = request.getString("update", "ingest");
@@ -348,7 +359,9 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
 
   Future<Void> postCodeModule(RoutingContext ctx) {
     Storage storage = new Storage(ctx);
-    CodeModuleEntity e = new CodeModuleEntity.CodeModuleBuilder(ctx.body().asJsonObject()).build();
+    ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
+    JsonObject request = validatedRequest.getBody().getJsonObject();
+    CodeModuleEntity e = new CodeModuleEntity.CodeModuleBuilder(request).build();
 
     ModuleCache.getInstance().purge(TenantUtil.tenant(ctx), e.getId());
     return ModuleCache.getInstance().lookup(ctx.vertx(), TenantUtil.tenant(ctx), e)
@@ -376,7 +389,9 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
 
   Future<Void> putCodeModule(RoutingContext ctx) {
     Storage storage = new Storage(ctx);
-    CodeModuleEntity e = new CodeModuleEntity.CodeModuleBuilder(ctx.body().asJsonObject()).build();
+    ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
+    JsonObject request = validatedRequest.getBody().getJsonObject();
+    CodeModuleEntity e = new CodeModuleEntity.CodeModuleBuilder(request).build();
     return ModuleCache.getInstance().lookup(ctx.vertx(), TenantUtil.tenant(ctx), e)
         .compose(module -> storage.updateCodeModuleEntity(e)
             .onSuccess(res -> {
@@ -422,7 +437,8 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
 
   Future<Void> putOaiConfig(RoutingContext ctx) {
     Storage storage = new Storage(ctx);
-    JsonObject request = ctx.body().asJsonObject();
+    ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
+    JsonObject request = validatedRequest.getBody().getJsonObject();
     return storage.updateOaiConfig(request)
         .onSuccess(res -> {
           if (Boolean.FALSE.equals(res)) {
@@ -444,9 +460,12 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
 
   static void failHandler(RoutingContext ctx) {
     Throwable t = ctx.failure();
-    // both semantic errors and syntax errors are from same pile ... Choosing 400 over 422.
-    int statusCode = t.getClass().getName().startsWith("io.vertx.ext.web.validation") ? 400 : 500;
-    failHandler(statusCode, ctx, t);
+    if (t instanceof io.vertx.ext.web.handler.HttpException) {
+      io.vertx.ext.web.handler.HttpException he = (io.vertx.ext.web.handler.HttpException) t;
+      failHandler(he.getStatusCode(), ctx, he.getCause());
+      return;
+    }
+    failHandler(500, ctx, t);
   }
 
   static void failHandler(RoutingContext ctx, Throwable e) {
@@ -535,7 +554,8 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
           add(routerBuilder, "startOaiPmhClient", oaiPmhClient::start);
           add(routerBuilder, "stopOaiPmhClient", oaiPmhClient::stop);
           add(routerBuilder, "statusOaiPmhClient", oaiPmhClient::status);
-          Router router = routerBuilder.createRouter();
+
+          Router router = Router.router(vertx);
 
           router.get("/reservoir/oai").handler(ctx ->
               OaiService.get(ctx).onFailure(cause -> failHandler(400, ctx, cause)));
@@ -552,6 +572,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
           //upload page
           router.route("/reservoir/upload-form/*")
               .handler(StaticHandler.create());
+
           router.route("/*").subRouter(routerBuilder.createRouter());
           return router;
         });

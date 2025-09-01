@@ -25,6 +25,8 @@ import io.vertx.core.http.RequestOptions;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.openapi.router.RouterBuilder;
+import io.vertx.openapi.validation.ValidatedRequest;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.RowIterator;
 import io.vertx.sqlclient.RowSet;
@@ -81,7 +83,9 @@ public class OaiPmhClientService {
    */
   public Future<Void> post(RoutingContext ctx) {
     Storage storage = new Storage(ctx);
-    JsonObject config = ctx.body().asJsonObject();
+
+    ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
+    JsonObject config = validatedRequest.getBody().getJsonObject();
 
     String id = config.getString("id");
     if (CLIENT_ID_ALL.equals(id)) {
@@ -241,7 +245,8 @@ public class OaiPmhClientService {
   public Future<Void> put(RoutingContext ctx) {
     Storage storage = new Storage(ctx);
     String id = Util.getPathParameter(ctx, "id");
-    JsonObject config = ctx.body().asJsonObject();
+    ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
+    JsonObject config = validatedRequest.getBody().getJsonObject();
     config.remove("id");
     return getJob(storage, id).compose(existing -> {
       if (existing != null) {
