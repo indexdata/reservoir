@@ -25,8 +25,6 @@ import io.vertx.core.http.RequestOptions;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.validation.RequestParameters;
-import io.vertx.ext.web.validation.ValidationHandler;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.RowIterator;
 import io.vertx.sqlclient.RowSet;
@@ -176,8 +174,7 @@ public class OaiPmhClientService {
    */
   public Future<Void> get(RoutingContext ctx) {
     Storage storage = new Storage(ctx);
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    String id = Util.getParameterString(params.pathParameter("id"));
+    String id = Util.getPathParameter(ctx, "id");
     return getConfig(storage, id).map(config -> {
       if (config == null) {
         HttpResponse.responseError(ctx, 404, id);
@@ -221,8 +218,7 @@ public class OaiPmhClientService {
    */
   public Future<Void> delete(RoutingContext ctx) {
     Storage storage = new Storage(ctx);
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    String id = Util.getParameterString(params.pathParameter("id"));
+    String id = Util.getPathParameter(ctx, "id");
     return storage.getPool().preparedQuery("DELETE FROM " + storage.getOaiPmhClientTable()
             + B_WHERE_ID1_LITERAL)
         .execute(Tuple.of(id))
@@ -244,8 +240,7 @@ public class OaiPmhClientService {
    */
   public Future<Void> put(RoutingContext ctx) {
     Storage storage = new Storage(ctx);
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    String id = Util.getParameterString(params.pathParameter("id"));
+    String id = Util.getPathParameter(ctx, "id");
     JsonObject config = ctx.body().asJsonObject();
     config.remove("id");
     return getJob(storage, id).compose(existing -> {
@@ -332,8 +327,7 @@ public class OaiPmhClientService {
    */
   public Future<Void> start(RoutingContext ctx) {
     Storage storage = new Storage(ctx);
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    String id = Util.getParameterString(params.pathParameter("id"));
+    String id = Util.getPathParameter(ctx, "id");
     Future<Boolean> future;
     if (CLIENT_ID_ALL.equals(id)) {
       future = getOaiPmhClients(storage)
@@ -398,8 +392,7 @@ public class OaiPmhClientService {
    */
   public Future<Void> stop(RoutingContext ctx) {
     Storage storage = new Storage(ctx);
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    String id = Util.getParameterString(params.pathParameter("id"));
+    String id = Util.getPathParameter(ctx, "id");
 
     if (CLIENT_ID_ALL.equals(id)) {
       return getOaiPmhClients(storage)
@@ -441,8 +434,7 @@ public class OaiPmhClientService {
    */
   public Future<Void> status(RoutingContext ctx) {
     Storage storage = new Storage(ctx);
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    String id = Util.getParameterString(params.pathParameter("id"));
+    String id = Util.getPathParameter(ctx, "id");
     Future<JsonArray> f;
     if (CLIENT_ID_ALL.equals(id)) {
       f = getOaiPmhClients(storage)

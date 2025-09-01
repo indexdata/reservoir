@@ -16,10 +16,7 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.StaticHandler;
-import io.vertx.ext.web.openapi.router.OpenAPIRoute;
 import io.vertx.ext.web.openapi.router.RouterBuilder;
-import io.vertx.ext.web.validation.RequestParameters;
-import io.vertx.ext.web.validation.ValidationHandler;
 import io.vertx.openapi.contract.OpenAPIContract;
 import java.util.UUID;
 import java.util.function.Function;
@@ -64,8 +61,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
   }
 
   Future<Void> reloadCodeModule(RoutingContext ctx) {
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    String id = Util.getParameterString(params.pathParameter("id"));
+    String id = Util.getPathParameter(ctx, "id");
     Storage storage = new Storage(ctx);
     return storage.selectCodeModuleEntity(id)
         .compose(res -> {
@@ -82,8 +78,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
   }
 
   Future<Void> deleteCodeModule(RoutingContext ctx) {
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    String id = Util.getParameterString(params.pathParameter("id"));
+    String id = Util.getPathParameter(ctx, "id");
     Storage storage = new Storage(ctx);
     return storage.deleteCodeModuleEntity(id)
         .onSuccess(res -> {
@@ -120,8 +115,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
 
   Future<Void> deleteGlobalRecords(RoutingContext ctx) {
     PgCqlDefinition definition = createDefinitionGlobalRecords();
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    String query = Util.getQueryParameterQuery(params);
+    String query = Util.getQueryParameterQuery(ctx);
     if (query == null) {
       failHandler(400, ctx, "Must specify query for delete records");
       return Future.succeededFuture();
@@ -134,16 +128,14 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
 
   Future<Void> getGlobalRecords(RoutingContext ctx) {
     PgCqlDefinition definition = createDefinitionGlobalRecords();
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameterQuery(params));
+    PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameterQuery(ctx));
     Storage storage = new Storage(ctx);
     return storage.getGlobalRecords(ctx, pgCqlQuery.getWhereClause(),
         pgCqlQuery.getOrderByClause());
   }
 
   Future<Void> getGlobalRecord(RoutingContext ctx) {
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    String id = Util.getParameterString(params.pathParameter("globalId"));
+    String id = Util.getQueryParameter(ctx, "globalId");
     Storage storage = new Storage(ctx);
     return storage.getGlobalRecord(id)
         .onSuccess(res -> {
@@ -175,9 +167,8 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     definition.addField(CqlFields.SOURCE_VERSION.getCqlName(),
         new PgCqlFieldNumber().withColumn(CqlFields.SOURCE_VERSION.getQualifiedSqlName()));
 
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameterQuery(params));
-    String matchKeyId = Util.getQueryParameter(params, "matchkeyid");
+    PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameterQuery(ctx));
+    String matchKeyId = Util.getQueryParameter(ctx, "matchkeyid");
     Storage storage = new Storage(ctx);
     return storage.selectMatchKeyConfig(matchKeyId).compose(conf -> {
       if (conf == null) {
@@ -200,8 +191,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     definition.addField(CqlFields.SOURCE_VERSION.getCqlName(),
         new PgCqlFieldNumber().withColumn(CqlFields.SOURCE_VERSION.getQualifiedSqlName()));
 
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameterQuery(params));
+    PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameterQuery(ctx));
     Storage storage = new Storage(ctx);
     return storage.touchClusters(pgCqlQuery)
         .map(count -> new JsonObject().put("count", count))
@@ -210,8 +200,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
   }
 
   Future<Void> getCluster(RoutingContext ctx) {
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    String id = Util.getParameterString(params.pathParameter("clusterId"));
+    String id = Util.getPathParameter(ctx, "clusterId");
     Storage storage = new Storage(ctx);
     return storage.getClusterById(UUID.fromString(id))
         .onSuccess(res -> {
@@ -267,8 +256,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
   }
 
   Future<Void> getConfigMatchKey(RoutingContext ctx) {
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    String id = Util.getParameterString(params.pathParameter("id"));
+    String id = Util.getPathParameter(ctx, "id");
     Storage storage = new Storage(ctx);
     return storage.selectMatchKeyConfig(id)
         .onSuccess(res -> {
@@ -301,8 +289,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
   }
 
   Future<Void> deleteConfigMatchKey(RoutingContext ctx) {
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    String id = Util.getParameterString(params.pathParameter("id"));
+    String id = Util.getPathParameter(ctx, "id");
     Storage storage = new Storage(ctx);
     return storage.deleteMatchKeyConfig(id)
         .onSuccess(res -> {
@@ -321,8 +308,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     definition.addField(CqlFields.METHOD.getCqlName(), new PgCqlFieldText().withExact());
     definition.addField(CqlFields.MATCHER.getCqlName(), new PgCqlFieldText().withExact());
 
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameterQuery(params));
+    PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameterQuery(ctx));
 
     Storage storage = new Storage(ctx);
     return storage.getMatchKeyConfigs(ctx, pgCqlQuery.getWhereClause(),
@@ -330,8 +316,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
   }
 
   Future<Void> initializeMatchKey(RoutingContext ctx) {
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    String id = Util.getParameterString(params.pathParameter("id"));
+    String id = Util.getPathParameter(ctx, "id");
     Storage storage = new Storage(ctx);
     return storage.initializeMatchKey(ctx.vertx(), id)
         .onSuccess(res -> {
@@ -345,8 +330,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
   }
 
   Future<Void> statsMatchKey(RoutingContext ctx) {
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    String id = Util.getParameterString(params.pathParameter("id"));
+    String id = Util.getPathParameter(ctx, "id");
     Storage storage = new Storage(ctx);
     return storage.selectMatchKeyConfig(id)
         .compose(conf -> {
@@ -376,8 +360,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
   }
 
   Future<Void> getCodeModule(RoutingContext ctx) {
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    String id = Util.getParameterString(params.pathParameter("id"));
+    String id = Util.getPathParameter(ctx, "id");
     Storage storage = new Storage(ctx);
     return storage.selectCodeModuleEntity(id)
         .onSuccess(e -> {
@@ -412,8 +395,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     definition.addField(CqlFields.ID.getCqlName(), new PgCqlFieldText().withExact());
     definition.addField(CqlFields.FUNCTION.getCqlName(), new PgCqlFieldText().withExact());
 
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameterQuery(params));
+    PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameterQuery(ctx));
 
     Storage storage = new Storage(ctx);
     return storage.selectCodeModuleEntities(ctx, pgCqlQuery.getWhereClause(),
@@ -521,8 +503,8 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     return OpenAPIContract.from(vertx, "openapi/reservoir.yaml")
         .map(contract -> {
           RouterBuilder routerBuilder = RouterBuilder.create(vertx, contract);
-          routerBuilder.rootHandler(BodyHandler.create().setBodyLimit(65536)
-              .setHandleFileUploads(false));
+          // routerBuilder.rootHandler(BodyHandler.create().setBodyLimit(65536)
+          //     .setHandleFileUploads(false));
           add(routerBuilder, "getGlobalRecords", this::getGlobalRecords);
           add(routerBuilder, "deleteGlobalRecords", this::deleteGlobalRecords);
           add(routerBuilder, "getGlobalRecord", this::getGlobalRecord);
