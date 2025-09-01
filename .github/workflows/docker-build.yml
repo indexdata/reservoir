@@ -76,6 +76,6 @@ jobs:
           build-args: |
             GIT_COMMIT=${{ github.sha }}
             MAVEN_MOUNT_TYPE=bind
-            MAVEN_MOUNT_SOURCE=${{ env.HOME }}/.m2/repository
+            MAVEN_MOUNT_SOURCE=/home/runner/.m2/repository
           cache-from: type=gha
           cache-to: type=gha,mode=max
