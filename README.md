@@ -126,13 +126,25 @@ If it's not defined you can specify it by passing `--add-host=host.docker.intern
 
 ## Installing with Helm
 
-Reservoir Helm chart is published to the GitHub packages repository so simplify installation on Kubernetes. The chart uses the GraalVM JIT image.
+Helm chart is published to the GitHub packages repository to simplify installation on Kubernetes. The chart uses the GraalVM JIT image by default.
 
-You can install the chart to your current cluster context/namespace with:
+You can install the chart to your current cluster context with:
 
 ```
-helm install reservoir oci://ghcr.io/indexdata/charts/reservoir --set envSecretRefs="{db-config-secrets}" --devel
+helm install my-reservoir oci://ghcr.io/indexdata/charts/reservoir \
+  -n my-namespace \
+  --set envSecretRefs="{my-db-config-secrets}" \
+  --devel
 ```
+
+where:
+* `my-reservoir` is the name of your instance (release name),
+* `my-namespace` is the cluster namespace
+* `my-db-config-secrets` is the name of the secret that holds the DB config
+
+Only master branch charts are published (hence `--devel`). The chart uses the [okapi-hooks](https://github.com/indexdata/okapi-hooks)
+sub-chart, disabled by default, to allow registration for selected Okapi tenants.
+See [values.yaml](chart/values.yaml) for details.
 
 ## Server metrics
 
