@@ -9,10 +9,9 @@
   <artifactId>mod-reservoir-server</artifactId>
   <name>Reservoir storage server module</name>
   <properties>
-    <vertx.launcher>com.indexdata.reservoir.server.ReservoirLauncher</vertx.launcher>
+    <main.class>com.indexdata.reservoir.server.ReservoirLauncher</main.class>
     <vertx.verticle>com.indexdata.reservoir.server.MainVerticle</vertx.verticle>
     <graal.compiler.dir>${project.build.directory}/compiler</graal.compiler.dir>
-    <main.class>com.indexdata.reservoir.server.Main</main.class>
   </properties>
   <dependencies>
     <dependency>

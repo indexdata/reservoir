@@ -13,7 +13,15 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.Config;
 
-public class ReservoirLauncher {
+public class ReservoirLauncher extends VertxApplication {
+  public ReservoirLauncher(String[] args) {
+    super(args);
+  }
+
+  public ReservoirLauncher(String[] args, VertxApplicationHooks hooks) {
+    super(args, hooks);
+  }
+
   private static final Logger log = LogManager.getLogger(ReservoirLauncher.class);
   private static final String PROMETHEUS_PORT = "metrics.prometheus.port";
   private static final String PROMETHEUS_PATH = "/metrics";
@@ -53,7 +61,7 @@ public class ReservoirLauncher {
       }
 
     };
-    VertxApplication app = new VertxApplication(args, hooks);
+    VertxApplication app = new ReservoirLauncher(args, hooks);
     app.launch();
   }
 
