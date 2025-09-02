@@ -79,6 +79,12 @@
         <groupId>org.folio</groupId>
         <artifactId>vertx-lib</artifactId>
         <version>${vertxlib.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>*</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.folio</groupId>
@@ -94,6 +100,12 @@
         <groupId>org.folio.okapi</groupId>
         <artifactId>okapi-core</artifactId>
         <version>${okapi.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>*</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.folio.okapi</groupId>
