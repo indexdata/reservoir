@@ -262,13 +262,6 @@
                   <exclude>log4j2-json.properties</exclude>
                 </excludes>
               </filter>
-              <!-- Filter to resolve conflict between vertx-lib and this project -->
-              <filter>
-                <artifact>org.folio:vertx-lib</artifact>
-                <excludes>
-                  <exclude>openapi/**</exclude>
-                </excludes>
-              </filter>
               <!-- Filter to resolve conflict between okapi-common and this project -->
               <filter>
                 <artifact>org.folio.okapi:okapi-common</artifact>
