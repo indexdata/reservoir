@@ -1,5 +1,8 @@
 name: mvn-verify
-on: [push]
+on:
+  push:
+    branches: [master]
+  pull_request:
 
 jobs:
   mvn-verify:
@@ -8,7 +11,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: graalvm/setup-graalvm@v1 # https://github.com/graalvm/setup-graalvm
         with:
-          java-version: '24.0.2'
+          java-version: '24'
           distribution: 'graalvm'
           cache: 'maven'
       - name: Show GraalVM and Java versions
