@@ -68,11 +68,13 @@
     <!-- logging see http://www.slf4j.org/legacy.html -->
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-slf4j-impl</artifactId>
+      <artifactId>log4j-slf4j2-impl</artifactId>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-jul</artifactId>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.folio.okapi</groupId>
