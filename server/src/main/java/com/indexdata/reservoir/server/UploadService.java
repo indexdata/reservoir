@@ -21,7 +21,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.okapi.common.HttpResponse;
 import org.folio.okapi.common.XOkapiHeaders;
 
@@ -62,7 +61,7 @@ public class UploadService {
         );
         Promise<IngestStatsByFile> promise = Promise.promise();
         request.endHandler(e1 ->
-            GenericCompositeFuture.all(futures).map(res -> statsByFile).onComplete(promise));
+            Future.all(futures).map(res -> statsByFile).onComplete(promise));
         future = promise.future();
       } else {
         future = uploadContent(ctx, request, params, params.fileName, params.contentType)

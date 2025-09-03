@@ -9,8 +9,6 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.validation.RequestParameters;
-import io.vertx.ext.web.validation.ValidationHandler;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.RowStream;
 import io.vertx.sqlclient.SqlConnection;
@@ -48,7 +46,6 @@ public final class OaiService {
   }
 
   static void oaiHeader(RoutingContext ctx) {
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
     HttpServerResponse response = ctx.response();
     response.setChunked(true);
     response.setStatusCode(200);
@@ -56,7 +53,7 @@ public final class OaiService {
     response.write(OAI_HEADER);
     response.write("  <responseDate>" + Instant.now() + "</responseDate>\n");
     response.write("  <request");
-    String verb = Util.getQueryParameter(params, "verb");
+    String verb = Util.getQueryParameter(ctx, "verb");
     if (verb != null) {
       response.write(" verb=\"" + encodeXmlText(verb) + "\"");
     }
@@ -89,12 +86,11 @@ public final class OaiService {
 
   static Future<Void> getCheck(RoutingContext ctx) {
     try {
-      RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-      String verb = Util.getQueryParameter(params, "verb");
+      String verb = Util.getQueryParameter(ctx, "verb");
       if (verb == null) {
         throw OaiException.badVerb("missing verb");
       }
-      String metadataPrefix = Util.getQueryParameter(params, "metadataPrefix");
+      String metadataPrefix = Util.getQueryParameter(ctx, "metadataPrefix");
       if (metadataPrefix != null && !"marcxml".equals(metadataPrefix)) {
         throw OaiException.cannotDisseminateFormat("only metadataPrefix \"marcxml\" supported");
       }
@@ -142,15 +138,14 @@ public final class OaiService {
   }
 
   static Future<Void> listRecords(RoutingContext ctx, boolean withMetadata) {
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    String coded = Util.getQueryParameter(params, "resumptionToken");
+    String coded = Util.getQueryParameter(ctx, "resumptionToken");
     ResumptionToken token = coded != null ? new ResumptionToken(coded) : null;
     String set = token != null
-        ? token.getSet() : Util.getQueryParameter(params, "set");
-    String from = Util.getQueryParameter(params, "from");
+        ? token.getSet() : Util.getQueryParameter(ctx, "set");
+    String from = Util.getQueryParameter(ctx, "from");
     String until = token != null
-        ? token.getUntil() : Util.getQueryParameter(params, "until");
-    Integer limit = params.queryParameter("limit").getInteger();
+        ? token.getUntil() : Util.getQueryParameter(ctx, "until");
+    Integer limit = Integer.parseInt(Util.getQueryParameter(ctx, "limit", "1000"));
     Storage storage = new Storage(ctx);
     return storage.selectMatchKeyConfig(set).compose(conf -> {
       if (conf == null) {
@@ -292,8 +287,7 @@ public final class OaiService {
   }
 
   static Future<Void> getRecord(RoutingContext ctx) {
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    String identifier = Util.getQueryParameter(params, "identifier");
+    String identifier = Util.getQueryParameter(ctx, "identifier");
     if (identifier == null) {
       throw OaiException.badArgument("missing identifier");
     }

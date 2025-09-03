@@ -379,7 +379,7 @@ public class MainVerticleTest extends TestBase {
         .get("/reservoir/config/matchkeys")
         .then().statusCode(400)
         .contentType("text/plain")
-        .body(containsString("Validation error"));
+        .body(containsString("Instance does not match any of [\"exact\",\"none\"]"));
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
@@ -514,7 +514,7 @@ public class MainVerticleTest extends TestBase {
         .get("/reservoir/config/matchkeys")
         .then().statusCode(400)
         .contentType("text/plain")
-        .body(containsString("Validation error"));
+        .body(containsString("Instance does not match any of [\"exact\",\"none\"]"));
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
@@ -1291,7 +1291,7 @@ public class MainVerticleTest extends TestBase {
         .get("/reservoir/clusters")
         .then().statusCode(400)
         .contentType("text/plain")
-        .body(containsString("Missing parameter matchkeyid"));
+        .body(containsString("does not contain the required query parameter matchkeyid"));
   }
 
   @Test
@@ -2521,6 +2521,7 @@ public class MainVerticleTest extends TestBase {
     assertThat(s, containsString("numberOfRecords>1<"));
     assertThat(s, containsString("<subfield code=\"s\">SOURCE-1</subfield>"));
 
+
     sruVerify = new SruVerify(s);
     assertThat(sruVerify.response, is("searchRetrieveResponse"));
     assertThat(sruVerify.numberOfRecords, is(1));
@@ -2568,14 +2569,22 @@ public class MainVerticleTest extends TestBase {
     assertThat(sruVerify.identifiers, hasSize(2));
     assertThat(sruVerify.errors, hasSize(0));
 
-    RestAssured.given()
+    s = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .param("query", "cql.AllRecords=true")
         .param("maximumRecords", "x")
         .get("/reservoir/sru")
-        .then().statusCode(400);
-  }
+        .then().statusCode(200)
+        .contentType("text/xml")
+        .extract().body().asString();
 
+    sruVerify = new SruVerify(s);
+    assertThat(sruVerify.response, is("searchRetrieveResponse"));
+    assertThat(sruVerify.numberOfRecords, is(0));
+    assertThat(sruVerify.identifiers, hasSize(0));
+    assertThat(sruVerify.errors, hasSize(1));
+    assertThat(sruVerify.errors.get(0), is("Unsupported parameter value"));
+  }
 
   @Test
   @java.lang.SuppressWarnings("squid:S5961") // Test methods should not contain too many assertions

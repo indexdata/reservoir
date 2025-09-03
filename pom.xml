@@ -37,9 +37,9 @@
     <graalvm-maven-plugin.version>0.10.6</graalvm-maven-plugin.version>
     <log4j2.version>2.25.1</log4j2.version>
     <slf4j-api.version>2.0.17</slf4j-api.version>
-    <vertx.version>4.5.20</vertx.version>
-    <okapi.version>6.2.3</okapi.version>
-    <vertxlib.version>3.4.0</vertxlib.version>
+    <vertx.version>5.0.3</vertx.version>
+    <okapi.version>7.0.0</okapi.version>
+    <vertxlib.version>4.0.0</vertxlib.version>
     <micrometer.version>1.12.13</micrometer.version>
   </properties>
   <dependencyManagement>
@@ -134,7 +134,7 @@
       <dependency>
         <groupId>io.rest-assured</groupId>
         <artifactId>rest-assured</artifactId>
-        <version>5.5.1</version>
+        <version>5.5.6</version>
       </dependency>
       <dependency>
         <groupId>org.apache.solr</groupId>
@@ -144,7 +144,7 @@
       <dependency>
         <groupId>org.testcontainers</groupId>
         <artifactId>testcontainers-bom</artifactId>
-        <version>1.20.6</version>
+        <version>1.21.3</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -243,6 +243,7 @@
               <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                 <manifestEntries>
                   <Main-Class>${main.class}</Main-Class>
+                  <Main-Verticle>${vertx.verticle}</Main-Verticle>
                   <Multi-Release>true</Multi-Release>
                 </manifestEntries>
               </transformer>
@@ -269,8 +270,6 @@
                   <exclude>META-INF/DEPENDENCIES</exclude>
                   <exclude>module-info.class</exclude>
                   <exclude>META-INF/versions/**/module-info.class</exclude>
-                  <exclude>log4j2.properties</exclude>
-                  <exclude>log4j2-json.properties</exclude>
                 </excludes>
               </filter>
               <!-- Filter to resolve conflict between okapi-common and this project -->
@@ -455,7 +454,19 @@
       <url>https://maven.indexdata.com/</url>
     </repository>
   </repositories>
-
+  <pluginRepositories>
+    <pluginRepository>
+      <id>folio</id>
+      <name>FOLIO Maven Plugin Repository</name>
+      <url>https://repository.folio.org/repository/maven-folio/</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </pluginRepository>
+  </pluginRepositories>
   <distributionManagement>
     <repository>
       <id>folio-nexus</id>

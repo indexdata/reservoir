@@ -84,6 +84,7 @@ If using GraalVM java, start the server with:
 
 ```
 java -Dport=8081 --enable-native-access=ALL-UNNAMED \
+   --sun-misc-unsafe-memory-access=allow \
    -jar server/target/mod-reservoir-server-fat.jar
 ```
 
@@ -647,7 +648,15 @@ and the additional module metadata.
 
 API descriptions:
 
- * [OpenAPI](server/src/main/resources/openapi/reservoir.yaml)
+ * [Reservoir](server/src/main/resources/openapi/reservoir.yaml)
+ * [Reservoir upload](server/src/main/resources/openapi/upload.yaml)
+ * [SRU](server/src/main/resources/openapi/sru.yaml)
+ * [OAI-PMH](server/src/main/resources/openapi/oai.yaml)
  * [Schemas](server/src/main/resources/openapi/schemas/)
 
-Generated [API documentation](https://s3.amazonaws.com/indexdata-docs/api/reservoir/reservoir.html).
+Generated API documentation:
+ * [Reservoir](https://s3.amazonaws.com/indexdata-docs/api/reservoir/reservoir.html).
+ * [Reservoir upload](https://s3.amazonaws.com/indexdata-docs/api/reservoir/upload.html).
+ * [SRU](https://s3.amazonaws.com/indexdata-docs/api/reservoir/sru.html).
+ * [OAI-PMH](https://s3.amazonaws.com/indexdata-docs/api/reservoir/oai.html).
+
