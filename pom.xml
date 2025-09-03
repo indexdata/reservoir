@@ -33,7 +33,6 @@
   </licenses>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <!-- graalvm >= 23.1.0 requires reorganisation: https://medium.com/graalvm/truffle-unchained-13887b77b62c -->
     <graalvm.version>24.2.2</graalvm.version>
     <graalvm-maven-plugin.version>0.10.6</graalvm-maven-plugin.version>
     <log4j2.version>2.25.1</log4j2.version>
@@ -388,6 +387,15 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <version>3.5.3</version>
+        <configuration>
+          <!-- not needed on graalvm, move to regular-jvm profile, or better, use JVMCI there
+          <systemPropertyVariables>
+            <polyglot.engine.WarnInterpreterOnly>false</polyglot.engine.WarnInterpreterOnly>
+          </systemPropertyVariables>
+          -->
+          <!-- silence netty warnings during tests -->
+          <argLine>--sun-misc-unsafe-memory-access=allow --enable-native-access=ALL-UNNAMED</argLine>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
