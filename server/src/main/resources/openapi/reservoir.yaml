@@ -1,6 +1,6 @@
 openapi: 3.0.0
 info:
-  title: Reservoir
+  title: Reservoir API (except upload)
   version: v1
 paths:
   # OAI config (singleton)
@@ -506,94 +506,6 @@ paths:
           $ref: "#/components/responses/trait_404"
         "500":
           $ref: "#/components/responses/trait_500"
-  /reservoir/upload:
-    parameters:
-      - $ref: headers/okapi-tenant.yaml
-      - $ref: headers/okapi-token.yaml
-      - $ref: headers/okapi-url.yaml
-      - $ref: headers/okapi-permissions.yaml
-      - in: query
-        name: sourceId
-        required: true
-        description: source identifier (library ID)
-        schema:
-          type: string
-      - in: query
-        name: sourceVersion
-        description: source version
-        schema:
-          type: integer
-          default: 1
-      - in: query
-        name: fileName
-        description: file name of the uploaded file (for non multipart upload)
-        schema:
-          type: string
-      - in: query
-        name: localIdPath
-        description: JSON-path for where local identifier is fetched from
-        schema:
-          type: string
-      - in: query
-        name: xmlFixing
-        description: attempt to fix XML input by replacing invalid chars
-        schema:
-          type: boolean
-          default: false
-      - in: query
-        name: raw
-        description: only calculate size
-        schema:
-          type: boolean
-          default: false
-      - in: query
-        name: ingest
-        description: ingest records after processing files
-        schema:
-          type: boolean
-          default: true
-    # post:
-    #   description: Upload MARC binary and MARCXML records.
-    #   operationId: uploadRecords
-    #   requestBody:
-    #     content:
-    #       multipart/form-data:
-    #         schema:
-    #           type: object
-    #           properties:
-    #             records:
-    #               type: string
-    #               format: binary
-    #         encoding:
-    #           records:
-    #             # MARC not that common (say .mrc) often defaults to application/octet-stream
-    #             contentType: application/octet-stream,application/marc,
-    #               application/xml,text/xml
-    #       application/octet-stream:
-    #         schema:
-    #           type: string
-    #           format: binary
-    #       application/xml:
-    #         schema:
-    #           type: string
-    #           format: binary
-    #       text/xml:
-    #         schema:
-    #           type: string
-    #           format: binary
-    #   responses:
-    #     "200":
-    #       description: Records accepted.
-    #       content:
-    #         application/json:
-    #           schema:
-    #             $ref: schemas/ingestStatsByFile.json
-    #     "400":
-    #       $ref: "#/components/responses/trait_400"
-    #     "403":
-    #       $ref: "#/components/responses/trait_403"
-    #     "500":
-    #       $ref: "#/components/responses/trait_500"
   # Global Records retrieval and simple ingest
   /reservoir/records:
     parameters:
@@ -757,33 +669,6 @@ paths:
           $ref: "#/components/responses/trait_404"
         "500":
           $ref: "#/components/responses/trait_500"
-  # /reservoir/oai:
-  #   parameters:
-  #     - $ref: headers/okapi-tenant.yaml
-  #     - $ref: headers/okapi-token.yaml
-  #     - $ref: headers/okapi-url.yaml
-  #     - $ref: parameters/oai-identifier.yaml
-  #     - $ref: parameters/oai-from.yaml
-  #     - $ref: parameters/oai-list-limit.yaml
-  #     - $ref: parameters/oai-until.yaml
-  #     - $ref: parameters/oai-resumptionToken.yaml
-  #     - $ref: parameters/oai-set.yaml
-  #     - $ref: parameters/oai-verb.yaml
-  #     - $ref: parameters/oai-metadataPrefix.yaml
-  #   get:
-  #     description: OAI service
-  #     operationId: oaiService
-  #     responses:
-  #       "200":
-  #         description: OAI response (possibly with OAI error code)
-  #         content:
-  #           text/xml:
-  #             schema:
-  #               type: string
-  #       "400":
-  #         $ref: "#/components/responses/trait_400"
-  #       "500":
-  #         $ref: "#/components/responses/trait_500"
   /reservoir/pmh-clients:
     parameters:
       - $ref: headers/okapi-tenant.yaml
@@ -951,31 +836,6 @@ paths:
           $ref: "#/components/responses/trait_404"
         "500":
           $ref: "#/components/responses/trait_500"
-  # /reservoir/sru:
-  #   parameters:
-  #     - $ref: headers/okapi-tenant.yaml
-  #     - $ref: headers/okapi-token.yaml
-  #     - $ref: headers/okapi-url.yaml
-  #     - $ref: parameters/query.yaml
-  #     - $ref: parameters/start-record.yaml
-  #     - $ref: parameters/maximum-records.yaml
-  #     - $ref: parameters/sru-version.yaml
-  #     - $ref: parameters/sru-operation.yaml
-  #     - $ref: parameters/sru-record-schema.yaml
-  #   get:
-  #     description: SRU service
-  #     operationId: sruService
-  #     responses:
-  #       "200":
-  #         description: SRU response
-  #         content:
-  #           text/xml:
-  #             schema:
-  #               type: string
-  #       "400":
-  #         $ref: "#/components/responses/trait_400"
-  #       "500":
-  #         $ref: "#/components/responses/trait_500"
 # Reservoir error responses
 components:
   responses:
