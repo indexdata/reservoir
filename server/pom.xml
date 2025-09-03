@@ -227,11 +227,6 @@
       </plugin>
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
-        <configuration>
-          <systemPropertyVariables>
-            <polyglot.engine.WarnInterpreterOnly>false</polyglot.engine.WarnInterpreterOnly>
-          </systemPropertyVariables>
-        </configuration>
       </plugin>
       <plugin>
         <groupId>pl.project13.maven</groupId>
