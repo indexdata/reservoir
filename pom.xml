@@ -271,8 +271,6 @@
                   <exclude>META-INF/DEPENDENCIES</exclude>
                   <exclude>module-info.class</exclude>
                   <exclude>META-INF/versions/**/module-info.class</exclude>
-                  <exclude>log4j2.properties</exclude>
-                  <exclude>log4j2-json.properties</exclude>
                 </excludes>
               </filter>
               <!-- Filter to resolve conflict between okapi-common and this project -->
