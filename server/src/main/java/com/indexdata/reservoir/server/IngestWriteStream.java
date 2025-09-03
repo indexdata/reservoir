@@ -1,9 +1,9 @@
 package com.indexdata.reservoir.server;
 
 import com.indexdata.reservoir.module.impl.ModuleJsonPath;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.streams.WriteStream;
@@ -22,7 +22,7 @@ public class IngestWriteStream implements WriteStream<JsonObject> {
   final String fileName;
   final String contentType;
   Handler<Throwable> exceptionHandler;
-  Handler<AsyncResult<Void>> endHandler;
+  Promise<Void> endHandler;
   boolean ended;
   Handler<Void> drainHandler;
   List<IngestMatcher> ingestMatches;
@@ -42,6 +42,7 @@ public class IngestWriteStream implements WriteStream<JsonObject> {
     this.contentType = contentType;
     this.stats = new IngestStats(fileName);
     this.ingest = params.ingest;
+    this.endHandler = Promise.promise();
   }
 
   @Override
@@ -100,9 +101,9 @@ public class IngestWriteStream implements WriteStream<JsonObject> {
             log.info("{} {}", params.getSummary(fileName), stats);
             if (endHandler != null) {
               if (failure != null) {
-                endHandler.handle(Future.failedFuture(failure));
+                endHandler.fail(failure);
               } else {
-                endHandler.handle(Future.succeededFuture());
+                endHandler.complete();
               }
             }
           }
@@ -110,19 +111,13 @@ public class IngestWriteStream implements WriteStream<JsonObject> {
   }
 
   @Override
-  public void write(JsonObject globalRecord, Handler<AsyncResult<Void>> handler) {
-    write(globalRecord).onComplete(handler);
-  }
-
-  @Override
-  public void end(Handler<AsyncResult<Void>> handler) {
+  public Future<Void> end() {
     ended = true;
     if (ops.get() == 0) {
       log.info("{} {}", params.getSummary(fileName), stats);
-      handler.handle(Future.succeededFuture());
-    } else {
-      endHandler = handler;
+      endHandler.complete();
     }
+    return endHandler.future();
   }
 
   @Override

@@ -9,10 +9,9 @@
   <artifactId>mod-reservoir-server</artifactId>
   <name>Reservoir storage server module</name>
   <properties>
-    <vertx.launcher>com.indexdata.reservoir.server.ReservoirLauncher</vertx.launcher>
+    <main.class>com.indexdata.reservoir.server.ReservoirLauncher</main.class>
     <vertx.verticle>com.indexdata.reservoir.server.MainVerticle</vertx.verticle>
     <graal.compiler.dir>${project.build.directory}/compiler</graal.compiler.dir>
-    <main.class>com.indexdata.reservoir.server.Main</main.class>
   </properties>
   <dependencies>
     <dependency>
@@ -26,11 +25,15 @@
     </dependency>
     <dependency>
       <groupId>io.vertx</groupId>
+      <artifactId>vertx-launcher-application</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
       <artifactId>vertx-web</artifactId>
     </dependency>
     <dependency>
       <groupId>io.vertx</groupId>
-      <artifactId>vertx-web-openapi</artifactId>
+      <artifactId>vertx-openapi</artifactId>
     </dependency>
     <dependency>
       <groupId>io.vertx</groupId>
@@ -38,7 +41,7 @@
     </dependency>
     <dependency>
       <groupId>io.vertx</groupId>
-      <artifactId>vertx-web-api-contract</artifactId>
+      <artifactId>vertx-web-openapi-router</artifactId>
     </dependency>
     <dependency>
       <groupId>io.vertx</groupId>
@@ -72,6 +75,10 @@
     <dependency>
       <groupId>org.folio.okapi</groupId>
       <artifactId>okapi-common</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
     </dependency>
     <dependency>
       <groupId>com.jayway.jsonpath</groupId>
@@ -243,6 +250,20 @@
           <generateGitPropertiesFile>true</generateGitPropertiesFile>
           <generateGitPropertiesFilename>${project.build.outputDirectory}/git.properties</generateGitPropertiesFilename>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.folio</groupId>
+        <artifactId>openapi-deref-plugin</artifactId>
+        <version>4.0.0</version>
+        <executions>
+          <execution>
+            <id>dereference-books</id>
+            <goals>
+              <goal>dereference</goal>
+            </goals>
+            <phase>generate-resources</phase>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

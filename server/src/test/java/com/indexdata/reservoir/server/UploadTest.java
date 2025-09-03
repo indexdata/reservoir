@@ -136,7 +136,7 @@ public class UploadTest extends TestBase {
           assertThat(responseBody.getJsonObject("marc1-delete.xml").getInteger("updated"), is(0));
           assertThat(responseBody.getJsonObject("marc1-delete.xml").getInteger("deleted"), is(1));
           return webClient.getAbs(OKAPI_URL + "/reservoir/records")
-                .addQueryParam("query", "sourceId = \"SOURCE-1\"")
+                .addQueryParam("query", "sourceId = SOURCE-1")
                 .putHeader(XOkapiHeaders.TENANT, TENANT_1)
                 .send()
                 .expecting(HttpResponseExpectation.SC_OK);
@@ -239,7 +239,7 @@ public class UploadTest extends TestBase {
             assertThat(responseBody.getJsonObject("marc3.xml").getInteger("updated"), is(0));
             assertThat(responseBody.getJsonObject("marc3.xml").getInteger("deleted"), is(0));
             return webClient.getAbs(OKAPI_URL + "/reservoir/records")
-                .addQueryParam("query", "sourceId = \"SOURCE-2\"")
+                .addQueryParam("query", "sourceId = SOURCE-2")
                 .putHeader(XOkapiHeaders.TENANT, TENANT_1)
                 .send()
                 .expecting(HttpResponseExpectation.SC_OK);
@@ -268,7 +268,7 @@ public class UploadTest extends TestBase {
             assertThat(responseBody.getJsonObject("marc1-delete.xml").getInteger("updated"), is(0));
             assertThat(responseBody.getJsonObject("marc1-delete.xml").getInteger("deleted"), is(1));
             return webClient.getAbs(OKAPI_URL + "/reservoir/records")
-                .addQueryParam("query", "sourceId = \"SOURCE-2\"")
+                .addQueryParam("query", "sourceId = SOURCE-2")
                 .putHeader(XOkapiHeaders.TENANT, TENANT_1)
                 .send()
                 .expecting(HttpResponseExpectation.SC_OK);
@@ -304,7 +304,7 @@ public class UploadTest extends TestBase {
             assertThat(responseBody.getJsonObject("marc3.xml").getInteger("updated"), is(0));
             assertThat(responseBody.getJsonObject("marc3.xml").getInteger("deleted"), is(0));
             return webClient.getAbs(OKAPI_URL + "/reservoir/records")
-                .addQueryParam("query", "sourceId = \"SOURCE-5\"")
+                .addQueryParam("query", "sourceId = SOURCE-5")
                 .putHeader(XOkapiHeaders.TENANT, TENANT_1)
                 .send()
                 .expecting(HttpResponseExpectation.SC_OK);
@@ -333,7 +333,7 @@ public class UploadTest extends TestBase {
             assertThat(responseBody.getJsonObject("marc3.xml").getInteger("updated"), is(3));
             assertThat(responseBody.getJsonObject("marc3.xml").getInteger("deleted"), is(0));
             return webClient.getAbs(OKAPI_URL + "/reservoir/records")
-                .addQueryParam("query", "sourceId = \"SOURCE-5\"")
+                .addQueryParam("query", "sourceId = SOURCE-5")
                 .putHeader(XOkapiHeaders.TENANT, TENANT_1)
                 .send()
                 .expecting(HttpResponseExpectation.SC_OK);
@@ -367,7 +367,7 @@ public class UploadTest extends TestBase {
             assertThat(responseBody.getJsonObject("marc3-no-id.xml").getInteger("updated"), is(0));
             assertThat(responseBody.getJsonObject("marc3-no-id.xml").getInteger("deleted"), is(0));
             return webClient.getAbs(OKAPI_URL + "/reservoir/records")
-                .addQueryParam("query", "sourceId = \"SOURCE-3\"")
+                .addQueryParam("query", "sourceId = SOURCE-3")
                 .putHeader(XOkapiHeaders.TENANT, TENANT_1)
                 .send()
                 .expecting(HttpResponseExpectation.SC_OK);
@@ -402,7 +402,7 @@ public class UploadTest extends TestBase {
             assertThat(responseBody.getJsonObject("marc3.xml").getInteger("updated"), is(0));
             assertThat(responseBody.getJsonObject("marc3.xml").getInteger("deleted"), is(0));
             return webClient.getAbs(OKAPI_URL + "/reservoir/records")
-                .addQueryParam("query", "sourceId = \"SOURCE-4\"")
+                .addQueryParam("query", "sourceId = SOURCE-4")
                 .putHeader(XOkapiHeaders.TENANT, TENANT_1)
                 .send()
                 .expecting(HttpResponseExpectation.SC_OK);

@@ -38,7 +38,6 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.stream.StreamSource;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.okapi.common.XOkapiHeaders;
 import org.marc4j.MarcPermissiveStreamReader;
 import org.marc4j.MarcReader;
@@ -257,7 +256,7 @@ public class Client {
       promise.fail(e);
       return;
     }
-    GenericCompositeFuture.all(futures)
+    Future.all(futures)
         .onFailure(e -> {
           log.error(e.getMessage(), e);
           promise.complete();

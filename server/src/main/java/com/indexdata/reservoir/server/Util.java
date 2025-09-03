@@ -1,12 +1,12 @@
 package com.indexdata.reservoir.server;
 
-import io.vertx.ext.web.validation.RequestParameter;
-import io.vertx.ext.web.validation.RequestParameters;
+import io.vertx.ext.web.RoutingContext;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 public final class Util {
   private static final String TIME_ZERO = "T00:00:00Z";
@@ -15,16 +15,21 @@ public final class Util {
     throw new UnsupportedOperationException("Util");
   }
 
-  static String getParameterString(RequestParameter parameter) {
-    return parameter == null ? null : parameter.getString();
+  static String getQueryParameter(RoutingContext ctx, String key, String defaultValue) {
+    List<String> params = ctx.queryParam(key);
+    return params.isEmpty() ? defaultValue : params.get(0);
   }
 
-  static String getQueryParameter(RequestParameters params, String key) {
-    return Util.getParameterString(params.queryParameter(key));
+  static String getQueryParameter(RoutingContext ctx, String key) {
+    return getQueryParameter(ctx, key, null);
   }
 
-  static String getQueryParameterQuery(RequestParameters params) {
-    return getQueryParameter(params, "query");
+  static String getQueryParameterQuery(RoutingContext ctx) {
+    return getQueryParameter(ctx, "query");
+  }
+
+  static String getPathParameter(RoutingContext ctx, String key) {
+    return ctx.pathParam(key);
   }
 
   /**

@@ -3,8 +3,6 @@ package com.indexdata.reservoir.server;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.validation.RequestParameters;
-import io.vertx.ext.web.validation.ValidationHandler;
 import org.folio.tlib.postgres.PgCqlDefinition;
 import org.folio.tlib.postgres.PgCqlQuery;
 import org.folio.tlib.postgres.cqlfield.PgCqlFieldAlwaysMatches;
@@ -42,8 +40,8 @@ public class SruService {
     response.write("  </diagnostics>\n");
   }
 
-  static boolean checkVersion(HttpServerResponse response, RequestParameters params) {
-    final String sruVersion = Util.getQueryParameter(params, "version");
+  static boolean checkVersion(HttpServerResponse response, RoutingContext ctx) {
+    final String sruVersion = Util.getQueryParameter(ctx, "version");
     if (sruVersion != null && !sruVersion.equals("2.0")) {
       returnDiagnostics(response, "5", "Unsupported version", "2.0");
       return false;
@@ -53,14 +51,19 @@ public class SruService {
 
   static Future<Void> getSearchRetrieveResponse(RoutingContext ctx, String query) {
     HttpServerResponse response = ctx.response();
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    if (!checkVersion(response, params)) {
+    if (!checkVersion(response, ctx)) {
       return Future.succeededFuture();
     }
 
-    // no need to check for null as default value is given in API spec
-    final Integer startRecord = params.queryParameter("startRecord").getInteger();
-    final Integer maximumRecords = params.queryParameter("maximumRecords").getInteger();
+    int startRecord;
+    int maximumRecords;
+    try {
+      startRecord = Integer.parseInt(Util.getQueryParameter(ctx, "startRecord", "1"));
+      maximumRecords = Integer.parseInt(Util.getQueryParameter(ctx, "maximumRecords", "10"));
+    } catch (NumberFormatException e) {
+      returnDiagnostics(response, "6", "Unsupported parameter value", e.getMessage());
+      return Future.succeededFuture();
+    }
 
     // should use createDefinitionBase
     PgCqlDefinition definition = PgCqlDefinition.create();
@@ -75,7 +78,7 @@ public class SruService {
       returnDiagnostics(response, "10", "Query syntax error", e.getMessage());
       return Future.succeededFuture();
     }
-    String recordSchema = Util.getQueryParameter(params, "recordSchema");
+    String recordSchema = Util.getQueryParameter(ctx, "recordSchema");
     if (recordSchema != null && !recordSchema.equals("marcxml")) {
       returnDiagnostics(response, "66", "Unknown schema for retrieval", recordSchema);
       return Future.succeededFuture();
@@ -96,12 +99,11 @@ public class SruService {
 
   static Future<Void> getExplainResponse(RoutingContext ctx) {
     HttpServerResponse response = ctx.response();
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
 
     response.write("<explainResponse xmlns=\"http://docs.oasis-open.org/ns/search-ws/sruResponse\">\n");
     response.write("  <version>2.0</version>\n");
 
-    checkVersion(response, params);
+    checkVersion(response, ctx);
     response.write("</explainResponse>\n");
     response.end();
     return Future.succeededFuture();
@@ -115,8 +117,7 @@ public class SruService {
 
     response.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
 
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    final String query = Util.getQueryParameter(params, "query");
+    final String query = Util.getQueryParameterQuery(ctx);
     if (query == null) {
       return getExplainResponse(ctx);
     }

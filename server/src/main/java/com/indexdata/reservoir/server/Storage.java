@@ -15,8 +15,6 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.validation.RequestParameters;
-import io.vertx.ext.web.validation.ValidationHandler;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.RowIterator;
 import io.vertx.sqlclient.RowSet;
@@ -1247,10 +1245,9 @@ public class Storage {
       String distinctCount, Tuple tuple, List<String> fromList, List<String[]> facets,
       String orderByClause, String property, Function<Row, Future<JsonObject>> handler) {
 
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    Integer offset = params.queryParameter("offset").getInteger();
-    Integer limit = params.queryParameter("limit").getInteger();
-    String count = params.queryParameter("count").getString();
+    Integer offset = Integer.parseInt(Util.getQueryParameter(ctx, "offset", "0"));
+    Integer limit = Integer.parseInt(Util.getQueryParameter(ctx, "limit", "10"));
+    String count = Util.getQueryParameter(ctx, "count");
     String query = "SELECT " + (distinctMain != null ? "DISTINCT ON (" + distinctMain + ")" : "")
         + " * FROM " + fromList.get(0)
         + (orderByClause == null ?  "" : " ORDER BY " + orderByClause)

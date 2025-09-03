@@ -1,0 +1,140 @@
+openapi: 3.0.0
+info:
+  title: Reservoir Upload API
+  version: v1
+paths:
+  /reservoir/upload:
+    parameters:
+      - $ref: headers/okapi-tenant.yaml
+      - $ref: headers/okapi-token.yaml
+      - $ref: headers/okapi-url.yaml
+      - $ref: headers/okapi-permissions.yaml
+      - in: query
+        name: sourceId
+        required: true
+        description: source identifier (library ID)
+        schema:
+          type: string
+      - in: query
+        name: sourceVersion
+        description: source version
+        schema:
+          type: integer
+          default: 1
+      - in: query
+        name: fileName
+        description: file name of the uploaded file (for non multipart upload)
+        schema:
+          type: string
+      - in: query
+        name: localIdPath
+        description: JSON-path for where local identifier is fetched from
+        schema:
+          type: string
+      - in: query
+        name: xmlFixing
+        description: attempt to fix XML input by replacing invalid chars
+        schema:
+          type: boolean
+          default: false
+      - in: query
+        name: raw
+        description: only calculate size
+        schema:
+          type: boolean
+          default: false
+      - in: query
+        name: ingest
+        description: ingest records after processing files
+        schema:
+          type: boolean
+          default: true
+    post:
+      description: Upload MARC binary and MARCXML records.
+      operationId: uploadRecords
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                records:
+                  type: string
+                  format: binary
+            encoding:
+              records:
+                # MARC not that common (say .mrc) often defaults to application/octet-stream
+                contentType: application/octet-stream,application/marc,
+                  application/xml,text/xml
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+          application/xml:
+            schema:
+              type: string
+              format: binary
+          text/xml:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: Records accepted.
+          content:
+            application/json:
+              schema:
+                $ref: schemas/ingestStatsByFile.json
+        "400":
+          $ref: "#/components/responses/trait_400"
+        "403":
+          $ref: "#/components/responses/trait_403"
+        "500":
+          $ref: "#/components/responses/trait_500"
+# Reservoir error responses
+components:
+  responses:
+    trait_400:
+      description: Bad request
+      content:
+        text/plain:
+          schema:
+            type: string
+            example: Invalid JSON in request
+        application/json:
+          schema:
+            type: object
+            example: {"error":"Invalid JSON in request"}
+    trait_403:
+      description: Forbidden
+      content:
+        text/plain:
+          schema:
+            type: string
+            example: Insufficient permissions to acccess resource
+        application/json:
+          schema:
+            type: object
+            example: {"error":"Insufficient permissions to acccess resource"}
+    trait_404:
+      description: Not Found
+      content:
+        text/plain:
+          schema:
+            type: string
+            example: Identifier 596d9f60-cda3-44d2-a4a1-2f48b7d4d23c not found
+        application/json:
+          schema:
+            type: object
+            example: {"error":"Identifier 596d9f60-cda3-44d2-a4a1-2f48b7d4d23c not found"}
+    trait_500:
+      description: Internal error
+      content:
+        text/plain:
+          schema:
+            type: string
+            example: Internal server error, contact administrator
+  schemas:
+    errors:
+      $ref: schemas/errors.json
+

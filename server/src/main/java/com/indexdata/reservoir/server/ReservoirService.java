@@ -14,11 +14,11 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.StaticHandler;
-import io.vertx.ext.web.openapi.RouterBuilder;
-import io.vertx.ext.web.validation.RequestParameters;
-import io.vertx.ext.web.validation.ValidationHandler;
+import io.vertx.ext.web.openapi.router.RouterBuilder;
+import io.vertx.openapi.contract.OpenAPIContract;
+import io.vertx.openapi.validation.RequestParameter;
+import io.vertx.openapi.validation.ValidatedRequest;
 import java.util.UUID;
 import java.util.function.Function;
 import org.apache.logging.log4j.LogManager;
@@ -62,8 +62,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
   }
 
   Future<Void> reloadCodeModule(RoutingContext ctx) {
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    String id = Util.getParameterString(params.pathParameter("id"));
+    String id = Util.getPathParameter(ctx, "id");
     Storage storage = new Storage(ctx);
     return storage.selectCodeModuleEntity(id)
         .compose(res -> {
@@ -80,8 +79,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
   }
 
   Future<Void> deleteCodeModule(RoutingContext ctx) {
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    String id = Util.getParameterString(params.pathParameter("id"));
+    String id = Util.getPathParameter(ctx, "id");
     Storage storage = new Storage(ctx);
     return storage.deleteCodeModuleEntity(id)
         .onSuccess(res -> {
@@ -118,8 +116,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
 
   Future<Void> deleteGlobalRecords(RoutingContext ctx) {
     PgCqlDefinition definition = createDefinitionGlobalRecords();
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    String query = Util.getQueryParameterQuery(params);
+    String query = Util.getQueryParameterQuery(ctx);
     if (query == null) {
       failHandler(400, ctx, "Must specify query for delete records");
       return Future.succeededFuture();
@@ -132,16 +129,14 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
 
   Future<Void> getGlobalRecords(RoutingContext ctx) {
     PgCqlDefinition definition = createDefinitionGlobalRecords();
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameterQuery(params));
+    PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameterQuery(ctx));
     Storage storage = new Storage(ctx);
     return storage.getGlobalRecords(ctx, pgCqlQuery.getWhereClause(),
         pgCqlQuery.getOrderByClause());
   }
 
   Future<Void> getGlobalRecord(RoutingContext ctx) {
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    String id = Util.getParameterString(params.pathParameter("globalId"));
+    String id = Util.getPathParameter(ctx, "globalId");
     Storage storage = new Storage(ctx);
     return storage.getGlobalRecord(id)
         .onSuccess(res -> {
@@ -173,9 +168,10 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     definition.addField(CqlFields.SOURCE_VERSION.getCqlName(),
         new PgCqlFieldNumber().withColumn(CqlFields.SOURCE_VERSION.getQualifiedSqlName()));
 
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameterQuery(params));
-    String matchKeyId = Util.getQueryParameter(params, "matchkeyid");
+    PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameterQuery(ctx));
+    ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
+    RequestParameter requestParameter = validatedRequest.getQuery().get("matchkeyid");
+    String matchKeyId = requestParameter.getString();
     Storage storage = new Storage(ctx);
     return storage.selectMatchKeyConfig(matchKeyId).compose(conf -> {
       if (conf == null) {
@@ -198,23 +194,26 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     definition.addField(CqlFields.SOURCE_VERSION.getCqlName(),
         new PgCqlFieldNumber().withColumn(CqlFields.SOURCE_VERSION.getQualifiedSqlName()));
 
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameterQuery(params));
+    PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameterQuery(ctx));
     Storage storage = new Storage(ctx);
     return storage.touchClusters(pgCqlQuery)
         .map(count -> new JsonObject().put("count", count))
-        .onSuccess(res -> ctx.response().end(res.encode()))
+        .onSuccess(res -> {
+          ctx.response().putHeader("Content-Type", "application/json");
+          ctx.response().end(res.encode());
+        })
         .mapEmpty();
   }
 
   Future<Void> getCluster(RoutingContext ctx) {
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    String id = Util.getParameterString(params.pathParameter("clusterId"));
+    ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
+    RequestParameter requestParameter = validatedRequest.getPathParameters().get("clusterId");
+    String clusterId = requestParameter.getString();
     Storage storage = new Storage(ctx);
-    return storage.getClusterById(UUID.fromString(id))
+    return storage.getClusterById(UUID.fromString(clusterId))
         .onSuccess(res -> {
           if (res.getJsonArray("records").isEmpty()) {
-            HttpResponse.responseError(ctx, 404, id);
+            HttpResponse.responseError(ctx, 404, clusterId);
             return;
           }
           HttpResponse.responseJson(ctx, 200).end(res.encode());
@@ -249,7 +248,8 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
 
   Future<Void> postConfigMatchKey(RoutingContext ctx) {
     Storage storage = new Storage(ctx);
-    JsonObject request = ctx.body().asJsonObject();
+    ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
+    JsonObject request = validatedRequest.getBody().getJsonObject();
     String id = request.getString("id");
     String method = getMethod(request);
     String update = request.getString("update", "ingest");
@@ -265,8 +265,8 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
   }
 
   Future<Void> getConfigMatchKey(RoutingContext ctx) {
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    String id = Util.getParameterString(params.pathParameter("id"));
+    ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
+    String id = validatedRequest.getPathParameters().get("id").getString();
     Storage storage = new Storage(ctx);
     return storage.selectMatchKeyConfig(id)
         .onSuccess(res -> {
@@ -281,7 +281,8 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
 
   Future<Void> putConfigMatchKey(RoutingContext ctx) {
     Storage storage = new Storage(ctx);
-    JsonObject request = ctx.body().asJsonObject();
+    ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
+    JsonObject request = validatedRequest.getBody().getJsonObject();
     String id = request.getString("id");
     String method = getMethod(request);
     String update = request.getString("update", "ingest");
@@ -299,8 +300,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
   }
 
   Future<Void> deleteConfigMatchKey(RoutingContext ctx) {
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    String id = Util.getParameterString(params.pathParameter("id"));
+    String id = Util.getPathParameter(ctx, "id");
     Storage storage = new Storage(ctx);
     return storage.deleteMatchKeyConfig(id)
         .onSuccess(res -> {
@@ -319,8 +319,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     definition.addField(CqlFields.METHOD.getCqlName(), new PgCqlFieldText().withExact());
     definition.addField(CqlFields.MATCHER.getCqlName(), new PgCqlFieldText().withExact());
 
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameterQuery(params));
+    PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameterQuery(ctx));
 
     Storage storage = new Storage(ctx);
     return storage.getMatchKeyConfigs(ctx, pgCqlQuery.getWhereClause(),
@@ -328,8 +327,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
   }
 
   Future<Void> initializeMatchKey(RoutingContext ctx) {
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    String id = Util.getParameterString(params.pathParameter("id"));
+    String id = Util.getPathParameter(ctx, "id");
     Storage storage = new Storage(ctx);
     return storage.initializeMatchKey(ctx.vertx(), id)
         .onSuccess(res -> {
@@ -343,8 +341,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
   }
 
   Future<Void> statsMatchKey(RoutingContext ctx) {
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    String id = Util.getParameterString(params.pathParameter("id"));
+    String id = Util.getPathParameter(ctx, "id");
     Storage storage = new Storage(ctx);
     return storage.selectMatchKeyConfig(id)
         .compose(conf -> {
@@ -362,7 +359,9 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
 
   Future<Void> postCodeModule(RoutingContext ctx) {
     Storage storage = new Storage(ctx);
-    CodeModuleEntity e = new CodeModuleEntity.CodeModuleBuilder(ctx.body().asJsonObject()).build();
+    ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
+    JsonObject request = validatedRequest.getBody().getJsonObject();
+    CodeModuleEntity e = new CodeModuleEntity.CodeModuleBuilder(request).build();
 
     ModuleCache.getInstance().purge(TenantUtil.tenant(ctx), e.getId());
     return ModuleCache.getInstance().lookup(ctx.vertx(), TenantUtil.tenant(ctx), e)
@@ -374,8 +373,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
   }
 
   Future<Void> getCodeModule(RoutingContext ctx) {
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    String id = Util.getParameterString(params.pathParameter("id"));
+    String id = Util.getPathParameter(ctx, "id");
     Storage storage = new Storage(ctx);
     return storage.selectCodeModuleEntity(id)
         .onSuccess(e -> {
@@ -391,7 +389,9 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
 
   Future<Void> putCodeModule(RoutingContext ctx) {
     Storage storage = new Storage(ctx);
-    CodeModuleEntity e = new CodeModuleEntity.CodeModuleBuilder(ctx.body().asJsonObject()).build();
+    ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
+    JsonObject request = validatedRequest.getBody().getJsonObject();
+    CodeModuleEntity e = new CodeModuleEntity.CodeModuleBuilder(request).build();
     return ModuleCache.getInstance().lookup(ctx.vertx(), TenantUtil.tenant(ctx), e)
         .compose(module -> storage.updateCodeModuleEntity(e)
             .onSuccess(res -> {
@@ -410,8 +410,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     definition.addField(CqlFields.ID.getCqlName(), new PgCqlFieldText().withExact());
     definition.addField(CqlFields.FUNCTION.getCqlName(), new PgCqlFieldText().withExact());
 
-    RequestParameters params = ctx.get(ValidationHandler.REQUEST_CONTEXT_KEY);
-    PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameterQuery(params));
+    PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameterQuery(ctx));
 
     Storage storage = new Storage(ctx);
     return storage.selectCodeModuleEntities(ctx, pgCqlQuery.getWhereClause(),
@@ -438,7 +437,8 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
 
   Future<Void> putOaiConfig(RoutingContext ctx) {
     Storage storage = new Storage(ctx);
-    JsonObject request = ctx.body().asJsonObject();
+    ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
+    JsonObject request = validatedRequest.getBody().getJsonObject();
     return storage.updateOaiConfig(request)
         .onSuccess(res -> {
           if (Boolean.FALSE.equals(res)) {
@@ -460,9 +460,12 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
 
   static void failHandler(RoutingContext ctx) {
     Throwable t = ctx.failure();
-    // both semantic errors and syntax errors are from same pile ... Choosing 400 over 422.
-    int statusCode = t.getClass().getName().startsWith("io.vertx.ext.web.validation") ? 400 : 500;
-    failHandler(statusCode, ctx, t);
+    if (t instanceof io.vertx.ext.web.handler.HttpException) {
+      io.vertx.ext.web.handler.HttpException he = (io.vertx.ext.web.handler.HttpException) t;
+      failHandler(he.getStatusCode(), ctx, he.getCause());
+      return;
+    }
+    failHandler(500, ctx, t);
   }
 
   static void failHandler(RoutingContext ctx, Throwable e) {
@@ -493,26 +496,34 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
 
   private void add(RouterBuilder routerBuilder, String operationId,
       Function<RoutingContext, Future<Void>> function) {
+
+    if (routerBuilder.getRoute(operationId) == null) {
+      throw new IllegalArgumentException("Unknown operationId: " + operationId);
+    }
+
+
     routerBuilder
-        .operation(operationId)
-        .handler(ctx -> {
+        .getRoute(operationId)
+        .addHandler(ctx -> {
           try {
             function.apply(ctx)
                 .onFailure(cause -> failHandler(400, ctx, cause));
           } catch (Exception t) {
             failHandler(400, ctx, t);
           }
-        }).failureHandler(ReservoirService::failHandler);
+        })
+        .addFailureHandler(ReservoirService::failHandler);
   }
 
   @Override
   public Future<Router> createRouter(Vertx vertx) {
     OaiPmhClientService oaiPmhClient = new OaiPmhClientService(vertx);
     UploadService uploadService = new UploadService();
-    return RouterBuilder.create(vertx, "openapi/reservoir.yaml")
-        .map(routerBuilder -> {
-          routerBuilder.rootHandler(BodyHandler.create().setBodyLimit(65536)
-              .setHandleFileUploads(false));
+    return OpenAPIContract.from(vertx, "openapi/reservoir.yaml")
+        .map(contract -> {
+          RouterBuilder routerBuilder = RouterBuilder.create(vertx, contract);
+          // routerBuilder.rootHandler(BodyHandler.create().setBodyLimit(65536)
+          //     .setHandleFileUploads(false));
           add(routerBuilder, "getGlobalRecords", this::getGlobalRecords);
           add(routerBuilder, "deleteGlobalRecords", this::deleteGlobalRecords);
           add(routerBuilder, "getGlobalRecord", this::getGlobalRecord);
@@ -526,7 +537,6 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
           add(routerBuilder, "getClusters", this::getClusters);
           add(routerBuilder, "touchClusters", this::touchClusters);
           add(routerBuilder, "getCluster", this::getCluster);
-          add(routerBuilder, "oaiService", OaiService::get);
           add(routerBuilder, "postCodeModule", this::postCodeModule);
           add(routerBuilder, "getCodeModule", this::getCodeModule);
           add(routerBuilder, "putCodeModule", this::putCodeModule);
@@ -544,8 +554,15 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
           add(routerBuilder, "startOaiPmhClient", oaiPmhClient::start);
           add(routerBuilder, "stopOaiPmhClient", oaiPmhClient::stop);
           add(routerBuilder, "statusOaiPmhClient", oaiPmhClient::status);
-          add(routerBuilder, "sruService", SruService::get);
+
           Router router = Router.router(vertx);
+
+          router.get("/reservoir/oai").handler(ctx ->
+              OaiService.get(ctx).onFailure(cause -> failHandler(400, ctx, cause)));
+
+          router.get("/reservoir/sru").handler(ctx ->
+              SruService.get(ctx).onFailure(cause -> failHandler(400, ctx, cause)));
+
           // this endpoint is streaming, and we handle it without OpenAPI and validation
           router.put("/reservoir/records").handler(ctx ->
               putGlobalRecords(ctx).onFailure(cause -> failHandler(400, ctx, cause)));
@@ -555,6 +572,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
           //upload page
           router.route("/reservoir/upload-form/*")
               .handler(StaticHandler.create());
+
           router.route("/*").subRouter(routerBuilder.createRouter());
           return router;
         });
