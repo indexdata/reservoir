@@ -647,7 +647,10 @@ and the additional module metadata.
 
 API descriptions:
 
- * [OpenAPI](server/src/main/resources/openapi/reservoir.yaml)
+ * [Reservoir OpenAPI](server/src/main/resources/openapi/reservoir.yaml)
+ * [Reservoir upload OpenAPI](server/src/main/resources/openapi/upload.yaml)
+ * [SRU OpenAPI](server/src/main/resources/openapi/sru.yaml)
+ * [OAI-PMH OpenAPI](server/src/main/resources/openapi/oai.yaml)
  * [Schemas](server/src/main/resources/openapi/schemas/)
 
 Generated [API documentation](https://s3.amazonaws.com/indexdata-docs/api/reservoir/reservoir.html).
