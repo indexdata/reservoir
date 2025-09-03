@@ -84,6 +84,7 @@ If using GraalVM java, start the server with:
 
 ```
 java -Dport=8081 --enable-native-access=ALL-UNNAMED \
+   --sun-misc-unsafe-memory-access=allow \
    -jar server/target/mod-reservoir-server-fat.jar
 ```
 
