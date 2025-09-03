@@ -647,10 +647,10 @@ and the additional module metadata.
 
 API descriptions:
 
- * [Reservoir OpenAPI](server/src/main/resources/openapi/reservoir.yaml)
- * [Reservoir upload OpenAPI](server/src/main/resources/openapi/upload.yaml)
- * [SRU OpenAPI](server/src/main/resources/openapi/sru.yaml)
- * [OAI-PMH OpenAPI](server/src/main/resources/openapi/oai.yaml)
+ * [Reservoir](server/src/main/resources/openapi/reservoir.yaml)
+ * [Reservoir upload](server/src/main/resources/openapi/upload.yaml)
+ * [SRU](server/src/main/resources/openapi/sru.yaml)
+ * [OAI-PMH](server/src/main/resources/openapi/oai.yaml)
  * [Schemas](server/src/main/resources/openapi/schemas/)
 
 Generated API documentation:
