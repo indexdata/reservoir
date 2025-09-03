@@ -653,4 +653,9 @@ API descriptions:
  * [OAI-PMH OpenAPI](server/src/main/resources/openapi/oai.yaml)
  * [Schemas](server/src/main/resources/openapi/schemas/)
 
-Generated [API documentation](https://s3.amazonaws.com/indexdata-docs/api/reservoir/reservoir.html).
+Generated API documentation:
+ * [Reservoir](https://s3.amazonaws.com/indexdata-docs/api/reservoir/reservoir.html).
+ * [Reservoir upload](https://s3.amazonaws.com/indexdata-docs/api/reservoir/upload.html).
+ * [SRU](https://s3.amazonaws.com/indexdata-docs/api/reservoir/sru.html).
+ * [OAI-PMH](https://s3.amazonaws.com/indexdata-docs/api/reservoir/oai.html).
+
