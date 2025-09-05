@@ -31,7 +31,6 @@ FROM container-registry.oracle.com/graalvm/jdk:24 AS slim
 
 ENV JAVA_MODULES=\
 java.base,\
-java.desktop,\
 java.logging,\
 java.sql,\
 java.xml,\

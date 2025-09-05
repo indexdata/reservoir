@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="error" name="PropertiesConfig" packages="org.folio.okapi.common.logging">
+  <Filters>
+    <ThresholdFilter level="info"/>
+  </Filters>
+  <Appenders>
+    <Console name="STDOUT" target="SYSTEM_OUT">
+      <JSONLayout compact="true" eventEol="true" stacktraceAsString="true">
+        <KeyValuePair key="requestId" value="${FolioLoggingContext:requestId}"/>
+        <KeyValuePair key="tenantId" value="${FolioLoggingContext:tenantId}"/>
+        <KeyValuePair key="userId" value="${FolioLoggingContext:userId}"/>
+        <KeyValuePair key="moduleId" value="${FolioLoggingContext:moduleId}"/>
+      </JSONLayout>
+    </Console>
+  </Appenders>
+  <Loggers>
+    <Root level="info">
+      <AppenderRef ref="STDOUT"/>
+    </Root>
+  </Loggers>
+</Configuration>
