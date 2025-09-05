@@ -49,7 +49,7 @@ RUN $JAVA_HOME/bin/jlink \
 # Create non-root user, home dir is needed so Graal can write attach files for JIT-enabled JS.
 RUN useradd -u 1000 -m -s /sbin/nologin reservoir
 
-RUN mkdir -p /home/reservoir/tmp && chown -R 1000:1000 /home/reservoir/tmp && chmod 777 /home/reservoir/tmp
+RUN mkdir -p /tmp/vertx-cache
 
 # Save list of shared lib deps
 RUN ldd /opt/graalvm-slim/bin/java | tr -s '[:blank:]' '\n' | grep '^/' | \
@@ -71,15 +71,17 @@ COPY --from=slim /usr/lib64/libm.so.6 /usr/lib64/libm.so.6
 # Copy slim runtime
 COPY --from=slim /opt/graalvm-slim /opt/graalvm-slim
 
+COPY --from=slim --chown=reservoir:reservoir /tmp/vertx-cache /tmp/vertx-cache
+
 # Copy app JAR
 COPY --from=builder /app/server/target/mod-reservoir-server-fat.jar /reservoir.jar
 
 # Switch to non-root user
 # But it doesn't work as /home/reservoir/tmp is seemingly not writable by this user
-# USER reservoir
+USER reservoir
 
 ENV JAVA_HOME=/opt/graalvm-slim
 
 EXPOSE 8081
 
-CMD ["/opt/graalvm-slim/bin/java", "-Dvertx.cacheDirBase=/home/reservoir/tmp", "--sun-misc-unsafe-memory-access=allow", "--enable-native-access=ALL-UNNAMED", "-jar", "/reservoir.jar"]
+CMD ["/opt/graalvm-slim/bin/java", "--sun-misc-unsafe-memory-access=allow", "--enable-native-access=ALL-UNNAMED", "-jar", "/reservoir.jar"]
