@@ -46,29 +46,40 @@ RUN $JAVA_HOME/bin/jlink \
     --add-modules $JAVA_MODULES \
     --output /opt/graalvm-slim
 
-FROM oraclelinux:9-slim
-
 # Create non-root user, home dir is needed so Graal can write attach files for JIT-enabled JS.
 RUN useradd -u 1000 -m -s /sbin/nologin reservoir
 
+RUN mkdir -p /home/reservoir/tmp && chown -R 1000:1000 /home/reservoir/tmp && chmod 777 /home/reservoir/tmp
+
+# Save list of shared lib deps
+RUN ldd /opt/graalvm-slim/bin/java | tr -s '[:blank:]' '\n' | grep '^/' | \
+    xargs -I % sh -c 'mkdir -p $(dirname deps%); cp % deps%;'
+
+FROM scratch
+
+# need to copy SSL certs and runtime use
+COPY --from=slim /etc/passwd /etc/passwd
+COPY --from=slim /etc/group /etc/group
+COPY --from=slim /home/reservoir /home/reservoir
+
+# Copy shared lib deps
+COPY --from=slim /app/deps /
+# Copy librt for real-time extensions. Was not part of /app/deps for some reason
+COPY --from=slim /usr/lib64/librt.so.1 /usr/lib64/librt.so.1
+# Copy libm. Was not part of /app/deps for some reason
+COPY --from=slim /usr/lib64/libm.so.6 /usr/lib64/libm.so.6
 # Copy slim runtime
 COPY --from=slim /opt/graalvm-slim /opt/graalvm-slim
 
 # Copy app JAR
 COPY --from=builder /app/server/target/mod-reservoir-server-fat.jar /reservoir.jar
-RUN chown reservoir:reservoir /reservoir.jar
 
 # Switch to non-root user
-USER reservoir
+# But it doesn't work as /home/reservoir/tmp is seemingly not writable by this user
+# USER reservoir
 
-ENV JAVA_OPTS=""
 ENV JAVA_HOME=/opt/graalvm-slim
-ENV PATH="$JAVA_HOME/bin:${PATH}"
-ENV GRAAL_OPTS="\
---sun-misc-unsafe-memory-access=allow \
---enable-native-access=ALL-UNNAMED"
 
-ENV HTTP_PORT=8081
-EXPOSE $HTTP_PORT
+EXPOSE 8081
 
-ENTRYPOINT ["sh", "-c", "$JAVA_HOME/bin/java -Dport=$HTTP_PORT $JAVA_OPTS $GRAAL_OPTS -jar /reservoir.jar"]
+CMD ["/opt/graalvm-slim/bin/java", "-Dvertx.cacheDirBase=/home/reservoir/tmp", "--sun-misc-unsafe-memory-access=allow", "--enable-native-access=ALL-UNNAMED", "-jar", "/reservoir.jar"]
