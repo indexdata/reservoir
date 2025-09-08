@@ -42,7 +42,7 @@ jobs:
       - name: Process MD for okapi-hooks
         if: ${{ matrix.md_path }}
         run: |
-          sed -i "s/\${artifactId}/${{ matrix.chart_name }}/" ${{ matrix.md_path }}
+          sed -i "s/\${artifactId}/mod-${{ matrix.chart_name }}/" ${{ matrix.md_path }}
           sed -i "s/\${version}/$CHART_VERSION/" ${{ matrix.md_path }}
           sed 's/^/    /' ${{ matrix.md_path }} > indented.json
           sed -i -e '/@descriptor@/{
