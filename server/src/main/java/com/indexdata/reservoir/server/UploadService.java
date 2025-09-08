@@ -31,10 +31,9 @@ public class UploadService {
   private static final String UPLOAD_PERMISSIONS_SOURCE_PREFIX = "reservoir-upload.source";
 
   private Future<IngestStats> uploadPayloadStream(ReadStream<JsonObject> upload,
-      IngestWriteStream ingestWriteStream, int queueSize) {
+      IngestWriteStream ingestWriteStream) {
 
-    ReadStream<JsonObject> parser = upload;
-    return parser.pipeTo(ingestWriteStream).map(x -> ingestWriteStream.stats());
+    return upload.pipeTo(ingestWriteStream).map(x -> ingestWriteStream.stats());
   }
 
   /**
@@ -90,20 +89,20 @@ public class UploadService {
       }
       Storage storage = new Storage(ctx);
       int queueSize = storage.pool.getPoolOptions().getMaxSize() * 10;
-      log.info("{} uploading. {} queuSize: {} tenant: {}",
+      log.info("{} uploading. {} queueSize: {} tenant: {}",
           params.getSummary(fileName), params.getDetails(contentType),
           queueSize, storage.getTenant());
-      return uploadContent(readStream,
-          new IngestWriteStream(ctx.vertx(), storage, params, fileName, contentType),
-          contentType, queueSize, params.xmlFixing);
+      var ingestWriteStream = new IngestWriteStream(
+          ctx.vertx(), storage, params, fileName, contentType);
+      ingestWriteStream.setWriteQueueMaxSize(queueSize);
+      return uploadContent(readStream, ingestWriteStream, contentType, params.xmlFixing);
     } catch (Exception e) {
       return Future.failedFuture(e);
     }
   }
 
   private Future<IngestStats> uploadContent(ReadStream<Buffer> request,
-      IngestWriteStream ingestWriteStream, String contentType,
-      int queueSize, boolean xmlFixing) {
+      IngestWriteStream ingestWriteStream, String contentType, boolean xmlFixing) {
     ReadStream<JsonObject> parser;
     if (contentType == null) {
       contentType = "application/octet-stream";
@@ -119,7 +118,7 @@ public class UploadService {
       }
     }
     parser = new MappingReadStream<>(parser, new MarcJsonToIngestMapper());
-    return uploadPayloadStream(parser, ingestWriteStream, queueSize);
+    return uploadPayloadStream(parser, ingestWriteStream);
   }
 
   private String enforcePermissionsBySource(RoutingContext ctx) {
