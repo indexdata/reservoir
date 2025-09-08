@@ -13,6 +13,7 @@ image:
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
 
+#must be enabled to take effect
 okapi-hooks:
   enabled: false
   moduleUrl: http://reservoir:80
