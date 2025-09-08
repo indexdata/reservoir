@@ -47,8 +47,7 @@ envConfigMaps: {}
 # - db-config
 configMapRefs: []
 
-imagePullSecrets:
-  - name: ghcr-secret
+imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
