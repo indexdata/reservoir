@@ -3,6 +3,7 @@ package com.indexdata.reservoir.server;
 import com.indexdata.reservoir.module.impl.ModuleJsonPath;
 import com.indexdata.reservoir.util.SourceId;
 import com.jayway.jsonpath.InvalidPathException;
+import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServerRequest;
 
 public class IngestParams {
@@ -17,15 +18,16 @@ public class IngestParams {
 
   /**
    * Create ingest params from request.
+   * @param vertx vertx
    * @param request request
    */
-  public IngestParams(HttpServerRequest request) {
+  public IngestParams(Vertx vertx, HttpServerRequest request) {
     this.sourceId = new SourceId(validateSourceId(request));
     sourceVersion = Integer.parseInt(request.getParam("sourceVersion", "1"));
     contentType = request.getHeader("Content-Type");
     try {
       jsonPath = request.getParam("localIdPath") == null
-        ? null : new ModuleJsonPath(request.getParam("localIdPath"));
+        ? null : new ModuleJsonPath(vertx, request.getParam("localIdPath"));
     } catch (InvalidPathException e) {
       throw new IllegalArgumentException("malformed 'localIdPath': " + e.getMessage());
     }

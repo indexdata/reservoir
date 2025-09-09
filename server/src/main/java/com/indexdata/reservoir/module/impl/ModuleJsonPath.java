@@ -15,9 +15,11 @@ import java.util.List;
 public class ModuleJsonPath implements Module {
 
   JsonPath jsonPath;
+  Vertx vertx;
 
   @Override
   public Future<Void> initialize(Vertx vertx, CodeModuleEntity entity) {
+    this.vertx = vertx;
     String script = entity.getScript();
     if (script == null) {
       return Future.failedFuture("module config must include 'script'");
@@ -29,7 +31,8 @@ public class ModuleJsonPath implements Module {
   public ModuleJsonPath() {
   }
 
-  public ModuleJsonPath(String script) {
+  public ModuleJsonPath(Vertx vertx, String script) {
+    this.vertx = vertx;
     jsonPath = JsonPath.compile(script);
   }
 
@@ -43,24 +46,32 @@ public class ModuleJsonPath implements Module {
     if (jsonPath == null) {
       throw new IllegalStateException("uninitialized");
     }
-    ReadContext ctx = JsonPath.parse(input.encode());
-    Collection<String> keys = new HashSet<>();
-    try {
-      Object o = ctx.read(jsonPath);
-      if (o instanceof String string) {
-        keys.add(string);
-      } else if (o instanceof List<?> list) {
-        for (Object m : list) {
-          if (!(m instanceof String)) {
-            return Future.succeededFuture(keys);
-          }
-        }
-        keys.addAll((List<String>) o);
-      }
-    } catch (PathNotFoundException e) {
-      //ignore
+    if (vertx == null) {
+      return Future.failedFuture("vertx not set");
     }
-    return Future.succeededFuture(keys);
+    return vertx.executeBlocking(() -> {
+      ReadContext ctx = JsonPath.parse(input.encode());
+      Collection<String> keys = new HashSet<>();
+      try {
+        Object o = ctx.read(jsonPath);
+        if (o instanceof String string) {
+          keys.add(string);
+        } else if (o instanceof List<?> list) {
+          for (Object m : list) {
+            if (!(m instanceof String)) {
+              return keys;
+            }
+          }
+          keys.addAll((List<String>) o);
+          // for (Object m : list) {
+          //   keys.add((String) m);
+          // }
+        }
+      } catch (PathNotFoundException e) {
+        //ignore
+      }
+      return keys;
+    });
   }
 
   @Override

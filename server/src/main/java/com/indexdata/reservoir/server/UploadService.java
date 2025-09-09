@@ -46,7 +46,7 @@ public class UploadService {
   public Future<Void> uploadRecords(RoutingContext ctx) {
     try {
       enforcePermissionsBySource(ctx);
-      IngestParams params = new IngestParams(ctx.request());
+      IngestParams params = new IngestParams(ctx.vertx(), ctx.request());
       HttpServerRequest request = ctx.request();
       Future<IngestStatsByFile> future;
       if (params.contentType != null && params.contentType.startsWith("multipart/form-data")) {
