@@ -121,7 +121,7 @@ docker run -e DB_HOST=host.docker.internal \
 ```
 
 **Note**: The magic host `host.docker.internal` is required to access the DB and may be only available in Docker Desktop.
-If it's not defined you can specify it by passing `--add-host=host.docker.internal:<docker bridge net IP>` to the run command.
+If it is not defined you can specify it by passing `--add-host=host.docker.internal:<docker bridge net IP>` to the run command.
 
 **Note**: Those docker build and run commands do work as-is with [Colima](https://github.com/abiosoft/colima).
 
@@ -607,16 +607,16 @@ Similarly, certain Reservoir API operations, including:
   * `/config/matchkeys/{name}/initialize`
   * `/clusters/?matchkeyid={name}&count=exact`
 
-are database heavy and may take a long time. Such request may be considered idle by the front load-balancer
+are database heavy and may take a long time. Such requests may be considered idle by the front load-balancer
 or ingress controller and require tuning of the timeout values.
 
-Specifically, for NGINX it's recommended that the read timeout is increased beyond the default 60s:
+Specifically, for NGINX it is recommended that the read timeout is increased beyond the default 60s:
 
 ```
 proxy_read_timeout 600s
 ```
 
-Additionally to allow uploading large files, it's a good idea to disable request buffering in NGINX and
+Additionally to allow uploading large files, it is a good idea to disable request buffering in NGINX and
 increase the max size:
 
 ```
@@ -655,8 +655,8 @@ API descriptions:
  * [Schemas](server/src/main/resources/openapi/schemas/)
 
 Generated API documentation:
- * [Reservoir](https://s3.amazonaws.com/indexdata-docs/api/reservoir/reservoir.html).
- * [Reservoir upload](https://s3.amazonaws.com/indexdata-docs/api/reservoir/upload.html).
- * [SRU](https://s3.amazonaws.com/indexdata-docs/api/reservoir/sru.html).
- * [OAI-PMH](https://s3.amazonaws.com/indexdata-docs/api/reservoir/oai.html).
+ * [Reservoir](https://s3.amazonaws.com/indexdata-docs/api/reservoir/reservoir.html)
+ * [Reservoir upload](https://s3.amazonaws.com/indexdata-docs/api/reservoir/upload.html)
+ * [SRU](https://s3.amazonaws.com/indexdata-docs/api/reservoir/sru.html)
+ * [OAI-PMH](https://s3.amazonaws.com/indexdata-docs/api/reservoir/oai.html)
 
