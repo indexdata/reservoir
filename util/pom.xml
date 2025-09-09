@@ -2,10 +2,10 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>com.indexdata</groupId>
-    <artifactId>mod-reservoir</artifactId>
+    <artifactId>reservoir</artifactId>
     <version>0.0.1-SNAPSHOT</version>
   </parent>
-  <artifactId>mod-reservoir-util</artifactId>
+  <artifactId>reservoir-util</artifactId>
   <name>Reservoir utility library</name>
 
   <dependencies>

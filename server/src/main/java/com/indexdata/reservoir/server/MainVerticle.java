@@ -18,7 +18,7 @@ public class MainVerticle extends AbstractVerticle {
   @Override
   public void start(Promise<Void> promise) {
     TenantPgPool.setModule("mod-reservoir");
-    ModuleVersionReporter m = new ModuleVersionReporter("com.indexdata/mod-reservoir-server");
+    ModuleVersionReporter m = new ModuleVersionReporter("com.indexdata/reservoir-server");
     log.info("Starting {} {} {}", m.getModule(), m.getVersion(), m.getCommitId());
 
     final int port = Integer.parseInt(

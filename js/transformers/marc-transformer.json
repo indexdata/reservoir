@@ -1,5 +1,5 @@
 {
   "id":"marc-transformer",
   "type":"javascript",
-  "url":"https://raw.githubusercontent.com/folio-org/mod-reservoir/master/js/transformers/marc-transformer.mjs"
+  "url":"https://raw.githubusercontent.com/indexdata/reservoir/master/js/transformers/marc-transformer.mjs"
 }

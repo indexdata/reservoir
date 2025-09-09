@@ -3,10 +3,10 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>com.indexdata</groupId>
-    <artifactId>mod-reservoir</artifactId>
+    <artifactId>reservoir</artifactId>
     <version>0.0.1-SNAPSHOT</version>
   </parent>
-  <artifactId>mod-reservoir-server</artifactId>
+  <artifactId>reservoir-server</artifactId>
   <name>Reservoir storage server module</name>
   <properties>
     <main.class>com.indexdata.reservoir.server.ReservoirLauncher</main.class>
@@ -16,7 +16,7 @@
   <dependencies>
     <dependency>
       <groupId>com.indexdata</groupId>
-      <artifactId>mod-reservoir-util</artifactId>
+      <artifactId>reservoir-util</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
