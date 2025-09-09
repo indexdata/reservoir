@@ -3,6 +3,11 @@ package com.indexdata.reservoir.util.readstream;
 import io.vertx.core.Handler;
 import io.vertx.core.streams.ReadStream;
 
+/**
+ * A read stream that maps the elements of another read stream using a mapper.
+ * @param <T> output type
+ * @param <V> input type
+ */
 public class MappingReadStream<T,V> implements ReadStream<T>, Handler<V> {
 
   boolean emitting;
@@ -137,7 +142,7 @@ public class MappingReadStream<T,V> implements ReadStream<T>, Handler<V> {
         exceptionHandler.handle(e);
       }
       // unregistering may suppress end handler
-      // raise it and end imediately
+      // raise it and end immediately
       if (!ended) {
         ended = true;
         mapper.end();

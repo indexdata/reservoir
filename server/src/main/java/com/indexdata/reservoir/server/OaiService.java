@@ -294,7 +294,7 @@ public final class OaiService {
     UUID clusterId = decodeOaiIdentifier(identifier);
     Storage storage = new Storage(ctx);
     return storage.getTransformer(ctx).compose(transformer -> {
-      return storage.getClusterRecord(ctx, clusterId).compose(row -> {
+      return storage.getClusterRecord(clusterId).compose(row -> {
         if (row == null) {
           throw OaiException.idDoesNotExist(identifier);
         }

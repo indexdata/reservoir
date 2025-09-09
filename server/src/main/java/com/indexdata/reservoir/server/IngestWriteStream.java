@@ -147,23 +147,19 @@ public class IngestWriteStream implements WriteStream<JsonObject> {
   }
 
   private Future<JsonObject> lookupId(JsonObject rec) {
-    Future<JsonObject> fut = Future.succeededFuture(rec);
-    if (params.jsonPath != null) {
-      fut = fut
-        .compose(r ->
-          lookupPath(vertx, params.jsonPath, r.getJsonObject("payload"))
-            .map(strings -> {
-              Iterator<String> iterator = strings.iterator();
-              if (iterator.hasNext()) {
-                r.put(LOCAL_ID, iterator.next().trim());
-              } else {
-                r.remove(LOCAL_ID);
-              }
-              return r;
-            }
-      ));
+    if (params.jsonPath == null) {
+      return Future.succeededFuture(rec);
     }
-    return fut;
+    return lookupPath(vertx, params.jsonPath, rec.getJsonObject("payload"))
+      .map(strings -> {
+        Iterator<String> iterator = strings.iterator();
+        if (iterator.hasNext()) {
+          rec.put(LOCAL_ID, iterator.next().trim());
+        } else {
+          rec.remove(LOCAL_ID);
+        }
+        return rec;
+      });
   }
 
   private void log(JsonObject rec) {
