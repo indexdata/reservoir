@@ -2,6 +2,6 @@
   "srvcId": "${artifactId}-${version}",
   "nodeId": "localhost",
   "descriptor": {
-    "exec": "java --module-path=../mod-reservoir/server/target/compiler/ --upgrade-module-path=../mod-reservoir/server/target/compiler/compiler.jar:../mod-reservoir/server/target/compiler/compiler-management.jar -XX:+UnlockExperimentalVMOptions -XX:+EnableJVMCI -jar ../mod-reservoir/server/target/${artifactId}-server-fat.jar -Dhttp.port=%p"
+    "exec": "java --module-path=../reservoir/server/target/compiler/ --upgrade-module-path=../reservoir/server/target/compiler/compiler.jar:../reservoir/server/target/compiler/compiler-management.jar -XX:+UnlockExperimentalVMOptions -XX:+EnableJVMCI -jar ../reservoir/server/target/${artifactId}-server-fat.jar -Dhttp.port=%p"
   }
 }

@@ -55,7 +55,7 @@ RUN useradd -u 1000 -m -s /sbin/nologin reservoir
 COPY --from=slim /opt/graalvm-slim /opt/graalvm-slim
 
 # Copy app JAR
-COPY --from=builder /app/server/target/mod-reservoir-server-fat.jar /reservoir.jar
+COPY --from=builder /app/server/target/reservoir-server-fat.jar /reservoir.jar
 RUN chown reservoir:reservoir /reservoir.jar
 
 # Switch to non-root user

@@ -85,7 +85,7 @@ If using GraalVM java, start the server with:
 ```
 java -Dport=8081 --enable-native-access=ALL-UNNAMED \
    --sun-misc-unsafe-memory-access=allow \
-   -jar server/target/mod-reservoir-server-fat.jar
+   -jar server/target/reservoir-server-fat.jar
 ```
 
 If using regular JVM, you must pass additional arguments to embed the Graal JS compiler:
@@ -93,7 +93,7 @@ If using regular JVM, you must pass additional arguments to embed the Graal JS c
 ```
 java -Dport=8081 --upgrade-module-path=server/target/compiler \
    -XX:+UnlockExperimentalVMOptions -XX:+EnableJVMCI \
-   -jar server/target/mod-reservoir-server-fat.jar
+   -jar server/target/reservoir-server-fat.jar
 ```
 
 ## Running with Docker
@@ -256,12 +256,12 @@ in order to pass the tenant identifier (trailing slash is important).
 Note: the CLI is no longer developed and the file upload functionality is now available from
 curl (see below) so please use this instead.
 
-The client is a command-line tool for sending records to the mod-reservoir server.
+The client is a command-line tool for sending records to the reservoir server.
 
 Run the client with:
 
 ```
-java -jar client/target/mod-reservoir-client-fat.jar [options] [files...]
+java -jar client/target/reservoir-client-fat.jar [options] [files...]
 ```
 
 To see list options use `--help`. The client uses environment variables
@@ -269,15 +269,14 @@ To see list options use `--help`. The client uses environment variables
 token respectively.
 
 Before records can be pushed, the database needs to be prepared for the tenant.
-If Okapi is used, then the usual `install` command will do it, but if the
-mod-reservoir module is being run on its own, then that must be done manually.
+If Okapi is used, then the usual `install` command will do it, but if the reservoir module is being run on its own, then that must be done manually.
 
 For example, to prepare the database for tenant `diku` on server running on localhost:8081, use:
 
 ```
 export OKAPI_TENANT=diku
 export OKAPI_URL=http://localhost:8081
-java -jar client/target/mod-reservoir-client-fat.jar --init
+java -jar client/target/reservoir-client-fat.jar --init
 ```
 
 **Note**: The above-mentioned commands are for the server running on localhost.
@@ -289,7 +288,7 @@ To purge the data, use:
 ```
 export OKAPI_TENANT=diku
 export OKAPI_URL=http://localhost:8081
-java -jar client/target/mod-reservoir-client-fat.jar --purge
+java -jar client/target/reservoir-client-fat.jar --purge
 ```
 
 To send MARCXML to the same server with defined `sourceId`, use:
@@ -298,7 +297,7 @@ To send MARCXML to the same server with defined `sourceId`, use:
 export OKAPI_TENANT=diku
 export OKAPI_URL=http://localhost:8081
 export sourceid=lib1
-java -jar client/target/mod-reservoir-client-fat.jar \
+java -jar client/target/reservoir-client-fat.jar \
   --source $sourceid \
   --xsl xsl/localid.xsl \
   client/src/test/resources/record10.xml
@@ -377,7 +376,7 @@ cat js/matchkeys/goldrush/goldrush-conf.json
 {
   "id": "goldrush-matcher",
   "type": "javascript",
-  "url": "https://raw.githubusercontent.com/folio-org/mod-reservoir/master/js/matchkeys/goldrush/goldrush.mjs"
+  "url": "https://raw.githubusercontent.com/indexdata/reservoir/master/js/matchkeys/goldrush/goldrush.mjs"
 }
 ```
 
@@ -659,4 +658,3 @@ Generated API documentation:
  * [Reservoir upload](https://s3.amazonaws.com/indexdata-docs/api/reservoir/upload.html)
  * [SRU](https://s3.amazonaws.com/indexdata-docs/api/reservoir/sru.html)
  * [OAI-PMH](https://s3.amazonaws.com/indexdata-docs/api/reservoir/oai.html)
-
