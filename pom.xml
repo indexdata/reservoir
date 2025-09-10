@@ -239,6 +239,21 @@
           <version>3.6.0</version>
           <dependencies>
             <dependency>
+              <groupId>org.ow2.asm</groupId>
+              <artifactId>asm</artifactId>
+              <version>9.8</version>
+            </dependency>
+            <dependency>
+              <groupId>org.ow2.asm</groupId>
+              <artifactId>asm-commons</artifactId>
+              <version>9.8</version>
+            </dependency>
+            <dependency>
+              <groupId>org.vafer</groupId>
+              <artifactId>jdependency</artifactId>
+              <version>2.13</version>
+            </dependency>
+            <dependency>
               <groupId>org.apache.logging.log4j</groupId>
               <artifactId>log4j-transform-maven-shade-plugin-extensions</artifactId>
               <version>0.2.0</version>
@@ -246,6 +261,8 @@
           </dependencies>
           <configuration>
             <createDependencyReducedPom>false</createDependencyReducedPom>
+            <createDependencyReducedPom>false</createDependencyReducedPom>
+            <minimizeJar>true</minimizeJar>
             <transformers>
               <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                 <manifestEntries>
@@ -278,6 +295,20 @@
                   <exclude>module-info.class</exclude>
                   <exclude>META-INF/versions/**/module-info.class</exclude>
                 </excludes>
+              </filter>
+              <filter>
+                <artifact>org.graalvm.*:*</artifact>
+                <includes>
+                  <include>**</include>
+                </includes>
+              </filter>
+              <!-- Keep all Marc4j to include code tables -->
+              <filter>
+                <artifact>org.marc4j:marc4j</artifact>
+                <excludeDefaults>false</excludeDefaults>
+                <includes>
+                  <include>**</include>
+                </includes>
               </filter>
               <!-- Filter to resolve conflict between okapi-common and this project -->
               <filter>
