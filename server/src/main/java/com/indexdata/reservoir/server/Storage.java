@@ -1342,22 +1342,19 @@ public class Storage {
     });
   }
 
-  Future<Row> getClusterRecord(RoutingContext ctx, UUID clusterId) {
-    return getTransformer(ctx).compose(transformer -> {
-      String sqlQuery = "SELECT * FROM " + getClusterMetaTable() + " WHERE cluster_id = $1";
-      return getPool()
-          .withConnection(conn -> conn.preparedQuery(sqlQuery)
-              .execute(Tuple.of(clusterId))
-              .compose(res -> {
-                RowIterator<Row> iterator = res.iterator();
-                if (!iterator.hasNext()) {
-                  return Future.succeededFuture(null);
-                }
-                Row row = iterator.next();
-                return Future.succeededFuture(row);
-              }));
-    });
+  Future<Row> getClusterRecord(UUID clusterId) {
+    String sqlQuery = "SELECT * FROM " + getClusterMetaTable() + " WHERE cluster_id = $1";
+    return getPool()
+        .withConnection(conn -> conn.preparedQuery(sqlQuery)
+            .execute(Tuple.of(clusterId))
+            .compose(res -> {
+              RowIterator<Row> iterator = res.iterator();
+              if (!iterator.hasNext()) {
+                return Future.succeededFuture(null);
+              }
+              Row row = iterator.next();
+              return Future.succeededFuture(row);
+            }));
   }
-
 
 }
