@@ -113,7 +113,7 @@ public class ModuleJavaScript implements Module {
       var output = execJavaScript(functionName, input);
       // only support string encoded JSON objects for now
       if (!output.isString()) {
-        throw new DecodeException(
+        throw new IllegalArgumentException(
             "Function " + functionName + " of module " + id + " must return JSON string");
       }
       return new JsonObject(output.asString());
