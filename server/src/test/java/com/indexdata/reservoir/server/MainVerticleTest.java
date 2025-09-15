@@ -51,6 +51,7 @@ import io.vertx.sqlclient.Tuple;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.awaitility.Awaitility;
+import org.folio.okapi.common.ModuleVersionReporter;
 import org.folio.okapi.common.XOkapiHeaders;
 import org.hamcrest.Matchers;
 import org.junit.After;
@@ -162,6 +163,18 @@ public class MainVerticleTest extends TestBase {
         }
       }
     }
+
+  @Test
+  public void testMainPage() {
+    ModuleVersionReporter m = new ModuleVersionReporter("com.indexdata/reservoir-server");
+    RestAssured.given()
+        .baseUri(MODULE_URL)
+        .get("/")
+        .then().statusCode(200)
+        .header("Content-Type", is("application/json"))
+        .body("revision", is(m.getCommitId()))
+        .body("links.clusters", endsWith("/reservoir/clusters"));
+  }
 
   @Test
   public void testAdminHealth() {

@@ -28,6 +28,7 @@ public class MainVerticle extends AbstractVerticle {
     ReservoirService reservoirService = new ReservoirService(vertx);
 
     RouterCreator[] routerCreators = {
+        new MainPage(m),
         reservoirService,
         new Tenant2Api(reservoirService),
         new HealthApi(),
