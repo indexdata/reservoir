@@ -291,7 +291,11 @@ public class ModuleTest {
     ModuleCache.getInstance().lookup(vertx, TENANT, entity)
         .compose(m -> m.execute(null, input).eventually(() -> m.terminate()))
         .onComplete(context.asyncAssertFailure(
-            e -> assertThat(e.getMessage(), containsString("must return JSON string"))));
+            e -> {
+              assertThat(e.getClass(), is(IllegalArgumentException.class));
+              assertThat(e.getMessage(), containsString("must return JSON string"));
+            }
+        ));
   }
 
   @Test

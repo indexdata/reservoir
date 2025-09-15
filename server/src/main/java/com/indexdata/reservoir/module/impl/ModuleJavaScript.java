@@ -103,44 +103,38 @@ public class ModuleJavaScript implements Module {
     }
   }
 
-  private Future<Value> execJavaScript(String functionName, JsonObject input) {
-    return vertx
-        .executeBlocking(() -> getFunction(functionName).execute(input.encode()));
+  private Value execJavaScript(String functionName, JsonObject input) {
+    return getFunction(functionName).execute(input.encode());
   }
 
   @Override
   public Future<JsonObject> execute(String functionName, JsonObject input) {
-    return execJavaScript(functionName, input)
-        .compose(output -> {
-          if (output.isString()) {
-            // only support string encoded JSON objects for now
-            try {
-              return Future.succeededFuture(new JsonObject(output.asString()));
-            } catch (DecodeException de) {
-              return Future.failedFuture(de);
-            }
-          } else {
-            return Future.failedFuture(
-                "Function " + functionName + " of module " + id + " must return JSON string");
-          }
-        });
+    return vertx.executeBlocking(() -> {
+      var output = execJavaScript(functionName, input);
+      // only support string encoded JSON objects for now
+      if (!output.isString()) {
+        throw new IllegalArgumentException(
+            "Function " + functionName + " of module " + id + " must return JSON string");
+      }
+      return new JsonObject(output.asString());
+    });
   }
 
   @Override
   public Future<Collection<String>> executeAsCollection(String functionName, JsonObject input) {
-    return execJavaScript(functionName, input)
-        .map(output -> {
-          Collection<String> keys = new HashSet<>();
-          if (output.hasArrayElements()) {
-            for (int i = 0; i < output.getArraySize(); i++) {
-              Value memberValue = output.getArrayElement(i);
-              addValue(keys, memberValue);
-            }
-          } else {
-            addValue(keys, output);
-          }
-          return keys;
-        });
+    return vertx.executeBlocking(() -> {
+      var output = execJavaScript(functionName, input);
+      Collection<String> keys = new HashSet<>();
+      if (output.hasArrayElements()) {
+        for (int i = 0; i < output.getArraySize(); i++) {
+          Value memberValue = output.getArrayElement(i);
+          addValue(keys, memberValue);
+        }
+      } else {
+        addValue(keys, output);
+      }
+      return keys;
+    });
   }
 
   private void addValue(Collection<String> keys, Value value) {
