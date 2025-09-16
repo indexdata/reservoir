@@ -33,7 +33,7 @@
   </licenses>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <graalvm.version>24.2.2</graalvm.version>
+    <graalvm.version>25.0.0</graalvm.version>
     <graalvm-maven-plugin.version>0.10.6</graalvm-maven-plugin.version>
     <log4j2.version>3.0.0-beta3</log4j2.version>
     <snakeyaml.version>2.5</snakeyaml.version>
@@ -367,7 +367,7 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.14.0</version>
         <configuration>
-          <release>24</release>
+          <release>25</release>
           <encoding>UTF-8</encoding>
           <compilerArgs>
             <arg>-Xlint:unchecked</arg>
