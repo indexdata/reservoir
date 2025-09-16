@@ -1,0 +1,23 @@
+version: 2
+updates:
+  # Maven (root + all modules)
+  - package-ecosystem: "maven"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 10
+    labels: ["deps", "java"]
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels: ["deps", "ci"]
+
+  # Dockerfiles (if you have any, adjust path or add more entries)
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels: ["deps", "docker"]
