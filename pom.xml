@@ -41,7 +41,7 @@
     <vertx.version>5.0.4</vertx.version>
     <okapi.version>7.0.0</okapi.version>
     <vertxlib.version>4.0.0</vertxlib.version>
-    <micrometer.version>1.12.13</micrometer.version>
+    <micrometer.version>1.15.4</micrometer.version>
   </properties>
   <dependencyManagement>
     <dependencies>
