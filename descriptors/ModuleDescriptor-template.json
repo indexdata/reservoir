@@ -23,6 +23,19 @@
       ]
     },
     {
+      "id": "reservoir-info",
+      "version": "1.0",
+      "handlers": [
+        {
+          "methods": [
+            "GET"
+          ],
+          "pathPattern": "/reservoir",
+          "permissionsRequired": []
+        }
+      ]
+    },
+    {
       "id": "reservoir-config-oai",
       "version": "1.0",
       "handlers": [

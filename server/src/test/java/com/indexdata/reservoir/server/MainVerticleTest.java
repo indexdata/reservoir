@@ -168,8 +168,8 @@ public class MainVerticleTest extends TestBase {
   public void testMainPage() {
     ModuleVersionReporter m = new ModuleVersionReporter("com.indexdata/reservoir-server");
     RestAssured.given()
-        .baseUri(MODULE_URL)
-        .get("/")
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .get("/reservoir")
         .then().statusCode(200)
         .header("Content-Type", is("application/json"))
         .body("revision", is(m.getCommitId()))
