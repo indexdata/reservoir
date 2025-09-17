@@ -6,18 +6,27 @@ updates:
     schedule:
       interval: "daily"
     open-pull-requests-limit: 10
-    labels: ["deps", "java"]
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    labels: ["deps"]
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
-    labels: ["deps", "ci"]
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    labels: ["deps"]
 
   # Dockerfiles (if you have any, adjust path or add more entries)
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
       interval: "weekly"
-    labels: ["deps", "docker"]
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    labels: ["deps"]
