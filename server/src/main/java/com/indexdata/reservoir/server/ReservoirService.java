@@ -24,6 +24,7 @@ import java.util.function.Function;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.HttpResponse;
+import org.folio.okapi.common.ModuleVersionReporter;
 import org.folio.tlib.RouterCreator;
 import org.folio.tlib.TenantInitHooks;
 import org.folio.tlib.postgres.PgCqlDefinition;
@@ -36,13 +37,38 @@ import org.folio.tlib.util.TenantUtil;
 
 public class ReservoirService implements RouterCreator, TenantInitHooks {
 
-  private static final Logger log = LogManager.getLogger(ReservoirService.class);
-  final Vertx vertx;
   private static final String ENTITY_ID_NOT_FOUND_PATTERN = "%s %s not found";
   private static final String MODULE_LABEL = "Module";
+  private static final Logger log = LogManager.getLogger(ReservoirService.class);
 
-  public ReservoirService(Vertx vertx) {
+  private final ModuleVersionReporter moduleVersionReporter;
+  private final Vertx vertx;
+
+  public ReservoirService(Vertx vertx, ModuleVersionReporter moduleVersionReporter) {
     this.vertx = vertx;
+    this.moduleVersionReporter = moduleVersionReporter;
+  }
+
+  Future<Void> getServiceInfo(RoutingContext ctx) {
+    String baseUrl = ctx.request().absoluteURI().replaceAll("/reservoir$", "");
+    JsonObject links = new JsonObject()
+        .put("clusters", baseUrl + "/reservoir/clusters")
+        .put("configMatchKeys", baseUrl + "/reservoir/config/matchkeys")
+        .put("configModules", baseUrl + "/reservoir/config/modules")
+        .put("configOai", baseUrl + "/reservoir/config/oai")
+        .put("oai", baseUrl + "/reservoir/oai")
+        .put("pmhClients", baseUrl + "/reservoir/pmh-clients")
+        .put("records", baseUrl + "/reservoir/records")
+        .put("sru", baseUrl + "/reservoir/sru")
+        .put("upload", baseUrl + "/reservoir/upload")
+        ;
+    JsonObject response = new JsonObject()
+        .put("links", links)
+        .put("name", moduleVersionReporter.getModule())
+        .put("version", moduleVersionReporter.getVersion())
+        .put("revision", moduleVersionReporter.getCommitId());
+    HttpResponse.responseJson(ctx, 200).end(response.encode());
+    return Future.succeededFuture();
   }
 
   Future<Void> putGlobalRecords(RoutingContext ctx) {
@@ -524,6 +550,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
           RouterBuilder routerBuilder = RouterBuilder.create(vertx, contract);
           // routerBuilder.rootHandler(BodyHandler.create().setBodyLimit(65536)
           //     .setHandleFileUploads(false));
+          add(routerBuilder, "getServiceInfo", this::getServiceInfo);
           add(routerBuilder, "getGlobalRecords", this::getGlobalRecords);
           add(routerBuilder, "deleteGlobalRecords", this::deleteGlobalRecords);
           add(routerBuilder, "getGlobalRecord", this::getGlobalRecord);
