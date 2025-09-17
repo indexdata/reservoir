@@ -10,6 +10,7 @@
   <name>Reservoir storage server module</name>
   <properties>
     <main.class>com.indexdata.reservoir.server.ReservoirLauncher</main.class>
+    <native.main.class>com.indexdata.reservoir.server.NativeMain</native.main.class>
     <vertx.verticle>com.indexdata.reservoir.server.MainVerticle</vertx.verticle>
     <graal.compiler.dir>${project.build.directory}/compiler</graal.compiler.dir>
   </properties>
@@ -309,7 +310,7 @@
             </executions>
             <configuration>
               <imageName>reservoir-native</imageName>
-              <mainClass>${main.class}</mainClass>
+              <mainClass>${native.main.class}</mainClass>
               <skipNativeTests>true</skipNativeTests>
               <debug>true</debug>
               <verbose>true</verbose>
