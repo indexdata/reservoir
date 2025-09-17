@@ -1,4 +1,4 @@
-FROM container-registry.oracle.com/graalvm/native-image:24 AS build
+FROM container-registry.oracle.com/graalvm/native-image:25 AS build
 # Red Hat Enterprise Linux release 10.0 (CentOS Stream)
 RUN microdnf install -y maven
 
