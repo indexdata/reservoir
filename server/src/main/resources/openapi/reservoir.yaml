@@ -3,6 +3,31 @@ info:
   title: Reservoir API (except upload)
   version: v1
 paths:
+  /reservoir:
+    get:
+      description: Get reservoir service information
+      operationId: getServiceInfo
+      responses:
+        "200":
+          description: Service information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    example: mod-reservoir
+                  version:
+                    type: string
+                    example: 1.0.0-SNAPSHOT
+                  revision:
+                    type: string
+                    example: 63f789c9628788d727d4afdd969c2419d779535e
+                  links:
+                    type: array
+                    items:
+                      type: string
   # OAI config (singleton)
   /reservoir/config/oai:
     parameters:
