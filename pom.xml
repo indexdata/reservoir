@@ -38,7 +38,7 @@
     <log4j2.version>3.0.0-beta3</log4j2.version>
     <snakeyaml.version>2.5</snakeyaml.version>
     <slf4j-api.version>2.0.17</slf4j-api.version>
-    <vertx.version>5.0.3</vertx.version>
+    <vertx.version>5.0.4</vertx.version>
     <okapi.version>7.0.0</okapi.version>
     <vertxlib.version>4.0.0</vertxlib.version>
     <micrometer.version>1.15.4</micrometer.version>
