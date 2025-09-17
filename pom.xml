@@ -38,7 +38,7 @@
     <log4j2.version>3.0.0-beta3</log4j2.version>
     <snakeyaml.version>2.5</snakeyaml.version>
     <slf4j-api.version>2.0.17</slf4j-api.version>
-    <vertx.version>5.0.3</vertx.version>
+    <vertx.version>5.0.4</vertx.version>
     <okapi.version>7.0.0</okapi.version>
     <vertxlib.version>4.0.0</vertxlib.version>
     <micrometer.version>1.15.4</micrometer.version>
@@ -162,7 +162,7 @@
       <dependency>
         <groupId>org.junit</groupId>
         <artifactId>junit-bom</artifactId>
-        <version>5.13.1</version>
+        <version>5.13.4</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -236,7 +236,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-shade-plugin</artifactId>
-          <version>3.6.0</version>
+          <version>3.6.1</version>
           <dependencies>
             <dependency>
               <groupId>org.apache.logging.log4j</groupId>
@@ -307,7 +307,7 @@
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>exec-maven-plugin</artifactId>
-          <version>3.0.0</version>
+          <version>3.5.1</version>
         </plugin>
       </plugins>
     </pluginManagement>
