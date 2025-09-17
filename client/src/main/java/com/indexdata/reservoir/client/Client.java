@@ -362,9 +362,9 @@ public class Client {
   Future<Void> sendIso2709(InputStream stream) {
     return Future.<Void>future(p -> sendChunk(
       new MarcReaderProxy(
-        strict
-          ? new MarcStreamReader(stream)
-          : new MarcPermissiveStreamReader(stream, true, true)),
+          strict
+            ? new MarcStreamReader(stream)
+            : new MarcPermissiveStreamReader(stream, true, true)),
         p))
         .eventually(() -> {
           try {

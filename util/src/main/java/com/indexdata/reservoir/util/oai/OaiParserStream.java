@@ -62,8 +62,8 @@ public class OaiParserStream<T> {
    */
   public String getError() {
     return errorCode != null
-      ? errorCode + ": " + errorText
-      : errorText;
+        ? errorCode + ": " + errorText
+        : errorText;
   }
 
   public OaiParserStream<T> exceptionHandler(Handler<Throwable> handler) {

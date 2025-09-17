@@ -25,7 +25,7 @@ public class IngestParams {
     contentType = request.getHeader("Content-Type");
     try {
       jsonPath = request.getParam("localIdPath") == null
-        ? null : new ModuleJsonPath(request.getParam("localIdPath"));
+          ? null : new ModuleJsonPath(request.getParam("localIdPath"));
     } catch (InvalidPathException e) {
       throw new IllegalArgumentException("malformed 'localIdPath': " + e.getMessage());
     }

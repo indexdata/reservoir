@@ -80,9 +80,13 @@ public class IngestStats {
     return stats;
   }
 
+  /** Return string representation. */
   public String toString() {
-    return "processed: " + processed() + " ignored: " + ignored()
-      + " inserted: " + inserted() + " updated: " + updated() + " deleted: " + deleted();
+    return "processed: " + processed()
+        + " ignored: " + ignored()
+        + " inserted: " + inserted()
+        + " updated: " + updated()
+        + " deleted: " + deleted();
   }
 
 }
