@@ -10,6 +10,17 @@ updates:
       prefix: "chore"
       include: "scope"
     labels: ["deps"]
+    groups:
+      runtime-deps:
+        patterns:
+          - "*"                  # catch everything
+        exclude-patterns:
+          - "*-plugin"           # exclude plugin artifacts
+          - "org.apache.maven.plugins:*"
+      build-plugins:
+        patterns:
+          - "*-plugin"           # typical plugin naming
+          - "org.apache.maven.plugins:*"
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
