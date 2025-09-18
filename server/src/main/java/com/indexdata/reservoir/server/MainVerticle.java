@@ -25,10 +25,9 @@ public class MainVerticle extends AbstractVerticle {
         Config.getSysConf("http.port", "port", "8081", config()));
     log.info("Listening on port {}", port);
 
-    ReservoirService reservoirService = new ReservoirService(vertx);
+    ReservoirService reservoirService = new ReservoirService(vertx, m);
 
     RouterCreator[] routerCreators = {
-        new MainPage(m),
         reservoirService,
         new Tenant2Api(reservoirService),
         new HealthApi(),
