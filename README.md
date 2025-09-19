@@ -29,21 +29,21 @@ This project has three subprojects:
 
 Requirements:
 
-* Java 24, preferably GraalVM
-* Maven 3.6.3 or later
+* Java 25, preferably GraalVM
+* Maven 3.9.11 (earlier might work)
 * Docker (unless `-DskipTests` is used)
 
-You need `JAVA_HOME` set, e.g.:
+It is easiest to use [sdkman](https://sdkman.io):
+
+    curl -s "https://get.sdkman.io" | bash
+    . $HOME/.sdkman/bin/sdkman-init.sh
+    sdk install java 25-graal
+    sdk install maven
+
+Otherwise, you'll need to install everything manually and set `JAVA_HOME`:
 
    * Linux: `export JAVA_HOME=$(readlink -f /usr/bin/javac | sed "s:bin/javac::")`
-   * macOS: `export JAVA_HOME=$(/usr/libexec/java_home -v 24)`
-
-It is easier to select preferred JVM with [sdkman](https://sdkman.io).
-
-Use something like:
-
-    . $HOME/.sdkman/bin/sdkman-init.sh
-    sdk install java 24.0.2-graal
+   * macOS: `export JAVA_HOME=$(/usr/libexec/java_home -v 25)`
 
 Then build reservoir with:
 
