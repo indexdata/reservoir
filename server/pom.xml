@@ -316,9 +316,8 @@
               <quickBuild>false</quickBuild>
               <buildArgs>
                 <buildArg>--no-fallback</buildArg>
-                <buildArg>-H:ResourceConfigurationFiles=${project.basedir}/resource-config.json</buildArg>
-                <buildArg>-H:ReflectionConfigurationFiles=${project.basedir}/reflection-config.json</buildArg>
-                <buildArg>--enable-url-protocols=https</buildArg>
+                <!-- <buildArg>-H:+SharedArenaSupport</buildArg> -->
+                <buildArg>--enable-url-protocols=http,https</buildArg>
                 <buildArg>--enable-native-access=ALL-UNNAMED</buildArg>
                 <buildArg>--enable-native-access=org.graalvm.truffle</buildArg>
               </buildArgs>

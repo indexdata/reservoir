@@ -1,0 +1,2814 @@
+{
+  "reflection": [
+    {
+      "type": "com.aayushatharva.brotli4j.Brotli4jLoader"
+    },
+    {
+      "type": "com.fasterxml.jackson.databind.deser.Deserializers[]"
+    },
+    {
+      "type": "com.fasterxml.jackson.databind.ext.Java7SupportImpl",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.fasterxml.jackson.databind.ser.Serializers[]"
+    },
+    {
+      "type": "com.github.luben.zstd.Zstd"
+    },
+    {
+      "type": "com.indexdata.reservoir.server.MainVerticle",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.indexdata.reservoir.server.ReservoirLauncher",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "main",
+          "parameterTypes": [
+            "java.lang.String[]"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "com.jcraft.jzlib.JZlib"
+    },
+    {
+      "type": "com.sun.crypto.provider.AESCipher$General",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.ARCFOURCipher",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.ChaCha20Cipher$ChaCha20Poly1305",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.DESCipher",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.DESedeCipher",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.DHParameters",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.GaloisCounterMode$AESGCM",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.HKDFKeyDerivation$HKDFSHA256",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "javax.crypto.KDFParameters"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.HmacCore$HmacSHA256",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.PBKDF2Core$HmacSHA1",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.PBKDF2Core$HmacSHA224",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.PBKDF2Core$HmacSHA256",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.PBKDF2Core$HmacSHA384",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.PBKDF2Core$HmacSHA512",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.TlsMasterSecretGenerator",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.org.apache.xerces.internal.jaxp.DocumentBuilderFactoryImpl",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "groovy.lang.Closure"
+    },
+    {
+      "type": "io.netty.bootstrap.ServerBootstrap$1"
+    },
+    {
+      "type": "io.netty.bootstrap.ServerBootstrap$ServerBootstrapAcceptor"
+    },
+    {
+      "type": "io.netty.buffer.AbstractByteBufAllocator"
+    },
+    {
+      "type": "io.netty.buffer.AbstractReferenceCountedByteBuf",
+      "fields": [
+        {
+          "name": "refCnt"
+        }
+      ]
+    },
+    {
+      "type": "io.netty.buffer.AdaptivePoolingAllocator$Chunk",
+      "fields": [
+        {
+          "name": "refCnt"
+        }
+      ]
+    },
+    {
+      "type": "io.netty.buffer.AdaptivePoolingAllocator$Magazine"
+    },
+    {
+      "type": "io.netty.channel.AbstractChannelHandlerContext"
+    },
+    {
+      "type": "io.netty.channel.ChannelException",
+      "jniAccessible": true
+    },
+    {
+      "type": "io.netty.channel.ChannelOutboundBuffer"
+    },
+    {
+      "type": "io.netty.channel.DefaultChannelConfig"
+    },
+    {
+      "type": "io.netty.channel.DefaultChannelPipeline"
+    },
+    {
+      "type": "io.netty.channel.DefaultChannelPipeline$HeadContext"
+    },
+    {
+      "type": "io.netty.channel.DefaultChannelPipeline$TailContext"
+    },
+    {
+      "type": "io.netty.channel.DefaultFileRegion",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "file"
+        },
+        {
+          "name": "transferred"
+        }
+      ]
+    },
+    {
+      "type": "io.netty.channel.epoll.LinuxSocket",
+      "jniAccessible": true
+    },
+    {
+      "type": "io.netty.channel.epoll.Native",
+      "jniAccessible": true
+    },
+    {
+      "type": "io.netty.channel.epoll.NativeDatagramPacketArray$NativeDatagramPacket",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "count"
+        },
+        {
+          "name": "memoryAddress"
+        },
+        {
+          "name": "recipientAddr"
+        },
+        {
+          "name": "recipientAddrLen"
+        },
+        {
+          "name": "recipientPort"
+        },
+        {
+          "name": "recipientScopeId"
+        },
+        {
+          "name": "segmentSize"
+        },
+        {
+          "name": "senderAddr"
+        },
+        {
+          "name": "senderAddrLen"
+        },
+        {
+          "name": "senderPort"
+        },
+        {
+          "name": "senderScopeId"
+        }
+      ]
+    },
+    {
+      "type": "io.netty.channel.epoll.NativeStaticallyReferencedJniMethods",
+      "jniAccessible": true
+    },
+    {
+      "type": "io.netty.channel.unix.Buffer",
+      "jniAccessible": true
+    },
+    {
+      "type": "io.netty.channel.unix.DatagramSocketAddress",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "byte[]",
+            "int",
+            "int",
+            "int",
+            "io.netty.channel.unix.DatagramSocketAddress"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "io.netty.channel.unix.DomainDatagramSocketAddress",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "byte[]",
+            "int",
+            "io.netty.channel.unix.DomainDatagramSocketAddress"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods",
+      "jniAccessible": true
+    },
+    {
+      "type": "io.netty.channel.unix.FileDescriptor",
+      "jniAccessible": true
+    },
+    {
+      "type": "io.netty.channel.unix.LimitsStaticallyReferencedJniMethods",
+      "jniAccessible": true
+    },
+    {
+      "type": "io.netty.channel.unix.PeerCredentials",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "int",
+            "int",
+            "int[]"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "io.netty.channel.unix.Socket",
+      "jniAccessible": true
+    },
+    {
+      "type": "io.netty.handler.codec.compression.JdkZlibDecoder"
+    },
+    {
+      "type": "io.netty.handler.codec.dns.DatagramDnsQueryEncoder"
+    },
+    {
+      "type": "io.netty.handler.codec.haproxy.HAProxyMessageDecoder"
+    },
+    {
+      "type": "io.netty.handler.codec.http.HttpClientCodec"
+    },
+    {
+      "type": "io.netty.handler.codec.http.HttpContentDecoder$ByteBufForwarder"
+    },
+    {
+      "type": "io.netty.handler.codec.http.HttpContentDecompressor"
+    },
+    {
+      "type": "io.netty.handler.codec.http.websocketx.extensions.WebSocketServerExtensionHandler"
+    },
+    {
+      "type": "io.netty.handler.ssl.SslHandler"
+    },
+    {
+      "type": "io.netty.handler.stream.ChunkedWriteHandler"
+    },
+    {
+      "type": "io.netty.resolver.dns.Cache$Entries"
+    },
+    {
+      "type": "io.netty.resolver.dns.DnsNameResolver$2"
+    },
+    {
+      "type": "io.netty.resolver.dns.DnsNameResolver$3"
+    },
+    {
+      "type": "io.netty.resolver.dns.DnsNameResolver$DnsResponseHandler"
+    },
+    {
+      "type": "io.netty.util.AbstractReferenceCounted",
+      "fields": [
+        {
+          "name": "refCnt"
+        }
+      ]
+    },
+    {
+      "type": "io.netty.util.DefaultAttributeMap"
+    },
+    {
+      "type": "io.netty.util.DefaultAttributeMap$DefaultAttribute"
+    },
+    {
+      "type": "io.netty.util.Recycler$DefaultHandle"
+    },
+    {
+      "type": "io.netty.util.ReferenceCountUtil"
+    },
+    {
+      "type": "io.netty.util.concurrent.DefaultPromise"
+    },
+    {
+      "type": "io.netty.util.concurrent.MpscIntQueue$MpscAtomicIntegerArrayQueue"
+    },
+    {
+      "type": "io.netty.util.concurrent.SingleThreadEventExecutor"
+    },
+    {
+      "type": "io.netty.util.internal.NativeLibraryUtil",
+      "methods": [
+        {
+          "name": "loadLibrary",
+          "parameterTypes": [
+            "java.lang.String",
+            "boolean"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "io.netty.util.internal.shaded.org.jctools.queues.BaseMpscLinkedArrayQueueColdProducerFields",
+      "fields": [
+        {
+          "name": "producerLimit"
+        }
+      ]
+    },
+    {
+      "type": "io.netty.util.internal.shaded.org.jctools.queues.BaseMpscLinkedArrayQueueConsumerFields",
+      "fields": [
+        {
+          "name": "consumerIndex"
+        }
+      ]
+    },
+    {
+      "type": "io.netty.util.internal.shaded.org.jctools.queues.BaseMpscLinkedArrayQueueProducerFields",
+      "fields": [
+        {
+          "name": "producerIndex"
+        }
+      ]
+    },
+    {
+      "type": "io.netty.util.internal.shaded.org.jctools.queues.MpmcArrayQueueConsumerIndexField",
+      "fields": [
+        {
+          "name": "consumerIndex"
+        }
+      ]
+    },
+    {
+      "type": "io.netty.util.internal.shaded.org.jctools.queues.MpmcArrayQueueProducerIndexField",
+      "fields": [
+        {
+          "name": "producerIndex"
+        }
+      ]
+    },
+    {
+      "type": "io.vertx.core.eventbus.impl.EventBusImpl"
+    },
+    {
+      "type": "io.vertx.core.http.impl.Http1xUpgradeToH2CHandler"
+    },
+    {
+      "type": "io.vertx.core.http.impl.HttpChunkContentCompressor"
+    },
+    {
+      "type": "io.vertx.core.http.impl.HttpServerConnectionInitializer$1"
+    },
+    {
+      "type": "io.vertx.core.http.impl.VertxHttpRequestDecoder"
+    },
+    {
+      "type": "io.vertx.core.http.impl.VertxHttpResponseEncoder"
+    },
+    {
+      "type": "io.vertx.core.internal.concurrent.InboundMessageQueue"
+    },
+    {
+      "type": "io.vertx.core.logging.SLF4JLogDelegateFactory",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "io.vertx.core.net.impl.ChannelProvider$1"
+    },
+    {
+      "type": "io.vertx.core.net.impl.ChannelProvider$2"
+    },
+    {
+      "type": "io.vertx.core.net.impl.ServerChannelLoadBalancer"
+    },
+    {
+      "type": "io.vertx.core.net.impl.VertxHandler"
+    },
+    {
+      "type": "io.vertx.core.streams.impl.MessagePassingQueue$MpSc"
+    },
+    {
+      "type": "io.vertx.ext.web.impl.RoutingContextImplBase"
+    },
+    {
+      "type": "io.vertx.launcher.application.impl.VertxApplicationCommand",
+      "fields": [
+        {
+          "name": "clusterHost"
+        },
+        {
+          "name": "clusterPort"
+        },
+        {
+          "name": "clusterPublicHost"
+        },
+        {
+          "name": "clusterPublicPort"
+        },
+        {
+          "name": "clustered"
+        },
+        {
+          "name": "configStr"
+        },
+        {
+          "name": "deploymentOptionsStr"
+        },
+        {
+          "name": "helpRequested"
+        },
+        {
+          "name": "instances"
+        },
+        {
+          "name": "mainVerticle"
+        },
+        {
+          "name": "vertxOptionsStr"
+        },
+        {
+          "name": "virtualThread"
+        },
+        {
+          "name": "worker"
+        }
+      ]
+    },
+    {
+      "type": "io.vertx.micrometer.MicrometerMetricsFactory"
+    },
+    {
+      "type": "io.vertx.pgclient.impl.codec.PgCodec"
+    },
+    {
+      "type": "io.vertx.sqlclient.impl.TransactionPropagationLocal"
+    },
+    {
+      "type": "jakarta.servlet.Servlet"
+    },
+    {
+      "type": "java.beans.Introspector"
+    },
+    {
+      "type": "java.io.FileDescriptor",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "fd"
+        }
+      ]
+    },
+    {
+      "type": "java.io.IOException",
+      "jniAccessible": true
+    },
+    {
+      "type": "java.lang.Boolean",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "getBoolean",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "java.lang.Class",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "getClassLoader",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.lang.ClassLoader",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "classLoaderValueMap"
+        }
+      ],
+      "methods": [
+        {
+          "name": "loadClass",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "java.lang.Object"
+    },
+    {
+      "type": "java.lang.OutOfMemoryError",
+      "jniAccessible": true
+    },
+    {
+      "type": "java.lang.ProcessHandle",
+      "methods": [
+        {
+          "name": "current",
+          "parameterTypes": []
+        },
+        {
+          "name": "pid",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.lang.RuntimeException",
+      "jniAccessible": true
+    },
+    {
+      "type": "java.lang.Thread",
+      "methods": [
+        {
+          "name": "isVirtual",
+          "parameterTypes": []
+        },
+        {
+          "name": "ofVirtual",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.lang.Thread$Builder",
+      "methods": [
+        {
+          "name": "factory",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.lang.Thread$Builder$OfVirtual",
+      "methods": [
+        {
+          "name": "name",
+          "parameterTypes": [
+            "java.lang.String",
+            "long"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "java.net.InetSocketAddress",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.String",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "java.net.PortUnreachableException",
+      "jniAccessible": true
+    },
+    {
+      "type": "java.net.UnixDomainSocketAddress",
+      "methods": [
+        {
+          "name": "getPath",
+          "parameterTypes": []
+        },
+        {
+          "name": "of",
+          "parameterTypes": [
+            "java.nio.file.Path"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "java.nio.Bits"
+    },
+    {
+      "type": "java.nio.Buffer",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "address"
+        },
+        {
+          "name": "limit"
+        },
+        {
+          "name": "position"
+        }
+      ],
+      "methods": [
+        {
+          "name": "limit",
+          "parameterTypes": []
+        },
+        {
+          "name": "position",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.nio.ByteBuffer",
+      "methods": [
+        {
+          "name": "alignedSlice",
+          "parameterTypes": [
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "java.nio.DirectByteBuffer"
+    },
+    {
+      "type": "java.nio.channels.ClosedChannelException",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "java.nio.channels.FileChannel"
+    },
+    {
+      "type": "java.nio.channels.spi.SelectorProvider"
+    },
+    {
+      "type": "java.nio.file.Path"
+    },
+    {
+      "type": "java.nio.file.Paths"
+    },
+    {
+      "type": "java.security.AlgorithmParametersSpi"
+    },
+    {
+      "type": "java.security.KeyStoreSpi"
+    },
+    {
+      "type": "java.security.interfaces.RSAPrivateKey"
+    },
+    {
+      "type": "java.security.interfaces.RSAPublicKey"
+    },
+    {
+      "type": "java.sql.Connection"
+    },
+    {
+      "type": "java.sql.Date"
+    },
+    {
+      "type": "java.sql.Driver"
+    },
+    {
+      "type": "java.sql.DriverManager"
+    },
+    {
+      "type": "java.sql.Time"
+    },
+    {
+      "type": "java.sql.Timestamp"
+    },
+    {
+      "type": "java.time.Duration"
+    },
+    {
+      "type": "java.time.Instant"
+    },
+    {
+      "type": "java.time.LocalDate"
+    },
+    {
+      "type": "java.time.LocalDateTime"
+    },
+    {
+      "type": "java.time.LocalTime"
+    },
+    {
+      "type": "java.time.MonthDay"
+    },
+    {
+      "type": "java.time.OffsetDateTime"
+    },
+    {
+      "type": "java.time.OffsetTime"
+    },
+    {
+      "type": "java.time.Period"
+    },
+    {
+      "type": "java.time.Year"
+    },
+    {
+      "type": "java.time.YearMonth"
+    },
+    {
+      "type": "java.time.ZoneId"
+    },
+    {
+      "type": "java.time.ZoneOffset"
+    },
+    {
+      "type": "java.time.ZonedDateTime"
+    },
+    {
+      "type": "java.util.AbstractMap"
+    },
+    {
+      "type": "java.util.concurrent.ConcurrentHashMap"
+    },
+    {
+      "type": "javax.servlet.Servlet"
+    },
+    {
+      "type": "jdk.internal.jrtfs.JrtFileSystemProvider"
+    },
+    {
+      "type": "jdk.internal.loader.ClassLoaders$AppClassLoader"
+    },
+    {
+      "type": "jdk.internal.misc.Unsafe",
+      "methods": [
+        {
+          "name": "getUnsafe",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.AbstractLifeCycle"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.Appender[]"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.Filter[]"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.Logger$Builder",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "org.apache.logging.log4j.core.LoggerContext",
+            "org.apache.logging.log4j.message.MessageFactory",
+            "org.apache.logging.log4j.message.FlowMessageFactory",
+            "org.apache.logging.log4j.kit.recycler.RecyclerFactory",
+            "org.apache.logging.log4j.Logger"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.LoggerContext$Builder",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "org.apache.logging.log4j.plugins.di.ConfigurableInstanceFactory"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.appender.AbstractAppender$Builder",
+      "fields": [
+        {
+          "name": "ignoreExceptions"
+        }
+      ],
+      "methods": [
+        {
+          "name": "setConfiguration",
+          "parameterTypes": [
+            "org.apache.logging.log4j.core.config.Configuration"
+          ]
+        },
+        {
+          "name": "setLayout",
+          "parameterTypes": [
+            "org.apache.logging.log4j.core.Layout"
+          ]
+        },
+        {
+          "name": "setName",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.appender.AbstractOutputStreamAppender$Builder",
+      "fields": [
+        {
+          "name": "bufferSize"
+        },
+        {
+          "name": "bufferedIo"
+        },
+        {
+          "name": "immediateFlush"
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.appender.ConsoleAppender",
+      "methods": [
+        {
+          "name": "newBuilder",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.appender.ConsoleAppender$Builder",
+      "fields": [
+        {
+          "name": "direct"
+        },
+        {
+          "name": "follow"
+        },
+        {
+          "name": "target"
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.config.AppenderControlArraySet"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.config.AppenderRef",
+      "methods": [
+        {
+          "name": "createAppenderRef",
+          "parameterTypes": [
+            "java.lang.String",
+            "org.apache.logging.log4j.Level",
+            "org.apache.logging.log4j.core.Filter"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.config.AppenderRef[]"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.config.AppendersPlugin",
+      "methods": [
+        {
+          "name": "createAppenders",
+          "parameterTypes": [
+            "org.apache.logging.log4j.core.Appender[]"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.config.ConfigurationFactory"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.config.ConfigurationScheduler",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.config.DefaultConfigurationFactory"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.config.LoggerConfig$RootLogger",
+      "methods": [
+        {
+          "name": "newRootBuilder",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.config.LoggerConfig$RootLogger$Builder",
+      "methods": [
+        {
+          "name": "setConfig",
+          "parameterTypes": [
+            "org.apache.logging.log4j.core.config.Configuration"
+          ]
+        },
+        {
+          "name": "setFilter",
+          "parameterTypes": [
+            "org.apache.logging.log4j.core.Filter"
+          ]
+        },
+        {
+          "name": "setIncludeLocation",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "setLevel",
+          "parameterTypes": [
+            "org.apache.logging.log4j.Level"
+          ]
+        },
+        {
+          "name": "setLevelAndRefs",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "setProperties",
+          "parameterTypes": [
+            "org.apache.logging.log4j.core.config.Property[]"
+          ]
+        },
+        {
+          "name": "setRefs",
+          "parameterTypes": [
+            "org.apache.logging.log4j.core.config.AppenderRef[]"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.config.LoggerConfig[]"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.config.Loggers"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.config.LoggersPlugin",
+      "methods": [
+        {
+          "name": "createLoggers",
+          "parameterTypes": [
+            "org.apache.logging.log4j.core.config.LoggerConfig[]"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.config.Property[]"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.config.builder.api.ConfigurationBuilderFactory"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.config.json.JsonConfigurationFactory",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.config.plugins.convert.CoreTypeConverters$BigDecimalConverter",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.config.plugins.convert.CoreTypeConverters$BigIntegerConverter",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.config.plugins.convert.CoreTypeConverters$ByteArrayConverter",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.config.plugins.convert.CoreTypeConverters$CharArrayConverter",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.config.plugins.convert.CoreTypeConverters$CharsetConverter",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.config.plugins.convert.CoreTypeConverters$ClassConverter",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.config.plugins.convert.CoreTypeConverters$CronExpressionConverter",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.config.plugins.convert.CoreTypeConverters$DurationConverter",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.config.plugins.convert.CoreTypeConverters$FileConverter",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.config.plugins.convert.CoreTypeConverters$InetAddressConverter",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.config.plugins.convert.CoreTypeConverters$LevelConverter",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.config.plugins.convert.CoreTypeConverters$PathConverter",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.config.plugins.convert.CoreTypeConverters$PatternConverter",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.config.plugins.convert.CoreTypeConverters$SecurityProviderConverter",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.config.plugins.convert.CoreTypeConverters$UriConverter",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.config.plugins.convert.CoreTypeConverters$UrlConverter",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.config.plugins.convert.CoreTypeConverters$UuidConverter",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.config.plugins.convert.CoreTypeConverters$ZoneIdConverter",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.config.plugins.util.LegacyAnnotationFactoryResolversPostProcessor"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.config.xml.XmlConfigurationFactory",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.filter.AbstractFilter"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.filter.AbstractFilterable$Builder",
+      "methods": [
+        {
+          "name": "setFilter",
+          "parameterTypes": [
+            "org.apache.logging.log4j.core.Filter"
+          ]
+        },
+        {
+          "name": "setPropertyArray",
+          "parameterTypes": [
+            "org.apache.logging.log4j.core.config.Property[]"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.filter.CompositeFilter",
+      "methods": [
+        {
+          "name": "createFilters",
+          "parameterTypes": [
+            "org.apache.logging.log4j.core.Filter[]"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.filter.ThresholdFilter",
+      "methods": [
+        {
+          "name": "createFilter",
+          "parameterTypes": [
+            "org.apache.logging.log4j.Level",
+            "org.apache.logging.log4j.core.Filter$Result",
+            "org.apache.logging.log4j.core.Filter$Result"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.impl.CoreDefaultBundle",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "configurationFactory",
+          "parameterTypes": []
+        },
+        {
+          "name": "configurationFactory",
+          "parameterTypes": [
+            "org.apache.logging.log4j.core.config.ConfigurationFactory"
+          ]
+        },
+        {
+          "name": "configurationStrSubstitutor",
+          "parameterTypes": [
+            "org.apache.logging.log4j.core.lookup.InterpolatorFactory"
+          ]
+        },
+        {
+          "name": "defaultContextDataInjector",
+          "parameterTypes": []
+        },
+        {
+          "name": "defaultContextSelector",
+          "parameterTypes": [
+            "org.apache.logging.log4j.plugins.di.ConfigurableInstanceFactory"
+          ]
+        },
+        {
+          "name": "defaultFlowMessageFactory",
+          "parameterTypes": []
+        },
+        {
+          "name": "defaultMessageFactory",
+          "parameterTypes": [
+            "org.apache.logging.log4j.kit.recycler.RecyclerFactory"
+          ]
+        },
+        {
+          "name": "defaultNanoClock",
+          "parameterTypes": []
+        },
+        {
+          "name": "defaultRecyclerFactory",
+          "parameterTypes": [
+            "org.apache.logging.log4j.kit.env.PropertyEnvironment",
+            "java.lang.ClassLoader",
+            "org.apache.logging.log4j.Logger"
+          ]
+        },
+        {
+          "name": "defaultShutdownCallbackRegistry",
+          "parameterTypes": []
+        },
+        {
+          "name": "defaultStatusLogger",
+          "parameterTypes": []
+        },
+        {
+          "name": "interpolatorFactory",
+          "parameterTypes": [
+            "java.util.Map"
+          ]
+        },
+        {
+          "name": "loggerContextFactory",
+          "parameterTypes": [
+            "org.apache.logging.log4j.plugins.di.ConfigurableInstanceFactory"
+          ]
+        },
+        {
+          "name": "reusableLogEventFactory",
+          "parameterTypes": [
+            "org.apache.logging.log4j.core.ContextDataInjector",
+            "org.apache.logging.log4j.core.time.Clock",
+            "org.apache.logging.log4j.core.time.NanoClock",
+            "org.apache.logging.log4j.kit.recycler.RecyclerFactory"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.impl.CoreInstanceFactoryPostProcessor"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.impl.CoreProperties$AsyncProperties",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "boolean"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.impl.CoreProperties$AuthenticationProperties",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Class",
+            "org.apache.logging.log4j.core.impl.CoreProperties$BasicAuthenticationProperties"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.impl.CoreProperties$BasicAuthenticationProperties",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.String",
+            "java.lang.String",
+            "java.lang.Class"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.impl.CoreProperties$ConfigurationProperties",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.String",
+            "java.lang.String",
+            "java.lang.Class",
+            "org.apache.logging.log4j.Level",
+            "java.lang.String",
+            "java.lang.Class",
+            "java.lang.String",
+            "boolean",
+            "long"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.impl.CoreProperties$ContextDataProperties",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Class",
+            "java.lang.Class"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.impl.CoreProperties$GarbageCollectionProperties",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "int",
+            "int",
+            "boolean",
+            "int",
+            "int",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.impl.CoreProperties$LoaderProperties",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "boolean"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.impl.CoreProperties$LogEventProperties",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "org.apache.logging.log4j.core.impl.CoreProperties$ContextDataProperties",
+            "java.lang.Class"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.impl.CoreProperties$LoggerContextProperties",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Class",
+            "java.lang.Class",
+            "java.lang.Class",
+            "java.lang.Boolean",
+            "boolean"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.impl.CoreProperties$MessageProperties",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Class"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.impl.CoreProperties$StatusLoggerProperties",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "org.apache.logging.log4j.Level"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.impl.CoreProperties$ThreadContextMapProperties",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "boolean",
+            "boolean",
+            "int",
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.impl.CoreProperties$ThreadContextProperties",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "boolean",
+            "boolean",
+            "org.apache.logging.log4j.core.impl.CoreProperties$ThreadContextMapProperties"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.impl.CoreProperties$Version1Properties",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "boolean",
+            "java.lang.String",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.impl.Log4jContextFactory"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.impl.Log4jModuleReflectionPostProcessor"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.impl.Log4jProvider"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.impl.ReusableLogEventFactory"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.impl.ThreadContextDataInjector$AbstractContextDataInjector"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.impl.ThreadContextDataInjector$ForDefaultThreadContextMap"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.impl.ThreadContextDataProvider"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.impl.internal.ReusableMessageFactory"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.layout.PatternLayout",
+      "methods": [
+        {
+          "name": "newBuilder",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.layout.PatternLayout$Builder",
+      "fields": [
+        {
+          "name": "alwaysWriteExceptions"
+        },
+        {
+          "name": "charset"
+        },
+        {
+          "name": "configuration"
+        },
+        {
+          "name": "disableAnsi"
+        },
+        {
+          "name": "footer"
+        },
+        {
+          "name": "header"
+        },
+        {
+          "name": "noConsoleNoAnsi"
+        },
+        {
+          "name": "pattern"
+        },
+        {
+          "name": "patternSelector"
+        },
+        {
+          "name": "regexReplacement"
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.lookup.AbstractConfigurationAwareLookup"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.lookup.AbstractLookup"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.lookup.ConfigurationStrSubstitutor"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.lookup.ContextMapLookup"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.lookup.DateLookup"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.lookup.EnvironmentLookup"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.lookup.EventLookup"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.lookup.Interpolator"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.lookup.JavaLookup"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.lookup.JmxRuntimeInputArgumentsLookup"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.lookup.Log4jLookup"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.lookup.LowerLookup"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.lookup.MainMapLookup"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.lookup.MapLookup"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.lookup.MarkerLookup"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.lookup.ResourceBundleLookup"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.lookup.StrSubstitutor"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.lookup.StructuredDataLookup"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.lookup.SystemPropertiesLookup"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.lookup.UpperLookup"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.AbstractStyleNameConverter$Black"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.AbstractStyleNameConverter$Blue"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.AbstractStyleNameConverter$Cyan"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.AbstractStyleNameConverter$Green"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.AbstractStyleNameConverter$Magenta"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.AbstractStyleNameConverter$Red"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.AbstractStyleNameConverter$White"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.AbstractStyleNameConverter$Yellow"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.ClassNamePatternConverter",
+      "methods": [
+        {
+          "name": "newInstance",
+          "parameterTypes": [
+            "java.lang.String[]"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.DatePatternConverter",
+      "methods": [
+        {
+          "name": "newInstance",
+          "parameterTypes": [
+            "java.lang.String[]"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.EncodingPatternConverter"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.EndOfBatchPatternConverter"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.EqualsIgnoreCaseReplacementConverter"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.EqualsReplacementConverter"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.ExtendedThrowablePatternConverter"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.FileLocationPatternConverter"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.FullLocationPatternConverter"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.HighlightConverter"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.LevelPatternConverter",
+      "methods": [
+        {
+          "name": "newInstance",
+          "parameterTypes": [
+            "java.lang.String[]"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.LineLocationPatternConverter"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.LineSeparatorPatternConverter",
+      "methods": [
+        {
+          "name": "newInstance",
+          "parameterTypes": [
+            "java.lang.String[]"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.LoggerFqcnPatternConverter"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.LoggerPatternConverter",
+      "methods": [
+        {
+          "name": "newInstance",
+          "parameterTypes": [
+            "java.lang.String[]"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.MapPatternConverter"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.MarkerPatternConverter"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.MarkerSimpleNamePatternConverter"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.MaxLengthConverter"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.MdcPatternConverter"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.MessagePatternConverter",
+      "methods": [
+        {
+          "name": "newInstance",
+          "parameterTypes": [
+            "org.apache.logging.log4j.core.config.Configuration",
+            "java.lang.String[]"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.MethodLocationPatternConverter"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.NanoTimePatternConverter"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.NdcPatternConverter"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.ProcessIdPatternConverter"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.RegexReplacementConverter"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.RelativeTimePatternConverter"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.RepeatPatternConverter"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.RootThrowablePatternConverter"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.SequenceNumberPatternConverter"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.StyleConverter"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.ThreadIdPatternConverter"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.ThreadNamePatternConverter",
+      "methods": [
+        {
+          "name": "newInstance",
+          "parameterTypes": [
+            "java.lang.String[]"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.ThreadPriorityPatternConverter"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.ThrowablePatternConverter"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.UuidPatternConverter"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.pattern.VariablesNotEmptyReplacementConverter"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.plugins.Log4jPlugins"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.selector.AbstractContextSelector"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.selector.ClassLoaderContextSelector"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.time.ClockFactory",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "clock",
+          "parameterTypes": [
+            "org.apache.logging.log4j.kit.env.PropertyEnvironment"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.core.time.internal.DummyNanoClock"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.time.internal.SystemClock"
+    },
+    {
+      "type": "org.apache.logging.log4j.core.util.DefaultShutdownCallbackRegistry"
+    },
+    {
+      "type": "org.apache.logging.log4j.kit.recycler.RecyclerProperties",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.String",
+            "java.lang.Integer"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.kit.recycler.internal.DummyRecyclerFactoryProvider"
+    },
+    {
+      "type": "org.apache.logging.log4j.kit.recycler.internal.QueueingRecyclerFactoryProvider"
+    },
+    {
+      "type": "org.apache.logging.log4j.kit.recycler.internal.ThreadLocalRecyclerFactoryProvider"
+    },
+    {
+      "type": "org.apache.logging.log4j.kit.recycler.internal.ThreadLocalRecyclerFactoryProvider$ThreadLocalRecyclerFactory"
+    },
+    {
+      "type": "org.apache.logging.log4j.message.DefaultFlowMessageFactory"
+    },
+    {
+      "type": "org.apache.logging.log4j.plugins.condition.OnMissingBindingCondition",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.plugins.convert.TypeConverterFactory",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.util.List"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.plugins.di.resolver.GenericFactoryResolversPostProcessor"
+    },
+    {
+      "type": "org.apache.logging.log4j.plugins.di.resolver.PluginAnnotationFactoryResolversPostProcessor"
+    },
+    {
+      "type": "org.apache.logging.log4j.plugins.di.spi.SingletonScopePostProcessor"
+    },
+    {
+      "type": "org.apache.logging.log4j.plugins.model.PluginRegistry",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.ClassLoader"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.plugins.name.NamedQualifierNameProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.plugins.name.PluginAttributeNameProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.plugins.name.PluginBuilderAttributeNameProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.plugins.name.PluginElementNameProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.plugins.name.PluginNameProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.plugins.validation.validators.RequiredValidator",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.apache.logging.log4j.spi.AbstractLogger"
+    },
+    {
+      "type": "org.apache.logging.log4j.status.StatusLogger"
+    },
+    {
+      "type": "org.apache.logging.log4j.util.EnvironmentPropertySource"
+    },
+    {
+      "type": "org.apache.logging.log4j.util.SystemPropertiesPropertySource"
+    },
+    {
+      "type": "org.apache.logging.slf4j.SLF4JServiceProvider"
+    },
+    {
+      "type": "org.folio.okapi.common.logging.FolioLocal"
+    },
+    {
+      "type": "org.folio.okapi.common.logging.FolioLoggingContext",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.graalvm.home.impl.DefaultHomeFinder"
+    },
+    {
+      "type": "org.graalvm.polyglot.io.IOHelper",
+      "fields": [
+        {
+          "name": "ACCESS"
+        }
+      ]
+    },
+    {
+      "type": "org.graalvm.polyglot.management.Management",
+      "fields": [
+        {
+          "name": "ACCESS"
+        }
+      ]
+    },
+    {
+      "type": "org.marc4j.converter.impl.CodeTableGenerated",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.osgi.framework.FrameworkUtil"
+    },
+    {
+      "type": "sun.management.VMManagementImpl",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "compTimeMonitoringSupport"
+        },
+        {
+          "name": "currentThreadCpuTimeSupport"
+        },
+        {
+          "name": "objectMonitorUsageSupport"
+        },
+        {
+          "name": "otherThreadCpuTimeSupport"
+        },
+        {
+          "name": "remoteDiagnosticCommandsSupport"
+        },
+        {
+          "name": "synchronizerUsageSupport"
+        },
+        {
+          "name": "threadAllocatedMemorySupport"
+        },
+        {
+          "name": "threadContentionMonitoringSupport"
+        }
+      ]
+    },
+    {
+      "type": "sun.misc.Unsafe",
+      "fields": [
+        {
+          "name": "theUnsafe"
+        }
+      ],
+      "methods": [
+        {
+          "name": "invokeCleaner",
+          "parameterTypes": [
+            "java.nio.ByteBuffer"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.nio.ch.FileChannelImpl",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "fd"
+        }
+      ]
+    },
+    {
+      "type": "sun.nio.ch.SelectorImpl",
+      "fields": [
+        {
+          "name": "publicSelectedKeys"
+        },
+        {
+          "name": "selectedKeys"
+        }
+      ]
+    },
+    {
+      "type": "sun.security.pkcs12.PKCS12KeyStore",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.pkcs12.PKCS12KeyStore$DualFormatPKCS12",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.DSA$SHA224withDSA",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.DSA$SHA256withDSA",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.JavaKeyStore$DualFormatJKS",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.JavaKeyStore$JKS",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.NativePRNG",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.security.SecureRandomParameters"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.SHA",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.SHA2$SHA224",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.SHA2$SHA256",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.SHA5$SHA384",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.SHA5$SHA512",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.X509Factory",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.certpath.PKIXCertPathValidator",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.rsa.PSSParameters",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.rsa.RSAKeyFactory$Legacy",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.rsa.RSAPSSSignature",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.rsa.RSASignature$SHA224withRSA",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.rsa.RSASignature$SHA256withRSA",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.rsa.RSASignature$SHA384withRSA",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.ssl.SSLContextImpl$TLSContext",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.ssl.TrustManagerFactoryImpl$PKIXFactory",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.AuthorityInfoAccessExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.AuthorityKeyIdentifierExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.BasicConstraintsExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.CRLDistributionPointsExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.CertificatePoliciesExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.ExtendedKeyUsageExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.KeyUsageExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.NetscapeCertTypeExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.PrivateKeyUsageExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.SubjectAlternativeNameExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.SubjectKeyIdentifierExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.text.resources.cldr.FormatData"
+    },
+    {
+      "type": "sun.text.resources.cldr.FormatData_en"
+    },
+    {
+      "type": "sun.text.resources.cldr.FormatData_en_US"
+    },
+    {
+      "type": "sun.util.resources.cldr.CalendarData"
+    },
+    {
+      "type": {
+        "lambda": {
+          "declaringClass": "org.apache.logging.log4j.core.impl.CoreDefaultBundle",
+          "interfaces": [
+            "org.apache.logging.log4j.core.lookup.InterpolatorFactory"
+          ]
+        }
+      }
+    }
+  ],
+  "resources": [
+    {
+      "glob": "/META-INF/services/org.marc4j.marc.MarcFactory"
+    },
+    {
+      "glob": "META-INF/MANIFEST.MF"
+    },
+    {
+      "glob": "META-INF/graalvm/org.graalvm.polyglot/version"
+    },
+    {
+      "glob": "META-INF/graalvm/org.graalvm.truffle/version"
+    },
+    {
+      "glob": "META-INF/log4j-provider.properties"
+    },
+    {
+      "glob": "META-INF/log4j/propertyMapping.json"
+    },
+    {
+      "glob": "META-INF/maven/com.indexdata/reservoir-server/pom.properties"
+    },
+    {
+      "glob": "META-INF/native/libnetty_transport_native_epoll_x86_64.so"
+    },
+    {
+      "glob": "META-INF/org/apache/logging/log4j/core/config/plugins/Log4j2Plugins.dat"
+    },
+    {
+      "glob": "META-INF/resources/engine/libtruffleattach/linux/amd64/sha256"
+    },
+    {
+      "glob": "META-INF/services/com.oracle.truffle.api.TruffleRuntimeAccess"
+    },
+    {
+      "glob": "META-INF/services/com.oracle.truffle.api.impl.TruffleLocator"
+    },
+    {
+      "glob": "META-INF/services/com.oracle.truffle.api.instrumentation.provider.TruffleInstrumentProvider"
+    },
+    {
+      "glob": "META-INF/services/com.oracle.truffle.api.library.provider.DefaultExportProvider"
+    },
+    {
+      "glob": "META-INF/services/com.oracle.truffle.api.provider.InternalResourceProvider"
+    },
+    {
+      "glob": "META-INF/services/com.oracle.truffle.api.provider.TruffleLanguageProvider"
+    },
+    {
+      "glob": "META-INF/services/com.oracle.truffle.api.strings.provider.JCodingsProvider"
+    },
+    {
+      "glob": "META-INF/services/com.oracle.truffle.js.runtime.Evaluator"
+    },
+    {
+      "glob": "META-INF/services/com.oracle.truffle.runtime.EngineCacheSupport"
+    },
+    {
+      "glob": "META-INF/services/com.oracle.truffle.runtime.FloodControlHandler"
+    },
+    {
+      "glob": "META-INF/services/com.oracle.truffle.runtime.LoopNodeFactory"
+    },
+    {
+      "glob": "META-INF/services/com.oracle.truffle.runtime.TruffleTypes"
+    },
+    {
+      "glob": "META-INF/services/com.oracle.truffle.runtime.jfr.EventFactory$Provider"
+    },
+    {
+      "glob": "META-INF/services/io.vertx.core.spi.JsonFactory"
+    },
+    {
+      "glob": "META-INF/services/io.vertx.core.spi.VerticleFactory"
+    },
+    {
+      "glob": "META-INF/services/io.vertx.core.spi.VertxServiceProvider"
+    },
+    {
+      "glob": "META-INF/services/java.net.spi.InetAddressResolverProvider"
+    },
+    {
+      "glob": "META-INF/services/java.net.spi.URLStreamHandlerProvider"
+    },
+    {
+      "glob": "META-INF/services/java.nio.channels.spi.SelectorProvider"
+    },
+    {
+      "glob": "META-INF/services/java.nio.file.spi.FileSystemProvider"
+    },
+    {
+      "glob": "META-INF/services/java.time.zone.ZoneRulesProvider"
+    },
+    {
+      "glob": "META-INF/services/javax.xml.parsers.DocumentBuilderFactory"
+    },
+    {
+      "glob": "META-INF/services/org.apache.logging.log4j.core.script.ScriptManagerFactory"
+    },
+    {
+      "glob": "META-INF/services/org.apache.logging.log4j.core.util.ContextDataProvider"
+    },
+    {
+      "glob": "META-INF/services/org.apache.logging.log4j.core.util.WatchEventService"
+    },
+    {
+      "glob": "META-INF/services/org.apache.logging.log4j.kit.recycler.RecyclerFactoryProvider"
+    },
+    {
+      "glob": "META-INF/services/org.apache.logging.log4j.plugins.di.spi.ConfigurableInstanceFactoryPostProcessor"
+    },
+    {
+      "glob": "META-INF/services/org.apache.logging.log4j.plugins.model.PluginService"
+    },
+    {
+      "glob": "META-INF/services/org.apache.logging.log4j.spi.Provider"
+    },
+    {
+      "glob": "META-INF/services/org.apache.logging.log4j.util.PropertySource"
+    },
+    {
+      "glob": "META-INF/services/org.graalvm.home.HomeFinder"
+    },
+    {
+      "glob": "META-INF/services/org.graalvm.polyglot.impl.AbstractPolyglotImpl"
+    },
+    {
+      "glob": "META-INF/services/org.slf4j.spi.SLF4JServiceProvider"
+    },
+    {
+      "glob": "META-INF/vertx/vertx-version.txt"
+    },
+    {
+      "glob": "git.properties"
+    },
+    {
+      "glob": "json-schema.org"
+    },
+    {
+      "glob": "json-schema.org/draft-04"
+    },
+    {
+      "glob": "json-schema.org/draft-04/schema"
+    },
+    {
+      "glob": "log4j2-test.jsn"
+    },
+    {
+      "glob": "log4j2-test.json"
+    },
+    {
+      "glob": "log4j2-test.xml"
+    },
+    {
+      "glob": "log4j2-test14dad5dc.jsn"
+    },
+    {
+      "glob": "log4j2-test14dad5dc.json"
+    },
+    {
+      "glob": "log4j2-test14dad5dc.xml"
+    },
+    {
+      "glob": "log4j2.StatusLogger.properties"
+    },
+    {
+      "glob": "log4j2.component.properties"
+    },
+    {
+      "glob": "log4j2.jsn"
+    },
+    {
+      "glob": "log4j2.json"
+    },
+    {
+      "glob": "log4j2.system.properties"
+    },
+    {
+      "glob": "log4j2.xml"
+    },
+    {
+      "glob": "log4j214dad5dc.jsn"
+    },
+    {
+      "glob": "log4j214dad5dc.json"
+    },
+    {
+      "glob": "log4j214dad5dc.xml"
+    },
+    {
+      "glob": "openapi"
+    },
+    {
+      "glob": "openapi/reservoir.yaml"
+    },
+    {
+      "glob": "spec.openapis.org"
+    },
+    {
+      "glob": "spec.openapis.org/oas"
+    },
+    {
+      "glob": "spec.openapis.org/oas/3.0"
+    },
+    {
+      "glob": "spec.openapis.org/oas/3.0/schema"
+    },
+    {
+      "glob": "spec.openapis.org/oas/3.0/schema/2021-09-28"
+    },
+    {
+      "glob": "vertx-default-jul-logging.properties"
+    },
+    {
+      "module": "java.base",
+      "glob": "jdk/internal/icu/impl/data/icudt76b/nfc.nrm"
+    },
+    {
+      "module": "java.base",
+      "glob": "jdk/internal/icu/impl/data/icudt76b/nfkc.nrm"
+    },
+    {
+      "module": "java.base",
+      "glob": "jdk/internal/icu/impl/data/icudt76b/uprops.icu"
+    },
+    {
+      "module": "java.base",
+      "glob": "sun/net/idn/uidna.spp"
+    },
+    {
+      "module": "jdk.jfr",
+      "glob": "jdk/jfr/internal/types/metadata.bin"
+    }
+  ]
+}
