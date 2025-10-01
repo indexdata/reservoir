@@ -14,12 +14,8 @@ import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.Config;
 
 public class ReservoirLauncher extends VertxApplication {
-  public ReservoirLauncher(String[] args) {
-    super(args);
-  }
-
   public ReservoirLauncher(String[] args, VertxApplicationHooks hooks) {
-    super(args, hooks);
+    super(args, hooks, true, false);
   }
 
   private static final Logger log = LogManager.getLogger(ReservoirLauncher.class);
@@ -30,6 +26,11 @@ public class ReservoirLauncher extends VertxApplication {
 
   /** run the application. */
   public static void main(String[] args) {
+    int ret = mainNoExit(args);
+    System.exit(ret);
+  }
+
+  static int mainNoExit(String[] args) {
     VertxApplicationHooks hooks = new VertxApplicationHooks() {
       @Override
       public void beforeStartingVertx(HookContext context) {
@@ -61,9 +62,14 @@ public class ReservoirLauncher extends VertxApplication {
       }
 
     };
+    log.info("Reservoir launcher starting");
+    for (String arg : args) {
+      log.info("  arg: {}", arg);
+    }
     VertxApplication app = new ReservoirLauncher(args, hooks);
-    app.launch();
+    return app.launch();
   }
+
 
 
 }
