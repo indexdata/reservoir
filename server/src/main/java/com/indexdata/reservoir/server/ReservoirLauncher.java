@@ -68,14 +68,8 @@ public class ReservoirLauncher extends VertxApplication {
         return () -> new MainVerticle();
       }
     };
-    log.info("Reservoir launcher starting");
-    for (String arg : args) {
-      log.info("  arg: {}", arg);
-    }
     VertxApplication app = new ReservoirLauncher(args, hooks);
     return app.launch();
   }
-
-
 
 }

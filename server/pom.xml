@@ -216,7 +216,6 @@
           <archive>
             <manifestEntries>
               <Automatic-Module-Name>com.indexdata.reservoir.server</Automatic-Module-Name>
-              <Main-Verticle>${vertx.verticle}</Main-Verticle>
             </manifestEntries>
           </archive>
         </configuration>
