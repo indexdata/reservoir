@@ -1,5 +1,6 @@
 package com.indexdata.reservoir.server;
 
+import io.vertx.core.Deployable;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.json.JsonObject;
@@ -9,6 +10,7 @@ import io.vertx.launcher.application.VertxApplicationHooks;
 import io.vertx.micrometer.MicrometerMetricsOptions;
 import io.vertx.micrometer.VertxJmxMetricsOptions;
 import io.vertx.micrometer.VertxPrometheusOptions;
+import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.Config;
@@ -61,6 +63,10 @@ public class ReservoirLauncher extends VertxApplication {
         options.setMetricsOptions(metricsOpts);
       }
 
+      @Override
+      public Supplier<? extends Deployable> verticleSupplier() {
+        return () -> new MainVerticle();
+      }
     };
     log.info("Reservoir launcher starting");
     for (String arg : args) {

@@ -8,7 +8,7 @@ public class ReservoirLauncherTest {
 
   @Test
   public void testMain() throws Exception {
-    String[] args = {"com.indexdata.reservoir.server.MainVerticle"};
+    String[] args = {};
     assertEquals(15, ReservoirLauncher.mainNoExit(args));
   }
 }
