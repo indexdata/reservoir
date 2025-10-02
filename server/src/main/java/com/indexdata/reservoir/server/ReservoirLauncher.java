@@ -1,5 +1,6 @@
 package com.indexdata.reservoir.server;
 
+import io.vertx.core.Deployable;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.json.JsonObject;
@@ -9,27 +10,32 @@ import io.vertx.launcher.application.VertxApplicationHooks;
 import io.vertx.micrometer.MicrometerMetricsOptions;
 import io.vertx.micrometer.VertxJmxMetricsOptions;
 import io.vertx.micrometer.VertxPrometheusOptions;
+import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.Config;
 
 public class ReservoirLauncher extends VertxApplication {
-  public ReservoirLauncher(String[] args) {
-    super(args);
-  }
-
-  public ReservoirLauncher(String[] args, VertxApplicationHooks hooks) {
-    super(args, hooks);
-  }
-
   private static final Logger log = LogManager.getLogger(ReservoirLauncher.class);
   private static final String PROMETHEUS_PORT = "metrics.prometheus.port";
   private static final String PROMETHEUS_PATH = "/metrics";
   private static final String JMX_ENABLED = "metrics.jmx";
   private static final String JMX_DOMAIN = "reservoir";
 
+  public ReservoirLauncher(String[] args, VertxApplicationHooks hooks) {
+    super(args, hooks, true, false);
+  }
+
   /** run the application. */
   public static void main(String[] args) {
+    int ret = launch(args);
+    if (ret != 0) {
+      System.exit(ret);
+    }
+  }
+
+  static int launch(String[] args) {
+    System.setProperty("org.marc4j.marc.MarcFactory", "org.marc4j.marc.impl.MarcFactoryImpl");
     VertxApplicationHooks hooks = new VertxApplicationHooks() {
       @Override
       public void beforeStartingVertx(HookContext context) {
@@ -60,10 +66,13 @@ public class ReservoirLauncher extends VertxApplication {
         options.setMetricsOptions(metricsOpts);
       }
 
+      @Override
+      public Supplier<? extends Deployable> verticleSupplier() {
+        return () -> new MainVerticle();
+      }
     };
     VertxApplication app = new ReservoirLauncher(args, hooks);
-    app.launch();
+    return app.launch();
   }
-
 
 }
