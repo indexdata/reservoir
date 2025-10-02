@@ -16,23 +16,26 @@ import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.Config;
 
 public class ReservoirLauncher extends VertxApplication {
-  public ReservoirLauncher(String[] args, VertxApplicationHooks hooks) {
-    super(args, hooks, true, false);
-  }
-
   private static final Logger log = LogManager.getLogger(ReservoirLauncher.class);
   private static final String PROMETHEUS_PORT = "metrics.prometheus.port";
   private static final String PROMETHEUS_PATH = "/metrics";
   private static final String JMX_ENABLED = "metrics.jmx";
   private static final String JMX_DOMAIN = "reservoir";
 
-  /** run the application. */
-  public static void main(String[] args) {
-    int ret = mainNoExit(args);
-    System.exit(ret);
+  public ReservoirLauncher(String[] args, VertxApplicationHooks hooks) {
+    super(args, hooks, true, false);
   }
 
-  static int mainNoExit(String[] args) {
+  /** run the application. */
+  public static void main(String[] args) {
+    int ret = launch(args);
+    if (ret != 0) {
+      System.exit(ret);
+    }
+  }
+
+  static int launch(String[] args) {
+    System.setProperty("org.marc4j.marc.MarcFactory", "org.marc4j.marc.impl.MarcFactoryImpl");
     VertxApplicationHooks hooks = new VertxApplicationHooks() {
       @Override
       public void beforeStartingVertx(HookContext context) {

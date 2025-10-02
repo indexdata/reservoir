@@ -7,8 +7,8 @@ import org.junit.jupiter.api.Test;
 public class ReservoirLauncherTest {
 
   @Test
-  public void testMain() throws Exception {
-    String[] args = {};
-    assertEquals(15, ReservoirLauncher.mainNoExit(args));
+  public void testMainFail() throws Exception {
+    String[] args = {"-conf", "\"port\":9230}"};
+    assertEquals(15, ReservoirLauncher.launch(args));
   }
 }

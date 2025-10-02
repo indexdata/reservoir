@@ -10,7 +10,6 @@
   <name>Reservoir storage server module</name>
   <properties>
     <main.class>com.indexdata.reservoir.server.ReservoirLauncher</main.class>
-    <vertx.verticle>com.indexdata.reservoir.server.MainVerticle</vertx.verticle>
     <graal.compiler.dir>${project.build.directory}/compiler</graal.compiler.dir>
   </properties>
   <dependencies>
@@ -328,6 +327,15 @@
               <quickBuild>false</quickBuild>
               <buildArgs>
                 <buildArg>--no-fallback</buildArg>
+                <!--
+                *Enabled*: the native-image command fails with:
+                Error: Arena.ofShared is not supported with runtime compilations.
+                Replace usages of Arena.ofShared with Arena.ofAuto and disable shared arena support.
+                *Disabled*: when ingesting records it fails with:
+                Exception in thread "vert.x-eventloop-thread-0" com.oracle.svm.core.jdk.UnsupportedFeatureError:
+                Support for Arena.ofShared is not active: enable with -H:+SharedArenaSupport
+                at org.graalvm.nativeimage.builder/com.oracle.svm.core.util.VMError.unsupportedFeature(VMError.java:121)
+                -->
                 <!-- <buildArg>-H:+SharedArenaSupport</buildArg> -->
                 <buildArg>--enable-url-protocols=http,https</buildArg>
                 <buildArg>--enable-native-access=ALL-UNNAMED</buildArg>
