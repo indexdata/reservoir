@@ -82,12 +82,14 @@ spec:
             httpGet:
               path: /healthz
               port: http
-            timeoutSeconds: 2
+            timeoutSeconds: 5
             initialDelaySeconds: 5
           readinessProbe:
             httpGet:
               path: /healthz
               port: http
+            timeoutSeconds: 5
+            initialDelaySeconds: 5
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           {{- with .Values.volumeMounts }}
