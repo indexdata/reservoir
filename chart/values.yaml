@@ -24,6 +24,14 @@ containerPort: 8080
 # envvars passed to the container
 env: {}
 
+livenessProbe:
+  timeoutSeconds: 2
+  initialDelaySeconds: 5
+
+readinessProbe:
+  timeoutSeconds: 2
+  initialDelaySeconds: 5
+
 # envvars passed to the container as secretKeyRef, format
 # VARIABLE:
 #   name: secret-name
