@@ -253,7 +253,7 @@
       <plugin>
         <groupId>org.folio</groupId>
         <artifactId>openapi-deref-plugin</artifactId>
-        <version>4.0.0</version>
+        <version>${vertxlib.version}</version>
         <executions>
           <execution>
             <id>dereference-books</id>
