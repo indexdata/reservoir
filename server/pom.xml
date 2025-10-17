@@ -10,7 +10,6 @@
   <name>Reservoir storage server module</name>
   <properties>
     <main.class>com.indexdata.reservoir.server.ReservoirLauncher</main.class>
-    <vertx.verticle>com.indexdata.reservoir.server.MainVerticle</vertx.verticle>
     <graal.compiler.dir>${project.build.directory}/compiler</graal.compiler.dir>
   </properties>
   <dependencies>
@@ -286,6 +285,18 @@
       <id>native</id>
       <build>
         <plugins>
+          <!-- testing in native profile to create reachability-metadata.json -->
+          <!-- https://maven.apache.org/surefire/maven-surefire-plugin/test-mojo.html -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <skipTests>false</skipTests>
+              <argLine>-agentlib:native-image-agent=config-output-dir=target/classes/META-INF/native-image
+                --sun-misc-unsafe-memory-access=allow --enable-native-access=ALL-UNNAMED
+              </argLine>
+            </configuration>
+          </plugin>
           <plugin>
             <groupId>org.graalvm.buildtools</groupId>
             <artifactId>native-maven-plugin</artifactId>
@@ -316,9 +327,13 @@
               <quickBuild>false</quickBuild>
               <buildArgs>
                 <buildArg>--no-fallback</buildArg>
-                <buildArg>-H:ResourceConfigurationFiles=${project.basedir}/resource-config.json</buildArg>
-                <buildArg>-H:ReflectionConfigurationFiles=${project.basedir}/reflection-config.json</buildArg>
-                <buildArg>--enable-url-protocols=https</buildArg>
+                <!--
+                Instead of using -H:+SharedArenaSupport flag which causes issues,
+                we use a custom class substitution to replace CleanerJava25 implementation
+                to use Arena.ofAuto() instead of Arena.ofShared().
+                See com.indexdata.reservoir.server.substitutes.NettyCleanerSubstitutes
+                -->
+                <buildArg>--enable-url-protocols=http,https</buildArg>
                 <buildArg>--enable-native-access=ALL-UNNAMED</buildArg>
                 <buildArg>--enable-native-access=org.graalvm.truffle</buildArg>
               </buildArgs>

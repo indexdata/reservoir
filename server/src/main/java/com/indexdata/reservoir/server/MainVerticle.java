@@ -1,6 +1,7 @@
 package com.indexdata.reservoir.server;
 
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpServerOptions;
 import org.apache.logging.log4j.LogManager;
@@ -17,6 +18,7 @@ public class MainVerticle extends AbstractVerticle {
 
   @Override
   public void start(Promise<Void> promise) {
+    System.setProperty("org.marc4j.marc.MarcFactory", "org.marc4j.marc.impl.MarcFactoryImpl");
     TenantPgPool.setModule("mod-reservoir");
     ModuleVersionReporter m = new ModuleVersionReporter("com.indexdata/reservoir-server");
     log.info("Starting {} {} {}", m.getModule(), m.getVersion(), m.getCommitId());
@@ -34,7 +36,10 @@ public class MainVerticle extends AbstractVerticle {
         new Healthz(),
     };
 
-    Healthz.checkDb(vertx)
+    Future<Void> future = Config.getSysConfBoolean("db_check", true, config())
+        ? Healthz.checkDb(vertx)
+        : Future.succeededFuture();
+    future
         .compose(x -> RouterCreator.mountAll(vertx, routerCreators, "reservoir"))
         .compose(router -> {
           HttpServerOptions so = new HttpServerOptions()
