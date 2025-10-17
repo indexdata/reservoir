@@ -328,15 +328,11 @@
               <buildArgs>
                 <buildArg>--no-fallback</buildArg>
                 <!--
-                *Enabled*: the native-image command fails with:
-                Error: Arena.ofShared is not supported with runtime compilations.
-                Replace usages of Arena.ofShared with Arena.ofAuto and disable shared arena support.
-                *Disabled*: when ingesting records it fails with:
-                Exception in thread "vert.x-eventloop-thread-0" com.oracle.svm.core.jdk.UnsupportedFeatureError:
-                Support for Arena.ofShared is not active: enable with -H:+SharedArenaSupport
-                at org.graalvm.nativeimage.builder/com.oracle.svm.core.util.VMError.unsupportedFeature(VMError.java:121)
+                Instead of using -H:+SharedArenaSupport flag which causes issues,
+                we use a custom class substitution to replace CleanerJava25 implementation
+                to use Arena.ofAuto() instead of Arena.ofShared().
+                See com.indexdata.reservoir.server.substitutes.NettyCleanerSubstitutes
                 -->
-                <!-- <buildArg>-H:+SharedArenaSupport</buildArg> -->
                 <buildArg>--enable-url-protocols=http,https</buildArg>
                 <buildArg>--enable-native-access=ALL-UNNAMED</buildArg>
                 <buildArg>--enable-native-access=org.graalvm.truffle</buildArg>
