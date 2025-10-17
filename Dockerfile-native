@@ -25,8 +25,9 @@ COPY server/ server
 COPY util/ util
 COPY xsl/ xsl
 
-# Run native image build
-RUN --mount=type=cache,sharing=shared,target=/root/.m2/repository mvn -B -DskipTests -Pnative package
+# Native image build runs tests which uses testcontainers.
+# So we have to build on host before building the image.
+# RUN --mount=type=cache,sharing=shared,target=/root/.m2/repository mvn -B -DskipTests -Pnative package
 
 # Save list of shared lib deps
 RUN ldd server/target/reservoir-native | tr -s '[:blank:]' '\n' | grep '^/' | \
