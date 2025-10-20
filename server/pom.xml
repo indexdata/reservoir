@@ -44,6 +44,10 @@
     </dependency>
     <dependency>
       <groupId>io.vertx</groupId>
+      <artifactId>vertx-hazelcast</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
       <artifactId>vertx-pg-client</artifactId>
     </dependency>
     <dependency>
@@ -61,6 +65,10 @@
     <dependency>
       <groupId>org.folio</groupId>
       <artifactId>vertx-lib</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.hazelcast</groupId>
+      <artifactId>hazelcast</artifactId>
     </dependency>
     <!-- log4j deps rely on log4j-bom since vertx-stack-depchain only inludes log4j-core in test scope-->
     <dependency>
