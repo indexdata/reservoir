@@ -1,0 +1,10 @@
+{
+  "test/records/one.json":                    "symphony_op_38_____________________________________________________________1967____59_roberc________________________________________schumann__robert___________________p",
+  "test/records/spec-example-1.json":         "what_is_the_use_of_jewish_historyessays____________________________________1992____1__schoca________________________________________dawidowicz__lucy_s_________________p",
+  "test/records/spec-example-2.json":         "on_tyrannytwenty_lessons_from_the_twentieth_century________________________2017____1__timdua________________________________________snyder__timothy____________________p",
+  "test/records/three.json":                  "my_test_recordexample_fur_mod_meta_storagefictitious__________________elect20223443___mypreasecond_p_extra_p_su___________part_one__thee__minecompany_x_2022may29______not_a_real_gdcn_e",
+  "test/records/blinky-nutsy-gutenberg.json": "blinky_bill_and_nutsy_________________________________________________elect0000____________a________________________________________wall__dorothy______________________e",
+  "test/records/blinky-nutsy-nla.json":       "blinky_bill_and_nutsytwo_little_australians________________________________1937_______angusa________________________________________wall__dorothy______________________p",
+  "test/records/invalid-1-broken-json.json":  "Expected ',' or ']' after array element in JSON at position 233 (line 13 column 11)",
+  "test/records/invalid-2-no-fields.json":    "MARC fields is not an array."
+}
