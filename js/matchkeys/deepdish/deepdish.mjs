@@ -1,4 +1,6 @@
-// Generates GoldRush match key.
+// Generates deepdish match key.
+
+const numFields = [ '020', '022', '024' ];
 
 function loadMarcJson(record) {
   const marcObj = JSON.parse(record).marc;
@@ -400,17 +402,19 @@ function addComponent(component) {
   return `${delimiter}${component}`;
 }
 
-/**
- * Generates GoldRush match key.
- *
- * @version 1.3.0 (for specification December2024_0)
- * @param {string} record - The MARC-in-JSON input string wrapped in {marc: ...} object.
- * @return {string} The matchkey. Components are gathered from relevant fields
- *     and concatenated to a long string.
- */
-export function matchkey(record) {
+function doStandardNum(snum) {
+  let num = snum.num;
+  num = num.replace(/\W/g, '');
+  // let's convert all isbn to 9 digits
+  if (snum.tag === '020') {
+    num = num.replace(/.$/, '');
+    num = num.replace(/^97./, '');
+  }
+  return `${snum.tag}_${num}`;
+}
+
+function doAuthorTitle(marcObj) {
   let keyStr = '';
-  const marcObj = loadMarcJson(record);
   keyStr += addComponent(doTitle([
     getRelevantSubField(marcObj, '245', 'a'),
     getRelevantSubField(marcObj, '245', 'b'),
@@ -439,5 +443,32 @@ export function matchkey(record) {
   keyStr += addComponent(doInclusiveDates(getRelevantSubField(marcObj, '245', 'f')));
   keyStr += addComponent(doGDCN(getRelevantSubField(marcObj, '086', 'a')));
   keyStr += addComponent(doElectronicIndicator(marcObj));
+  return(keyStr);
+}
+
+/**
+ * Generates GoldRush match key.
+ *
+ * @version 1.3.0 (for specification December2024_0)
+ * @param {string} record - The MARC-in-JSON input string wrapped in {marc: ...} object.
+ * @return {string} The matchkey. Components are gathered from relevant fields
+ *     and concatenated to a long string.
+ */
+export function matchkey(record) {
+  let keyStr = '';
+  let snum = {};
+  const marcObj = loadMarcJson(record);
+  for (let x = 0; x < numFields.length; x++) {
+    let tag = numFields[x];
+    snum.num = getRelevantSubField(marcObj, tag, 'a');
+    snum.tag = tag;
+    if (snum.num) break;
+  }
+  if (snum.num) {
+    keyStr = doStandardNum(snum);
+  } else {
+    keyStr = doAuthorTitle(marcObj);
+  }
+  console.log(keyStr);
   return keyStr.toLowerCase();
 }
