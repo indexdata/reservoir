@@ -33,12 +33,12 @@
   </licenses>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <graalvm.version>25.0.0</graalvm.version>
+    <graalvm.version>25.0.1</graalvm.version>
     <graalvm-maven-plugin.version>0.11.2</graalvm-maven-plugin.version>
     <log4j2.version>3.0.0-beta3</log4j2.version>
     <snakeyaml.version>2.5</snakeyaml.version>
     <slf4j-api.version>2.0.17</slf4j-api.version>
-    <vertx.version>5.0.4</vertx.version>
+    <vertx.version>5.0.5</vertx.version>
     <okapi.version>7.0.0</okapi.version>
     <vertxlib.version>4.0.1</vertxlib.version>
     <micrometer.version>1.15.5</micrometer.version>
@@ -152,7 +152,7 @@
       <dependency>
         <groupId>org.testcontainers</groupId>
         <artifactId>testcontainers-bom</artifactId>
-        <version>1.21.3</version>
+        <version>2.0.1</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -389,7 +389,7 @@
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>exec-maven-plugin</artifactId>
-          <version>3.6.1</version>
+          <version>3.6.2</version>
         </plugin>
       </plugins>
     </pluginManagement>
@@ -505,7 +505,7 @@
           <dependency>
             <groupId>com.puppycrawl.tools</groupId>
             <artifactId>checkstyle</artifactId>
-            <version>12.0.1</version>
+            <version>12.1.0</version>
           </dependency>
         </dependencies>
         <configuration>

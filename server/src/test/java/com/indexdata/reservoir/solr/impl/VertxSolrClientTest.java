@@ -7,8 +7,8 @@ import com.indexdata.reservoir.solr.VertxSolrClient;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -16,39 +16,39 @@ import java.util.UUID;
 import org.apache.solr.common.SolrDocumentList;
 import org.apache.solr.common.SolrInputDocument;
 import org.apache.solr.common.params.MapSolrParams;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.testcontainers.containers.SolrContainer;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.solr.SolrContainer;
 
-@RunWith(VertxUnitRunner.class)
+@Testcontainers
+@ExtendWith(VertxExtension.class)
 public class VertxSolrClientTest {
 
   private final static String COLLECTION = "col1";
 
-  @ClassRule
-  public static SolrContainer solrContainer = new SolrContainer("solr:9.8.1-slim")
-      .withCollection(COLLECTION);
-
-  private static Vertx vertx;
+  @Container
+  private static final SolrContainer solrContainer = new SolrContainer("solr:9.8.1-slim").withCollection(COLLECTION);
 
   private static String solrUrl;
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() {
-    vertx = Vertx.vertx();
     solrUrl = "http://" + solrContainer.getHost() + ":" + solrContainer.getSolrPort() + "/solr";
   }
 
-  @AfterClass
-  public static void afterClass(TestContext context) {
-    vertx.close().onComplete(context.asyncAssertSuccess());
+  @AfterAll
+  public static void afterClass() throws Exception {
+    if (solrContainer != null) {
+      solrContainer.stop();
+    }
   }
 
   @Test
-  public void addOneDocument(TestContext context) {
+  public void addOneDocument(Vertx vertx, VertxTestContext context) {
     final UUID docId = UUID.randomUUID();
 
     VertxSolrClientSolrj c = new VertxSolrClientSolrj(vertx, solrUrl, COLLECTION);
@@ -58,11 +58,11 @@ public class VertxSolrClientTest {
     Collection<SolrInputDocument> docs = List.of(doc);
     c.add(docs)
         .compose(x -> c.commit())
-        .onComplete(context.asyncAssertSuccess());
+        .onComplete(context.succeedingThenComplete());
   }
 
   @Test
-  public void queryOneDocument(TestContext context) {
+  public void queryOneDocument(Vertx vertx, VertxTestContext context) {
     final UUID docId = UUID.randomUUID();
     VertxSolrClientSolrj c = new VertxSolrClientSolrj(vertx, solrUrl, COLLECTION);
     SolrInputDocument doc = new SolrInputDocument();
@@ -74,16 +74,17 @@ public class VertxSolrClientTest {
     c.add(docs)
         .compose(x -> c.commit())
         .compose(x -> c.query(params))
-        .onComplete(context.asyncAssertSuccess(res -> {
+        .onComplete(context.succeeding(res -> {
           SolrDocumentList results = res.getResults();
           assertThat(results.getNumFound(), is(1L));
           assertThat(results.get(0).get("id"), is(docId.toString()));
           assertThat(results.get(0).get("title"), is(List.of("title2a", "title2b")));
+          context.completeNow();
         }));
   }
 
   @Test
-  public void addOneJsonDocumentSolrj(TestContext context) {
+  public void addOneJsonDocumentSolrj(Vertx vertx, VertxTestContext context) {
     final UUID docId = UUID.randomUUID();
     VertxSolrClient c = new VertxSolrClientSolrj(vertx, solrUrl, COLLECTION);
     JsonArray docs = new JsonArray()
@@ -94,20 +95,21 @@ public class VertxSolrClientTest {
     c.add(docs)
         .compose(x -> c.commit())
         .compose(x -> c.query(map))
-        .onComplete(context.asyncAssertSuccess(res -> {
+        .onComplete(context.succeeding(res -> {
           assertThat(res.getJsonObject("response").getInteger("numFound"), is(1));
+          context.completeNow();
         }));
   }
 
   @Test
-  public void commitSolrj(TestContext context) {
+  public void commitSolrj(Vertx vertx, VertxTestContext context) {
     VertxSolrClient c = new VertxSolrClientSolrj(vertx, solrUrl, COLLECTION);
     c.commit()
-        .onComplete(context.asyncAssertSuccess());
+        .onComplete(context.succeedingThenComplete());
   }
 
   @Test
-  public void searchWebClient(TestContext context) {
+  public void searchWebClient(Vertx vertx, VertxTestContext context) {
     final UUID docId1 = UUID.randomUUID();
     final UUID docId2 = UUID.randomUUID();
     VertxSolrClient c = VertxSolrClient.create(vertx, solrUrl, COLLECTION);
@@ -122,11 +124,12 @@ public class VertxSolrClientTest {
     c.add(docs)
         .compose(x -> c.commit())
         .compose(x -> c.query(map))
-        .onComplete(context.asyncAssertSuccess(res -> {
+        .onComplete(context.succeeding(res -> {
           JsonObject response = res.getJsonObject("response");
           assertThat(response.getInteger("numFound"), is(1));
           // check we get 2nd document exactly
           assertThat(response.getJsonArray("docs").getJsonObject(0), is(docs.getJsonObject(1)));
+          context.completeNow();
         }));
   }
 }
