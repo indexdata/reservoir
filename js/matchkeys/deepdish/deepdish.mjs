@@ -1,4 +1,4 @@
-// Generates deepdish match key.
+// Generates GoldRush match key.
 
 function loadMarcJson(record) {
   const marcObj = JSON.parse(record).marc;
@@ -38,6 +38,27 @@ function getField(record, tag, sf) {
       }
     } else {
       data = f[tag];
+    }
+  }
+  return data;
+}
+
+function getRelevantSubField(record, tag, sf) {
+  // Get the first repeating field that has the relevant subfield.
+  let data = null;
+  const fields = record.fields.filter((f) => f[tag]);
+  loop1:
+  for (let x = 0; x < fields.length; x += 1) {
+    const f = fields[x];
+    if (f[tag].subfields) {
+      for (let n = 0; n < f[tag].subfields.length; n += 1) {
+        const s = f[tag].subfields[n];
+        if (s[sf]) {
+          data = s[sf];
+          // Use the first relevant subfield
+          break loop1;
+        }
+      }
     }
   }
   return data;
@@ -125,18 +146,8 @@ function doTitle(fieldData) {
       fieldStr += stripPunctuation(fieldData[n], ' ').trim();
     }
   }
-  fieldStr = normalizeAndUnaccent(fieldStr);
+  fieldStr = normalizeAndUnaccent(fieldStr.replace(/ /g, ''));
   return padContent(fieldStr, 70);
-}
-
-function doGMD(fieldData) {
-  // General medium designator
-  let fieldStr = '';
-  if (fieldData !== null) {
-    fieldStr = normalizeAndUnaccent(fieldData);
-    fieldStr = fieldStr.replace(/[^a-zA-Z0-9]/g, '');
-  }
-  return padContent(fieldStr, 5);
 }
 
 function doPublicationYear(fieldData) {
@@ -145,15 +156,18 @@ function doPublicationYear(fieldData) {
     if (fieldData[n] !== null) {
       let dataStr = '';
       if (n === 0) {
-        // Try for date2 from field 008
-        dataStr = `${fieldData[n]}`.substring(11, 15).replace(/[^0-9]/g, '');
-        if ((dataStr.match(/[0-9]{4}/)) && (dataStr !== '9999')) {
-          fieldStr = dataStr;
-          break;
-        } else {
-          // Try for date1 from field 008
+        const dateType = `${fieldData[n]}`.substring(6, 7);
+        if (dateType === 'r') {
+          // Try for date1 from field 008 -- reissue
           dataStr = `${fieldData[n]}`.substring(7, 11).replace(/[^0-9]/g, '');
-          if ((dataStr.match(/[0-9]{4}/)) && (dataStr !== '9999')) {
+          if ((dataStr.match(/[1-9][0-9]{3}/)) && (dataStr !== '9999')) {
+            fieldStr = dataStr;
+            break;
+          }
+        } else {
+          // Try for date2 from field 008
+          dataStr = `${fieldData[n]}`.substring(11, 15).replace(/[^0-9]/g, '');
+          if ((dataStr.match(/[1-9][0-9]{3}/)) && (dataStr !== '9999')) {
             fieldStr = dataStr;
             break;
           }
@@ -161,14 +175,14 @@ function doPublicationYear(fieldData) {
       } else if (n === 1) {
         // Try for date from field 264$c
         dataStr = `${fieldData[n]}`.replace(/[^0-9]/g, '');
-        if ((dataStr.match(/[0-9]{4}/)) && (dataStr !== '9999')) {
+        if ((dataStr.match(/[1-9][0-9]{3}/)) && (dataStr !== '9999')) {
           fieldStr = dataStr;
           break;
         }
       } else {
         // Try for date from field 260$c
         dataStr = `${fieldData[n]}`.replace(/[^0-9]/g, '');
-        if ((dataStr.match(/[0-9]{4}/)) && (dataStr !== '9999')) {
+        if ((dataStr.match(/[1-9][0-9]{3}/)) && (dataStr !== '9999')) {
           fieldStr = dataStr;
           break;
         }
@@ -196,10 +210,10 @@ function doPagination(fieldData) {
 function doEditionStatement(fieldData) {
   let fieldStr = '';
   if (fieldData !== null) {
-    let dataStr = normalizeAndUnaccent(fieldData);
+    const dataStr = normalizeAndUnaccent(fieldData).trim();
     // Detect contiguous numeric
     for (let n = 3; n > 0; n -= 1) {
-      const regexNum = new RegExp(`([0-9]{${n}})`);
+      const regexNum = new RegExp(`^([0-9]{${n}})`);
       const match = dataStr.match(regexNum);
       if (match) {
         fieldStr = `${match[1]}`;
@@ -208,42 +222,48 @@ function doEditionStatement(fieldData) {
     }
     if (!fieldStr) {
       // Detect words
-      dataStr = dataStr.substring(0, 3).toLowerCase();
-      switch (dataStr) {
-        case 'fir':
-          fieldStr = '1';
-          break;
-        case 'sec':
-          fieldStr = '2';
-          break;
-        case 'thi':
-          fieldStr = '3';
-          break;
-        case 'fou':
-          fieldStr = '4';
-          break;
-        case 'fif':
-          fieldStr = '5';
-          break;
-        case 'six':
-          fieldStr = '6';
-          break;
-        case 'sev':
-          fieldStr = '7';
-          break;
-        case 'eig':
-          fieldStr = '8';
-          break;
-        case 'nin':
-          fieldStr = '9';
-          break;
-        case 'ten':
-          fieldStr = '10';
-          break;
-        default:
-          fieldStr = '';
+      const match = dataStr.match(/^([a-zA-Z]{3})/);
+      if (match) {
+        const matchStr = `${match[1]}`.toLowerCase();
+        switch (matchStr) {
+          case 'fir':
+            fieldStr = '1';
+            break;
+          case 'sec':
+            fieldStr = '2';
+            break;
+          case 'thi':
+            fieldStr = '3';
+            break;
+          case 'fou':
+            fieldStr = '4';
+            break;
+          case 'fif':
+            fieldStr = '5';
+            break;
+          case 'six':
+            fieldStr = '6';
+            break;
+          case 'sev':
+            fieldStr = '7';
+            break;
+          case 'eig':
+            fieldStr = '8';
+            break;
+          case 'nin':
+            fieldStr = '9';
+            break;
+          case 'ten':
+            fieldStr = '10';
+            break;
+          default:
+            fieldStr = '1';
+        }
       }
     }
+  }
+  if (!fieldStr) {
+    fieldStr = '1';
   }
   return padContent(fieldStr, 3);
 }
@@ -253,11 +273,11 @@ function doPublisherName(fieldData) {
   for (let n = 0; n < fieldData.length; n += 1) {
     if (fieldData[n] !== null) {
       if (n === 0) {
-        // Try first for field 264$a
+        // Try first for field 264$b
         fieldStr = normalizeAndUnaccent(fieldData[n]).toLowerCase();
         break;
       } else {
-        // Try then for field 260$a
+        // Try then for field 260$b
         fieldStr = normalizeAndUnaccent(fieldData[n]).toLowerCase();
       }
     }
@@ -296,12 +316,12 @@ function doAuthor(fieldData) {
   let fieldStr = '';
   for (let n = 0; n < fieldData.length; n += 1) {
     if (fieldData[n] !== null) {
-      let dataStr = stripPunctuation(fieldData[n], '_');
+      let dataStr = stripPunctuation(fieldData[n], '');
       dataStr = normalizeAndUnaccent(dataStr);
       fieldStr += dataStr;
     }
   }
-  return padContent(fieldStr, 20);
+  return padContent(fieldStr.replace(/[^a-zA-Z0-9]/g, ''), 5);
 }
 
 function doInclusiveDates(fieldData) {
@@ -326,25 +346,25 @@ function doGDCN(fieldData) {
 
 function doElectronicIndicator(marcObj) {
   let field = '';
-  field = normalizeAndUnaccent(getField(marcObj, '245', 'h'));
+  field = normalizeAndUnaccent(getRelevantSubField(marcObj, '245', 'h'));
   if (field) {
     if (field.match(/\belectronic resource\b/i)) {
       return 'e';
     }
   }
-  field = normalizeAndUnaccent(getField(marcObj, '590', 'a'));
+  field = normalizeAndUnaccent(getRelevantSubField(marcObj, '590', 'a'));
   if (field) {
     if (field.match(/\belectronic reproduction\b/i)) {
       return 'e';
     }
   }
-  field = normalizeAndUnaccent(getField(marcObj, '533', 'a'));
+  field = normalizeAndUnaccent(getRelevantSubField(marcObj, '533', 'a'));
   if (field) {
     if (field.match(/\belectronic reproduction\b/i)) {
       return 'e';
     }
   }
-  field = normalizeAndUnaccent(getField(marcObj, '300', 'a'));
+  field = normalizeAndUnaccent(getRelevantSubField(marcObj, '300', 'a'));
   if (field) {
     if (field.match(/\bonline resource\b/i)) {
       return 'e';
@@ -383,7 +403,7 @@ function addComponent(component) {
 /**
  * Generates GoldRush match key.
  *
- * @version 1.1.0 (for specification September 2021)
+ * @version 1.3.0 (for specification December2024_0)
  * @param {string} record - The MARC-in-JSON input string wrapped in {marc: ...} object.
  * @return {string} The matchkey. Components are gathered from relevant fields
  *     and concatenated to a long string.
@@ -392,32 +412,32 @@ export function matchkey(record) {
   let keyStr = '';
   const marcObj = loadMarcJson(record);
   keyStr += addComponent(doTitle([
-    getField(marcObj, '245', 'a'),
-    getField(marcObj, '245', 'b'),
-    getField(marcObj, '245', 'p'),
+    getRelevantSubField(marcObj, '245', 'a'),
+    getRelevantSubField(marcObj, '245', 'b'),
+    getRelevantSubField(marcObj, '245', 'p'),
   ]));
-  keyStr += addComponent(doGMD(getField(marcObj, '245', 'h')));
   keyStr += addComponent(doPublicationYear([
     getField(marcObj, '008'),
-    getField(marcObj, '264', 'c'),
-    getField(marcObj, '260', 'c'),
+    getRelevantSubField(marcObj, '264', 'c'),
+    getRelevantSubField(marcObj, '260', 'c'),
   ]));
-  keyStr += addComponent(doPagination(getField(marcObj, '300', 'a')));
-  keyStr += addComponent(doEditionStatement(getField(marcObj, '250', 'a')));
+  keyStr += addComponent(doPagination(getRelevantSubField(marcObj, '300', 'a')));
+  keyStr += addComponent(doEditionStatement(getRelevantSubField(marcObj, '250', 'a')));
   keyStr += addComponent(doPublisherName([
-    getField(marcObj, '264', 'b'),
-    getField(marcObj, '260', 'b'),
+    getRelevantSubField(marcObj, '264', 'b'),
+    getRelevantSubField(marcObj, '260', 'b'),
   ]));
   keyStr += addComponent(doTypeOfRecord(marcObj.leader));
   keyStr += addComponent(doTitlePart(getMultiSubfields(marcObj, '245', 'p')));
-  keyStr += addComponent(doTitleNumber(getField(marcObj, '245', 'n')));
+  keyStr += addComponent(doTitleNumber(getRelevantSubField(marcObj, '245', 'n')));
   keyStr += addComponent(doAuthor([
     getField(marcObj, '100', 'a'),
     getField(marcObj, '110', 'a'),
     getField(marcObj, '111', 'a'),
+    getField(marcObj, '130', 'a'),
   ]));
-  keyStr += addComponent(doInclusiveDates(getField(marcObj, '245', 'f')));
-  keyStr += addComponent(doGDCN(getField(marcObj, '086', 'a')));
+  keyStr += addComponent(doInclusiveDates(getRelevantSubField(marcObj, '245', 'f')));
+  keyStr += addComponent(doGDCN(getRelevantSubField(marcObj, '086', 'a')));
   keyStr += addComponent(doElectronicIndicator(marcObj));
   return keyStr.toLowerCase();
 }
