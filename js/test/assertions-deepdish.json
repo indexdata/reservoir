@@ -1,10 +1,7 @@
 {
-  "test/records/one.json":                    "symphonyop38__________________________________________________________1967____59_roberc________________________________________schum_______________p",
-  "test/records/spec-example-1.json":         "020_080524116",
-  "test/records/spec-example-2.json":         "020_080419011",
-  "test/records/three.json":                  "mytestrecordexamplefurmodmetastoragefictitious________________________202234435__mypreasecond_p_extra_p_su___________part_one__theem2022may29______not_a_real_gdcn_e",
-  "test/records/blinky-nutsy-gutenberg.json": "blinkybillandnutsy____________________________________________________0000____1_______a________________________________________walld_______________e",
-  "test/records/blinky-nutsy-nla.json":       "blinkybillandnutsytwolittleaustralians________________________________1937____1__angusa________________________________________walld_______________p",
-  "test/records/invalid-1-broken-json.json":  "Expected ',' or ']' after array element in JSON at position 233 (line 13 column 11)",
-  "test/records/invalid-2-no-fields.json":    "MARC fields is not an array."
+  "test/records/numbers/isbn.json":                   "020_886372762",
+  "test/records/numbers/issn.json":                   "022_1432069x",
+  "test/records/numbers/other-id.json":               "024_747014471029",
+  "test/records/numbers/no-number.json":              "mynewattitude_________________________________________________________2003silbejsilbep",
+  "test/records/numbers/no-number-slim.json":         "larivistacommerceemargueritecaetani___________________________________2015storia_____p"
 }

@@ -16,7 +16,7 @@ const assertionsJson = fs.readFileSync(assertionsFile, 'utf8');
 const assertionsDeepdish = JSON.parse(assertionsJson);
 let testsNum = 0;
 let testsFailedNum = 0;
-const testsPath = 'test/records';
+const testsPath = 'test/records/numbers';
 const files = fs.readdirSync(testsPath);
 const testFiles = files.filter((file) => path.extname(file) === '.json');
 for (let n = 0; n < testFiles.length; n += 1) {

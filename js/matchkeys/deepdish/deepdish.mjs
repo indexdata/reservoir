@@ -66,23 +66,6 @@ function getRelevantSubField(record, tag, sf) {
   return data;
 }
 
-function getMultiSubfields(record, tag, sf) {
-  const data = [];
-  const fields = record.fields.filter((f) => f[tag]);
-  for (let x = 0; x < fields.length; x += 1) {
-    const f = fields[x];
-    if (f[tag].subfields) {
-      for (let y = 0; y < f[tag].subfields.length; y += 1) {
-        const s = f[tag].subfields[y];
-        if (s[sf]) {
-          data.push(s[sf]);
-        }
-      }
-    }
-  }
-  return data;
-}
-
 function stripPunctuation(keyPart, replaceChar) {
   let trimmed = keyPart;
   trimmed = trimmed.replace(/%22/g, '_');
@@ -197,79 +180,6 @@ function doPublicationYear(fieldData) {
   return padContent(fieldStr, 4);
 }
 
-function doPagination(fieldData) {
-  let fieldStr = '';
-  if (fieldData !== null) {
-    // Get first four contiguous digits
-    const match = fieldData.match(/([0-9]{4})/);
-    if (match) {
-      fieldStr = `${match[1]}`;
-    }
-  }
-  return padContent(fieldStr, 4);
-}
-
-function doEditionStatement(fieldData) {
-  let fieldStr = '';
-  if (fieldData !== null) {
-    const dataStr = normalizeAndUnaccent(fieldData).trim();
-    // Detect contiguous numeric
-    for (let n = 3; n > 0; n -= 1) {
-      const regexNum = new RegExp(`^([0-9]{${n}})`);
-      const match = dataStr.match(regexNum);
-      if (match) {
-        fieldStr = `${match[1]}`;
-        break;
-      }
-    }
-    if (!fieldStr) {
-      // Detect words
-      const match = dataStr.match(/^([a-zA-Z]{3})/);
-      if (match) {
-        const matchStr = `${match[1]}`.toLowerCase();
-        switch (matchStr) {
-          case 'fir':
-            fieldStr = '1';
-            break;
-          case 'sec':
-            fieldStr = '2';
-            break;
-          case 'thi':
-            fieldStr = '3';
-            break;
-          case 'fou':
-            fieldStr = '4';
-            break;
-          case 'fif':
-            fieldStr = '5';
-            break;
-          case 'six':
-            fieldStr = '6';
-            break;
-          case 'sev':
-            fieldStr = '7';
-            break;
-          case 'eig':
-            fieldStr = '8';
-            break;
-          case 'nin':
-            fieldStr = '9';
-            break;
-          case 'ten':
-            fieldStr = '10';
-            break;
-          default:
-            fieldStr = '1';
-        }
-      }
-    }
-  }
-  if (!fieldStr) {
-    fieldStr = '1';
-  }
-  return padContent(fieldStr, 3);
-}
-
 function doPublisherName(fieldData) {
   let fieldStr = '';
   for (let n = 0; n < fieldData.length; n += 1) {
@@ -296,24 +206,6 @@ function doTypeOfRecord(fieldData) {
   return fieldStr;
 }
 
-function doTitlePart(fieldData) {
-  // Use all p subfields, apart from the first
-  let fieldStr = '';
-  for (let n = 1; n < fieldData.length; n += 1) {
-    const dataStr = normalizeAndUnaccent(fieldData[n]);
-    fieldStr += stripPunctuation(dataStr.trim(), '_').substring(0, 10);
-  }
-  return padContent(fieldStr, 30);
-}
-
-function doTitleNumber(fieldData) {
-  let fieldStr = '';
-  if (fieldData !== null) {
-    fieldStr = stripPunctuation(fieldData, '_');
-  }
-  return padContent(fieldStr, 10);
-}
-
 function doAuthor(fieldData) {
   let fieldStr = '';
   for (let n = 0; n < fieldData.length; n += 1) {
@@ -324,26 +216,6 @@ function doAuthor(fieldData) {
     }
   }
   return padContent(fieldStr.replace(/[^a-zA-Z0-9]/g, ''), 5);
-}
-
-function doInclusiveDates(fieldData) {
-  let fieldStr = '';
-  if (fieldData !== null) {
-    fieldStr = stripPunctuation(fieldData.replace(/ /g, ''), '_');
-  }
-  return padContent(fieldStr, 15);
-}
-
-function doGDCN(fieldData) {
-  // Government Document Classification Number
-  let fieldStr = '';
-  if (fieldData !== null) {
-    fieldStr = stripPunctuation(fieldData, '_');
-    fieldStr = normalizeAndUnaccent(fieldStr);
-    // Limit maximum field length
-    fieldStr = fieldStr.substring(0, 32000);
-  }
-  return fieldStr;
 }
 
 function doElectronicIndicator(marcObj) {
@@ -425,23 +297,17 @@ function doAuthorTitle(marcObj) {
     getRelevantSubField(marcObj, '264', 'c'),
     getRelevantSubField(marcObj, '260', 'c'),
   ]));
-  keyStr += addComponent(doPagination(getRelevantSubField(marcObj, '300', 'a')));
-  keyStr += addComponent(doEditionStatement(getRelevantSubField(marcObj, '250', 'a')));
   keyStr += addComponent(doPublisherName([
     getRelevantSubField(marcObj, '264', 'b'),
     getRelevantSubField(marcObj, '260', 'b'),
   ]));
   keyStr += addComponent(doTypeOfRecord(marcObj.leader));
-  keyStr += addComponent(doTitlePart(getMultiSubfields(marcObj, '245', 'p')));
-  keyStr += addComponent(doTitleNumber(getRelevantSubField(marcObj, '245', 'n')));
   keyStr += addComponent(doAuthor([
     getField(marcObj, '100', 'a'),
     getField(marcObj, '110', 'a'),
     getField(marcObj, '111', 'a'),
     getField(marcObj, '130', 'a'),
   ]));
-  keyStr += addComponent(doInclusiveDates(getRelevantSubField(marcObj, '245', 'f')));
-  keyStr += addComponent(doGDCN(getRelevantSubField(marcObj, '086', 'a')));
   keyStr += addComponent(doElectronicIndicator(marcObj));
   return(keyStr);
 }
@@ -469,6 +335,7 @@ export function matchkey(record) {
   } else {
     keyStr = doAuthorTitle(marcObj);
   }
-  console.log(keyStr);
-  return keyStr.toLowerCase();
+  keyStr = keyStr.toLowerCase();
+  // console.log(keyStr);
+  return keyStr;
 }
