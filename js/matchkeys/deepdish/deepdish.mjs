@@ -313,9 +313,12 @@ function doAuthorTitle(marcObj) {
 }
 
 /**
- * Generates GoldRush match key.
+ * Generates deepdish match key.
  *
- * @version 1.3.0 (for specification December2024_0)
+ * The functions apart from doStandardNum() are based on
+ * the GoldRush specification December2024_0
+ *
+ * @version 1.0.0
  * @param {string} record - The MARC-in-JSON input string wrapped in {marc: ...} object.
  * @return {string} The matchkey. Components are gathered from relevant fields
  *     and concatenated to a long string.
