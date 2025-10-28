@@ -1,0 +1,50 @@
+{
+  "fields": [
+    {
+      "001": "7570a52b-a7b0-5bf1-8406-5d6283120432"
+    },
+    {
+      "005": "20251023161152.0"
+    },
+    {
+      "008": "251023s2015                            d"
+    },
+    {
+      "245": {
+        "ind1": " ",
+        "ind2": " ",
+        "subfields": [
+          {
+            "a": "La rivista Commerce e Marguerite Caetani"
+          }
+        ]
+      }
+    },
+    {
+      "264": {
+        "ind1": " ",
+        "ind2": "1",
+        "subfields": [
+          {
+            "b": "Storia e Letteratura - Casalini"
+          },
+          {
+            "c": "2015"
+          }
+        ]
+      }
+    },
+    {
+      "856": {
+        "ind1": "4",
+        "ind2": "0",
+        "subfields": [
+          {
+            "u": "LOCKSS_RESOLVER?isbn=978-8-863-72762-3"
+          }
+        ]
+      }
+    }
+  ],
+  "leader": "00353nam a2200109u  4500"
+}

@@ -20,6 +20,10 @@ The [js/matchkeys/goldrush](goldrush) implements the "Gold Rush - Colorado Allia
 
 The [js/matchkeys/goldrush2024](goldrush2024) implements the "Gold Rush - Colorado Alliance MARC record match key generation" (specification dated 4 December 2024).
 
+### deepdish
+
+The [js/matchkeys/deepdish](deepdish) utilises fields "020 International Standard Book Number (ISBN)" and "022 International Standard Serial Number (ISSN)" and "024 Other Standard Identifier". If those fields are not found then it utilises some specific components of the "Gold Rush - Colorado Alliance MARC record match key generation" (specification dated 4 December 2024).
+
 ## Matchkeys tests of development code
 
 Do 'cd ..' to change to the 'reservoir/js' directory.

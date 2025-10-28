@@ -1,0 +1,186 @@
+{
+  "leader": "02014cjm a22004691a 4500",
+  "fields": [
+    {
+      "001": "13578263"
+    },
+    {
+      "005": "20250606210104.9"
+    },
+    {
+      "007": "sd fsngnnmmned"
+    },
+    {
+      "008": "040430s2003    wiujzn|           | zxx d"
+    },
+    {
+      "050": {
+        "subfields": [
+          {
+            "a": "SDA 96711"
+          }
+        ],
+        "ind1": "0",
+        "ind2": "0"
+      }
+    },
+    {
+      "100": {
+        "subfields": [
+          {
+            "a": "Silbergleit, Paul."
+          },
+          {
+            "4": "prf"
+          }
+        ],
+        "ind1": "1",
+        "ind2": " "
+      }
+    },
+    {
+      "245": {
+        "subfields": [
+          {
+            "a": "My new attitude"
+          },
+          {
+            "h": "[sound recording] /"
+          },
+          {
+            "c": "Paul Silbergleit."
+          }
+        ],
+        "ind1": "1",
+        "ind2": "0"
+      }
+    },
+    {
+      "260": {
+        "subfields": [
+          {
+            "a": "[Milwaukee, Wis.] :"
+          },
+          {
+            "b": "Silberspoon Productions,"
+          },
+          {
+            "c": "p2003."
+          }
+        ],
+        "ind1": " ",
+        "ind2": " "
+      }
+    },
+    {
+      "300": {
+        "subfields": [
+          {
+            "a": "1 sound disc :"
+          },
+          {
+            "b": "digital ;"
+          },
+          {
+            "c": "4 3/4 in."
+          }
+        ],
+        "ind1": " ",
+        "ind2": " "
+      }
+    },
+    {
+      "336": {
+        "subfields": [
+          {
+            "a": "performed music"
+          },
+          {
+            "b": "prm"
+          },
+          {
+            "2": "rdacontent"
+          }
+        ],
+        "ind1": " ",
+        "ind2": " "
+      }
+    },
+    {
+      "337": {
+        "subfields": [
+          {
+            "a": "audio"
+          },
+          {
+            "b": "s"
+          },
+          {
+            "2": "rdamedia"
+          }
+        ],
+        "ind1": " ",
+        "ind2": " "
+      }
+    },
+    {
+      "338": {
+        "subfields": [
+          {
+            "a": "audio disc"
+          },
+          {
+            "b": "sd"
+          },
+          {
+            "2": "rdacarrier"
+          }
+        ],
+        "ind1": " ",
+        "ind2": " "
+      }
+    },
+    {
+      "700": {
+        "subfields": [
+          {
+            "a": "Einerson, Steven."
+          },
+          {
+            "4": "prf"
+          }
+        ],
+        "ind1": "1",
+        "ind2": " "
+      }
+    },
+    {
+      "700": {
+        "subfields": [
+          {
+            "a": "Ledvina, Charles."
+          },
+          {
+            "4": "prf"
+          }
+        ],
+        "ind1": "1",
+        "ind2": " "
+      }
+    },
+    {
+      "700": {
+        "subfields": [
+          {
+            "a": "Ritter, Brian."
+          },
+          {
+            "4": "prf"
+          }
+        ],
+        "ind1": "1",
+        "ind2": " "
+      }
+    }
+  ]
+}
