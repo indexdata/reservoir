@@ -1,6 +1,6 @@
 // Generates deepdish match key.
 
-const numFields = [ '020', '022', '024' ];
+const numFields = ['020', '022', '024'];
 
 function loadMarcJson(record) {
   const marcObj = JSON.parse(record).marc;
@@ -275,7 +275,7 @@ function addComponent(component) {
 }
 
 function doStandardNum(snum) {
-  let num = snum.num;
+  let { num } = snum;
   num = num.replace(/\W/g, '');
   // let's convert all isbn to 9 digits
   if (snum.tag === '020') {
@@ -309,7 +309,7 @@ function doAuthorTitle(marcObj) {
     getField(marcObj, '130', 'a'),
   ]));
   keyStr += addComponent(doElectronicIndicator(marcObj));
-  return(keyStr);
+  return (keyStr);
 }
 
 /**
@@ -322,10 +322,10 @@ function doAuthorTitle(marcObj) {
  */
 export function matchkey(record) {
   let keyStr = '';
-  let snum = {};
+  const snum = {};
   const marcObj = loadMarcJson(record);
-  for (let x = 0; x < numFields.length; x++) {
-    let tag = numFields[x];
+  for (let x = 0; x < numFields.length; x += 1) {
+    const tag = numFields[x];
     snum.num = getRelevantSubField(marcObj, tag, 'a');
     snum.tag = tag;
     if (snum.num) break;

@@ -3,6 +3,8 @@
   "type": "module",
   "scripts": {
     "test-deepdish": "node test/deepdish.mjs",
+    "lint-deepdish": "eslint matchkeys/deepdish/deepdish.mjs",
+    "lint-test-deepdish": "eslint test/deepdish.mjs",
     "lint-goldrush2024": "eslint matchkeys/goldrush2024/goldrush.mjs",
     "explain-lint-goldrush2024": "eslint --print-config matchkeys/goldrush2024/goldrush.mjs",
     "lint-test-goldrush2024": "eslint test/goldrush2024.mjs",
