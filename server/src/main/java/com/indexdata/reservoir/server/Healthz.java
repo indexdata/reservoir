@@ -27,7 +27,7 @@ public class Healthz implements RouterCreator {
           ctx.response().end("OK");
         })
         .onFailure(err -> {
-          log.error("Healthz check failed: {}", err.getMessage(), err);
+          log.error("Healthz check failed", err);
           ctx.response().setStatusCode(500).end("Internal Server Error " + err.getMessage());
         });
   }

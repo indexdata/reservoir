@@ -1216,7 +1216,7 @@ public class Storage {
                     .eventually(() -> tx.commit().compose(y -> sqlConnection.close()));
               });
               stream.exceptionHandler(e -> {
-                log.error("stream error {}", e.getMessage(), e);
+                log.error("stream error", e);
                 resultFooter(ctx, null, facets, e.getMessage());
                 tx.commit().compose(y -> sqlConnection.close());
               });
