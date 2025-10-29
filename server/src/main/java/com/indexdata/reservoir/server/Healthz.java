@@ -6,10 +6,14 @@ import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.tlib.RouterCreator;
 import org.folio.tlib.postgres.TenantPgPool;
 
 public class Healthz implements RouterCreator {
+
+  private static final Logger log = LogManager.getLogger(Healthz.class);
 
   public static Future<Void> checkDb(Vertx vertx) {
     TenantPgPool pool = TenantPgPool.pool(vertx, "x"); // not using the tenant for anything
@@ -23,6 +27,7 @@ public class Healthz implements RouterCreator {
           ctx.response().end("OK");
         })
         .onFailure(err -> {
+          log.error("Healthz check failed: {}", err.getMessage(), err);
           ctx.response().setStatusCode(500).end("Internal Server Error " + err.getMessage());
         });
   }
