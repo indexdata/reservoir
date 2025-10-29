@@ -278,7 +278,7 @@ public final class OaiService {
                   .onComplete(y -> endListResponse(ctx, conn, tx, elem))
           );
           stream.exceptionHandler(e -> {
-            log.error("stream error {}", e.getMessage(), e);
+            log.error("stream error", e);
             endListResponse(ctx, conn, tx, elem);
           });
           return Future.succeededFuture();
