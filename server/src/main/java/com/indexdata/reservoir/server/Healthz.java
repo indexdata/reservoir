@@ -24,15 +24,13 @@ public class Healthz implements RouterCreator {
     TenantPgPool pool = TenantPgPool.pool(vertx, "x"); // not using the tenant for anything
     return pool.getConnection()
       .timeout(DB_CONNECTION_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-      // .onFailure(e -> log.error("Healthz failed to get DB connection", e))
       .recover(e -> Future.failedFuture("Failed to get DB connection: " + e.getMessage()))
       .compose(conn -> conn.query("SELECT 1")
         .execute()
-        .eventually(conn::close)
         .timeout(DB_QUERY_TIMEOUT_MS, TimeUnit.MILLISECONDS)
         .recover(e -> Future.failedFuture("Failed to execute query: " + e.getMessage()))
-       )
-      .mapEmpty();
+        .eventually(() -> conn.close())
+      ).mapEmpty();
   }
 
   void healthHandler(Vertx vertx, RoutingContext ctx) {
