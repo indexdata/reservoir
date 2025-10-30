@@ -30,7 +30,8 @@ public class Healthz implements RouterCreator {
         .timeout(DB_QUERY_TIMEOUT_MS, TimeUnit.MILLISECONDS)
         .recover(e -> Future.failedFuture("Failed to execute query: " + e.getMessage()))
         .eventually(() -> conn.close())
-      ).mapEmpty();
+      )
+      .mapEmpty();
   }
 
   void healthHandler(Vertx vertx, RoutingContext ctx) {
