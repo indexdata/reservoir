@@ -6,6 +6,7 @@ import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import java.util.concurrent.TimeUnit;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.tlib.RouterCreator;
@@ -15,9 +16,14 @@ public class Healthz implements RouterCreator {
 
   private static final Logger log = LogManager.getLogger(Healthz.class);
 
+  /** Check the database connection. */
   public static Future<Void> checkDb(Vertx vertx) {
     TenantPgPool pool = TenantPgPool.pool(vertx, "x"); // not using the tenant for anything
-    return pool.query("SELECT 1").execute().mapEmpty();
+    return pool
+      .query("SELECT 1")
+      .execute()
+      .timeout(1, TimeUnit.SECONDS)
+      .mapEmpty();
   }
 
   void healthHandler(Vertx vertx, RoutingContext ctx) {
