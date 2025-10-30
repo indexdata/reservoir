@@ -21,9 +21,11 @@ public class Healthz implements RouterCreator {
   }
 
   void healthHandler(Vertx vertx, RoutingContext ctx) {
+    log.info("Healthz check called");
     ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "text/plain");
     checkDb(vertx)
         .onSuccess(x -> {
+          log.info("Healthz check succeeded");
           ctx.response().end("OK");
         })
         .onFailure(err -> {
