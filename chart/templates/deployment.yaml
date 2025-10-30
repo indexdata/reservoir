@@ -80,7 +80,7 @@ spec:
               protocol: TCP
           livenessProbe:
             httpGet:
-              path: /healthz
+              path: /admin/health
               port: http
             timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds | default 2 }}
             periodSeconds: {{ .Values.livenessProbe.periodSeconds | default 60 }}
