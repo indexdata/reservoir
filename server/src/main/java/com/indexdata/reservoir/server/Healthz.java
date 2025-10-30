@@ -16,13 +16,22 @@ public class Healthz implements RouterCreator {
 
   private static final Logger log = LogManager.getLogger(Healthz.class);
 
+  private static final int DB_CONNECTION_TIMEOUT_MS = 500;
+  private static final int DB_QUERY_TIMEOUT_MS = 500;
+
   /** Check the database connection. */
   public static Future<Void> checkDb(Vertx vertx) {
     TenantPgPool pool = TenantPgPool.pool(vertx, "x"); // not using the tenant for anything
-    return pool
-      .query("SELECT 1")
-      .execute()
-      .timeout(1, TimeUnit.SECONDS)
+    return pool.getConnection()
+      .timeout(DB_CONNECTION_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+      // .onFailure(e -> log.error("Healthz failed to get DB connection", e))
+      .recover(e -> Future.failedFuture("Failed to get DB connection: " + e.getMessage()))
+      .compose(conn -> conn.query("SELECT 1")
+        .execute()
+        .eventually(conn::close)
+        .timeout(DB_QUERY_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+        .recover(e -> Future.failedFuture("Failed to execute query: " + e.getMessage()))
+       )
       .mapEmpty();
   }
 
