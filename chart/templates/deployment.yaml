@@ -78,24 +78,28 @@ spec:
             - name: http
               containerPort: {{ .Values.containerPort }}
               protocol: TCP
+          {{- if and .Values.probes.enabled .Values.livenessProbe.enabled }}
           livenessProbe:
             httpGet:
-              path: /admin/health
+              path: {{ .Values.livenessProbe.path | default "/admin/health" }}
               port: http
             timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds | default 2 }}
             periodSeconds: {{ .Values.livenessProbe.periodSeconds | default 60 }}
             successThreshold: {{ .Values.livenessProbe.successThreshold | default 1 }}
             failureThreshold: {{ .Values.livenessProbe.failureThreshold | default 3 }}
             initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds | default 5 }}
+          {{- end }}
+          {{- if and .Values.probes.enabled .Values.readinessProbe.enabled }}
           readinessProbe:
             httpGet:
-              path: /healthz
+              path: {{ .Values.readinessProbe.path | default "/healthz" }}
               port: http
             timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds | default 2 }}
             periodSeconds: {{ .Values.readinessProbe.periodSeconds | default 60 }}
             successThreshold: {{ .Values.readinessProbe.successThreshold | default 1 }}
             failureThreshold: {{ .Values.readinessProbe.failureThreshold | default 3 }}
             initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds | default 5 }}
+          {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           {{- with .Values.volumeMounts }}

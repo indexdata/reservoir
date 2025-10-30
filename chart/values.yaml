@@ -25,11 +25,21 @@ containerPort: 8080
 env: {}
 
 livenessProbe:
+  enabled: true
+  path: /admin/health
   timeoutSeconds: 2
+  periodSeconds: 60
+  successThreshold: 1
+  failureThreshold: 3
   initialDelaySeconds: 5
 
 readinessProbe:
+  enabled: true
+  path: /healthz
   timeoutSeconds: 2
+  periodSeconds: 60
+  successThreshold: 1
+  failureThreshold: 3
   initialDelaySeconds: 5
 
 # envvars passed to the container as secretKeyRef, format
