@@ -24,6 +24,9 @@ containerPort: 8080
 # envvars passed to the container
 env: {}
 
+probes:
+  enabled: true
+
 livenessProbe:
   enabled: true
   path: /admin/health
