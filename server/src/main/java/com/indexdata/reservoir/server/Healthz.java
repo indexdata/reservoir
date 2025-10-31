@@ -35,15 +35,13 @@ public class Healthz implements RouterCreator {
   }
 
   void healthHandler(Vertx vertx, RoutingContext ctx) {
-    log.info("Healthz check called");
     ctx.response().putHeader(HttpHeaders.CONTENT_TYPE, "text/plain");
     checkDb(vertx)
         .onSuccess(x -> {
-          log.info("Healthz check succeeded");
           ctx.response().end("OK");
         })
         .onFailure(err -> {
-          log.error("Healthz check failed", err);
+          log.error("Health check failed", err);
           ctx.response().setStatusCode(500).end("Internal Server Error " + err.getMessage());
         });
   }
