@@ -40,7 +40,7 @@
     <slf4j-api.version>2.0.17</slf4j-api.version>
     <vertx.version>5.0.5</vertx.version>
     <okapi.version>7.0.0</okapi.version>
-    <vertxlib.version>4.0.1</vertxlib.version>
+    <vertxlib.version>4.1.0-SNAPSHOT</vertxlib.version>
     <micrometer.version>1.15.5</micrometer.version>
     <!-- vert.x is shipped with 4.2.5.Final, but we pin here to be able to experiment with SNAPSHOT versions -->
     <netty.version>4.2.7.Final</netty.version>
