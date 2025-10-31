@@ -35,6 +35,14 @@ spec:
           env:
             - name: HTTP_PORT
               value: "{{ .Values.containerPort }}"
+            - name: METRICS_PROMETHEUS_PORT
+              value: "{{ .Values.metrics.prometheusPort }}"
+            - name: METRICS_PROMETHEUS_PATH
+              value: "{{ .Values.metrics.prometheusPath }}"
+            - name: METRICS_JMX_ENABLED
+              value: "{{ .Values.metrics.jmxEnabled }}"
+            - name: METRICS_JMX_DOMAIN
+              value: "{{ .Values.metrics.jmxDomain }}"
             {{- range $k, $v := .Values.env }}
             {{- if ne $k "HTTP_PORT" }}
             - name: {{ $k }}
@@ -78,6 +86,11 @@ spec:
             - name: http
               containerPort: {{ .Values.containerPort }}
               protocol: TCP
+            {{- if .Values.metrics.enabled }}
+            - name: metrics
+              containerPort: {{ .Values.metrics.prometheusPort }}
+              protocol: TCP
+            {{- end }}
           {{- if and .Values.probes.enabled .Values.startupProbe.enabled }}
           startupProbe:
             httpGet:
