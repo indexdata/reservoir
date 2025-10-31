@@ -24,6 +24,13 @@ containerPort: 8080
 # envvars passed to the container
 env: {}
 
+metrics:
+  enabled: true
+  prometheusPath: /metrics
+  prometheusPort: 9404
+  jmxEnabled: false #jmx port is set via JAVA_OPTS
+  jmxDomain: "reservoir"
+
 probes:
   enabled: true
 
@@ -110,6 +117,7 @@ securityContext: {}
 service:
   type: ClusterIP
   httpPort: 80
+  metricsPort: 9404 #don't expose if service is public LoadBalancer or NodePort
 
 serviceAnnotations: {}
 
