@@ -27,23 +27,32 @@ env: {}
 probes:
   enabled: true
 
+startupProbe:
+  enabled: true
+  path: /admin/health #light check
+  timeoutSeconds: 2
+  periodSeconds: 5
+  successThreshold: 1
+  failureThreshold: 60
+  initialDelaySeconds: 0
+
 livenessProbe:
   enabled: true
-  path: /admin/health
+  path: /admin/health #light check
   timeoutSeconds: 2
-  periodSeconds: 60
+  periodSeconds: 30
   successThreshold: 1
   failureThreshold: 3
-  initialDelaySeconds: 5
+  initialDelaySeconds: 0 #uses startup probe
 
 readinessProbe:
   enabled: true
-  path: /healthz
-  timeoutSeconds: 2
-  periodSeconds: 60
-  successThreshold: 1
+  path: /healthz #deep check
+  timeoutSeconds: 3
+  periodSeconds: 30
+  successThreshold: 2 #flapping
   failureThreshold: 3
-  initialDelaySeconds: 5
+  initialDelaySeconds: 0 #uses startup probe
 
 # envvars passed to the container as secretKeyRef, format
 # VARIABLE:

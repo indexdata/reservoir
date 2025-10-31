@@ -78,27 +78,38 @@ spec:
             - name: http
               containerPort: {{ .Values.containerPort }}
               protocol: TCP
+          {{- if and .Values.probes.enabled .Values.startupProbe.enabled }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.startupProbe.path }}
+              port: http
+            timeoutSeconds: {{ .Values.startupProbe.timeoutSeconds }}
+            periodSeconds: {{ .Values.startupProbe.periodSeconds }}
+            successThreshold: {{ .Values.startupProbe.successThreshold }}
+            failureThreshold: {{ .Values.startupProbe.failureThreshold }}
+            initialDelaySeconds: {{ .Values.startupProbe.initialDelaySeconds }}
+          {{- end }}
           {{- if and .Values.probes.enabled .Values.livenessProbe.enabled }}
           livenessProbe:
             httpGet:
-              path: {{ .Values.livenessProbe.path | default "/admin/health" }}
+              path: {{ .Values.livenessProbe.path }}
               port: http
-            timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds | default 2 }}
-            periodSeconds: {{ .Values.livenessProbe.periodSeconds | default 60 }}
-            successThreshold: {{ .Values.livenessProbe.successThreshold | default 1 }}
-            failureThreshold: {{ .Values.livenessProbe.failureThreshold | default 3 }}
-            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds | default 5 }}
+            timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
+            periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+            successThreshold: {{ .Values.livenessProbe.successThreshold }}
+            failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
           {{- end }}
           {{- if and .Values.probes.enabled .Values.readinessProbe.enabled }}
           readinessProbe:
             httpGet:
-              path: {{ .Values.readinessProbe.path | default "/healthz" }}
+              path: {{ .Values.readinessProbe.path }}
               port: http
-            timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds | default 2 }}
-            periodSeconds: {{ .Values.readinessProbe.periodSeconds | default 60 }}
-            successThreshold: {{ .Values.readinessProbe.successThreshold | default 1 }}
-            failureThreshold: {{ .Values.readinessProbe.failureThreshold | default 3 }}
-            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds | default 5 }}
+            timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+            successThreshold: {{ .Values.readinessProbe.successThreshold }}
+            failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
+            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
           {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
