@@ -28,6 +28,12 @@ metrics:
   enabled: true
   prometheusPath: /metrics
   prometheusPort: 9404
+  monitor: # if enabled, creates ServiceMonitor or PodMonitor
+    enabled: false
+    interval: 30s
+    scrapeTimeout: 10s
+    labels: {} # match prom-stack serviceMonitorSelector/podMonitorSelector
+    # Example: labels: {release: "prometheus"}
   jmxEnabled: false #jmx port is set via JAVA_OPTS
   jmxDomain: "reservoir"
 
@@ -117,7 +123,8 @@ securityContext: {}
 service:
   type: ClusterIP
   httpPort: 80
-  metricsPort: 9404 #don't expose if service is public LoadBalancer or NodePort
+  metricsPort: 0 # Enabled if >0, don't expose if service is LoadBalancer or NodePort.
+                 # If enabled ServiceMonitor is created instead of PodMonitor.
 
 serviceAnnotations: {}
 
