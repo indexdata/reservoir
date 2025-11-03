@@ -12,6 +12,7 @@ import com.indexdata.reservoir.util.readstream.LargeJsonReadStream;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
@@ -74,9 +75,11 @@ public class Storage {
    * Create storage service for tenant.
    * @param vertx Vert.x hande
    * @param tenant tenant
+   * @param method HTTP method for selecting read or write pool
    */
-  public Storage(Vertx vertx, String tenant) {
-    this.pool = TenantPgPool.pool(vertx, tenant);
+  public Storage(Vertx vertx, String tenant, HttpMethod method) {
+    final String key = getPoolKey(method);
+    this.pool = TenantPgPool.pool(vertx, tenant, key);
     this.tenant = tenant;
     this.globalRecordTable = pool.getSchema() + "." + GLOBAL_RECORDS_TABLE;
     this.matchKeyConfigTable = pool.getSchema() + "." + MATCH_KEY_CONFIG_TABLE;
@@ -88,8 +91,15 @@ public class Storage {
     this.oaiPmhClientTable = pool.getSchema() + "." + OAI_PMH_CLIENTS_TABLE;
   }
 
-  public Storage(RoutingContext routingContext) {
-    this(routingContext.vertx(), TenantUtil.tenant(routingContext));
+  static String getPoolKey(HttpMethod method) {
+    if (method.equals(HttpMethod.GET)) {
+      return "read";
+    }
+    return "write";
+  }
+
+  public Storage(RoutingContext ctx) {
+    this(ctx.vertx(), TenantUtil.tenant(ctx), ctx.request().method());
   }
 
   public TenantPgPool getPool() {

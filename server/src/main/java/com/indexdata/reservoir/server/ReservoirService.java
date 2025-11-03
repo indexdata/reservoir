@@ -610,7 +610,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     if (!tenantAttributes.containsKey("module_to")) {
       return Future.succeededFuture(); // doing nothing for disable
     }
-    Storage storage = new Storage(vertx, tenant);
+    Storage storage = new Storage(vertx, tenant, HttpMethod.POST);
     return storage.init();
   }
 }
