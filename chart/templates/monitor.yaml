@@ -1,0 +1,36 @@
+{{- if and .Values.metrics.enabled .Values.metrics.monitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+{{- if gt (int .Values.service.metricsPort) 0 }}
+kind: ServiceMonitor
+{{- else }}
+kind: PodMonitor
+{{- end }}
+metadata:
+  name: {{ include "..fullname" . }}
+  labels:
+    {{- include "..labels" . | nindent 4 }}
+    app.kubernetes.io/component: metrics
+    {{- with .Values.metrics.monitor.labels }}
+      {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "..selectorLabels" . | nindent 6 }}
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  {{- if gt (int .Values.service.metricsPort) 0 }}
+  endpoints:
+  {{- else }}
+  podMetricsEndpoints:
+  {{- end }}
+    - port: metrics
+      path: {{ .Values.metrics.prometheusPath }}
+      interval: {{ .Values.metrics.monitor.interval | default "30s" }}
+      scheme: http
+      honorLabels: true
+      {{- with .Values.metrics.monitor.scrapeTimeout }}
+      scrapeTimeout: {{ . }}
+      {{- end }}
+{{- end }}
