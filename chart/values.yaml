@@ -32,7 +32,8 @@ metrics:
     enabled: false
     interval: 30s
     scrapeTimeout: 10s
-    labels: {} # match prom-stack serviceMonitorSelector/podMonitorSelector, usually 'release: <prom-stack-release-name>'
+    labels: {} # match prom-stack serviceMonitorSelector/podMonitorSelector
+    # Example: labels: {release: "prometheus"}
   jmxEnabled: false #jmx port is set via JAVA_OPTS
   jmxDomain: "reservoir"
 
