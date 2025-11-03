@@ -16,6 +16,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import com.indexdata.reservoir.server.entity.CodeModuleEntity;
 import io.restassured.RestAssured;
 import io.vertx.core.Future;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpResponseExpectation;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -3313,7 +3314,7 @@ public class MainVerticleTest extends TestBase {
     List<String> identifiers = new LinkedList<>();
 
     Async async = context.async();
-    Storage storage = new Storage(vertx, TENANT_1);
+    Storage storage = new Storage(vertx, TENANT_1, HttpMethod.PUT);
     storage.getPool().preparedQuery("UPDATE " + storage.getClusterMetaTable()
             + " SET datestamp = $1")
         .execute(Tuple.of(LocalDateTime.now(ZoneOffset.UTC)))
