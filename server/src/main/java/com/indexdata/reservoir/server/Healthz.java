@@ -21,7 +21,7 @@ public class Healthz implements RouterCreator {
 
   /** Check the database connection. */
   public static Future<Void> checkDb(Vertx vertx) {
-    TenantPgPool pool = TenantPgPool.pool(vertx, "x"); // not using the tenant for anything
+    TenantPgPool pool = TenantPgPool.pool(vertx, "x", "read"); // not using the tenant for anything
     return pool.getConnection()
       .timeout(DB_CONNECTION_TIMEOUT_MS, TimeUnit.MILLISECONDS)
       .recover(e -> Future.failedFuture("Failed to get DB connection: " + e.getMessage()))
