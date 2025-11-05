@@ -179,9 +179,11 @@ public final class OaiService {
       ResumptionToken resumptionToken = new ResumptionToken(conf.getString("id"), until);
       sqlQuery.append(" ORDER BY datestamp, cluster_id");
       return storage.getTransformer(ctx)
-          .compose(transformer -> storage.getPool().getConnection().compose(conn ->
-              listRecordsResponse(ctx, transformer, storage, conn, sqlQuery.toString(),
-                  Tuple.from(tupleList), limit, withMetadata, resumptionToken)
+          .compose(transformer -> storage.getPool().getConnection()
+              .compose(conn ->
+                listRecordsResponse(ctx, transformer, storage, conn, sqlQuery.toString(),
+                    Tuple.from(tupleList), limit, withMetadata, resumptionToken)
+              .onFailure(x -> conn.close())
           ));
     });
   }
