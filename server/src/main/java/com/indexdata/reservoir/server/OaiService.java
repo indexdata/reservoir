@@ -298,17 +298,17 @@ public final class OaiService {
         if (row == null) {
           throw OaiException.idDoesNotExist(identifier);
         }
-        return storage.getPool().getConnection().compose(connection ->
-            getClusterRecordMetadata(row, transformer, storage, connection, true, ctx.vertx())
-                .map(buf -> {
-                  oaiHeader(ctx);
-                  HttpServerResponse response = ctx.response();
-                  response.write("  <GetRecord>\n");
-                  response.write(buf);
-                  response.write("  </GetRecord>\n");
-                  oaiFooter(ctx);
-                  return null;
-                })
+        return storage.getPool().withConnection(connection ->
+          getClusterRecordMetadata(row, transformer, storage, connection, true, ctx.vertx())
+              .map(buf -> {
+                oaiHeader(ctx);
+                HttpServerResponse response = ctx.response();
+                response.write("  <GetRecord>\n");
+                response.write(buf);
+                response.write("  </GetRecord>\n");
+                oaiFooter(ctx);
+                return null;
+              })
         );
       });
     });
