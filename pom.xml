@@ -41,7 +41,7 @@
     <vertx.version>5.0.5</vertx.version>
     <okapi.version>7.0.0</okapi.version>
     <vertxlib.version>4.1.0-SNAPSHOT</vertxlib.version>
-    <micrometer.version>1.15.5</micrometer.version>
+    <micrometer.version>1.16.0</micrometer.version>
     <!-- vert.x is shipped with 4.2.5.Final, but we pin here to be able to experiment with SNAPSHOT versions -->
     <netty.version>4.2.7.Final</netty.version>
   </properties>
@@ -147,7 +147,7 @@
       <dependency>
         <groupId>org.apache.solr</groupId>
         <artifactId>solr-solrj</artifactId>
-        <version>9.9.0</version>
+        <version>9.10.0</version>
       </dependency>
       <dependency>
         <groupId>org.testcontainers</groupId>
