@@ -34,7 +34,7 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <graalvm.version>25.0.1</graalvm.version>
-    <graalvm-maven-plugin.version>0.11.2</graalvm-maven-plugin.version>
+    <graalvm-maven-plugin.version>0.11.3</graalvm-maven-plugin.version>
     <log4j2.version>3.0.0-beta3</log4j2.version>
     <snakeyaml.version>2.5</snakeyaml.version>
     <slf4j-api.version>2.0.17</slf4j-api.version>
@@ -489,7 +489,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-release-plugin</artifactId>
-        <version>3.1.1</version>
+        <version>3.2.0</version>
         <configuration>
           <preparationGoals>clean verify</preparationGoals>
           <tagNameFormat>v@{project.version}</tagNameFormat>
