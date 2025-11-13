@@ -6,6 +6,7 @@ import com.indexdata.reservoir.module.ModuleExecutable;
 import com.indexdata.reservoir.module.ModuleInvocation;
 import com.indexdata.reservoir.server.entity.ClusterBuilder;
 import com.indexdata.reservoir.server.entity.CodeModuleEntity;
+import com.indexdata.reservoir.server.metrics.IngestMetrics;
 import com.indexdata.reservoir.util.ReadStreamConsumer;
 import com.indexdata.reservoir.util.SourceId;
 import com.indexdata.reservoir.util.readstream.LargeJsonReadStream;
@@ -42,6 +43,7 @@ import org.apache.logging.log4j.Logger;
 import org.folio.tlib.postgres.PgCqlQuery;
 import org.folio.tlib.postgres.TenantPgPool;
 import org.folio.tlib.util.TenantUtil;
+
 
 // Define a constant instead of duplicating this literal
 @java.lang.SuppressWarnings({"squid:S1192"})
@@ -275,29 +277,44 @@ public class Storage {
    * @param sourceVersion source version
    * @param globalRecord global record JSON object
    * @param ingestMatches match key configurations in use
+   * @param ingestMetrics ingest metrics collector
    * @return async result with TRUE=inserted, FALSE=updated, null=deleted
    */
   Future<Boolean> ingestGlobalRecord(Vertx vertx,
       SourceId sourceId, int sourceVersion, JsonObject globalRecord,
-      List<IngestMatcher> ingestMatches) {
+      List<IngestMatcher> ingestMatches, IngestMetrics ingestMetrics) {
 
     final String localIdentifier = globalRecord.getString("localId");
     if (localIdentifier == null) {
+      ingestMetrics.incrementRecordsIgnored();
       return Future.failedFuture("localId required");
     }
     if (Boolean.TRUE.equals(globalRecord.getBoolean("delete"))) {
       return deleteGlobalRecord(localIdentifier, sourceId, sourceVersion)
-        .map(x -> null);
+        .map(x -> {
+          ingestMetrics.incrementRecordsDeleted();
+          return null;
+        });
     }
     final JsonObject payload = globalRecord.getJsonObject("payload");
     if (payload == null) {
+      ingestMetrics.incrementRecordsIgnored();
       return Future.failedFuture("payload required");
     }
     if (sourceId == null) {
+      ingestMetrics.incrementRecordsIgnored();
       return Future.failedFuture("sourceId required");
     }
     return upsertGlobalRecord(vertx, localIdentifier, sourceId,
-        sourceVersion, payload, ingestMatches);
+        sourceVersion, payload, ingestMatches)
+        .map(inserted -> {
+          if (inserted) {
+            ingestMetrics.incrementRecordsInserted();
+          } else {
+            ingestMetrics.incrementRecordsUpdated();
+          }
+          return inserted;
+        });
   }
 
   Future<Void> updateMatchKeyValues(Vertx vertx, SqlConnection conn, UUID globalId,
@@ -561,13 +578,17 @@ public class Storage {
    */
   public Future<Void> updateGlobalRecords(Vertx vertx, LargeJsonReadStream request) {
     return availableIngestMatchers(vertx)
-       .compose(ingestMatches ->
-              new ReadStreamConsumer<JsonObject, Void>()
-                .consume(request, r ->
-                    ingestGlobalRecord(
-                      vertx, new SourceId(request.topLevelObject().getString("sourceId")),
-                      request.topLevelObject().getInteger("sourceVersion", 1), r, ingestMatches)
-                      .mapEmpty()));
+      .compose(ingestMatches -> {
+        return new ReadStreamConsumer<JsonObject, Void>()
+          .consume(request, r -> {
+            SourceId sourceId = new SourceId(request.topLevelObject().getString("sourceId"));
+            IngestMetrics ingestMetrics = IngestMetrics.create().withSource(sourceId);
+            Integer sourceVersion = request.topLevelObject().getInteger("sourceVersion", 1);
+            return ingestGlobalRecord(vertx, sourceId,
+              sourceVersion, r, ingestMatches, ingestMetrics)
+          .mapEmpty();
+          });
+      });
   }
 
   /**
