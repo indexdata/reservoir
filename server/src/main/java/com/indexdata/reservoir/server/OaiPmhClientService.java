@@ -2,6 +2,7 @@ package com.indexdata.reservoir.server;
 
 import com.indexdata.reservoir.server.entity.ClusterBuilder;
 import com.indexdata.reservoir.server.entity.OaiPmhStatus;
+import com.indexdata.reservoir.server.metrics.IngestMetrics;
 import com.indexdata.reservoir.util.SourceId;
 import com.indexdata.reservoir.util.XmlMetadataParserMarcInJson;
 import com.indexdata.reservoir.util.XmlMetadataStreamParser;
@@ -508,7 +509,8 @@ public class OaiPmhClientService {
 
   Future<Boolean> ingestRecord(
       Storage storage, OaiRecord<JsonObject> oaiRecord,
-      SourceId sourceId, int sourceVersion, List<IngestMatcher> ingestMatches) {
+      SourceId sourceId, int sourceVersion, List<IngestMatcher> ingestMatches,
+      IngestMetrics ingestMetrics) {
     try {
       JsonObject globalRecord = new JsonObject();
       globalRecord.put("localId", oaiRecord.getIdentifier());
@@ -518,7 +520,7 @@ public class OaiPmhClientService {
         globalRecord.put("payload", new JsonObject().put("marc", oaiRecord.getMetadata()));
       }
       return storage.ingestGlobalRecord(vertx, sourceId, sourceVersion,
-          globalRecord, ingestMatches);
+          globalRecord, ingestMatches, ingestMetrics);
     } catch (Exception e) {
       log.error("{}", e.getMessage(), e);
       return Future.failedFuture(e);
@@ -604,6 +606,7 @@ public class OaiPmhClientService {
     XmlMetadataStreamParser<JsonObject> metadataParser
         = new XmlMetadataParserMarcInJson();
     SourceId sourceId = new SourceId(config.getString("sourceId"));
+    IngestMetrics ingestMetrics = IngestMetrics.create().withSource(sourceId);
     Promise<Void> promise = Promise.promise();
     AtomicInteger queue = new AtomicInteger();
     AtomicBoolean ended = new AtomicBoolean();
@@ -623,7 +626,7 @@ public class OaiPmhClientService {
             xmlParser.pause();
           }
           ingestRecord(storage, oaiRecord, sourceId, sourceVersion,
-              ingestMatches)
+              ingestMatches, ingestMetrics)
               .map(upd -> {
                 job.setTotalRecords(job.getTotalRecords() + 1);
                 job.setLastTotalRecords(job.getLastTotalRecords() + 1);
