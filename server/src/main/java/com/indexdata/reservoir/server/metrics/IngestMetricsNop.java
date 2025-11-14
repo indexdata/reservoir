@@ -1,6 +1,7 @@
 package com.indexdata.reservoir.server.metrics;
 
 import com.indexdata.reservoir.util.SourceId;
+import java.util.concurrent.TimeUnit;
 
 public class IngestMetricsNop implements IngestMetrics {
   @Override
@@ -18,6 +19,9 @@ public class IngestMetricsNop implements IngestMetrics {
   }
 
   public void incrementRecordsUpdated() {
+  }
+
+  public void recordMatcher(long amount, TimeUnit unit) {
   }
 
 }
