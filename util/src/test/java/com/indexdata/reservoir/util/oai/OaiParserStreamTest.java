@@ -15,8 +15,6 @@ import org.junit.runner.RunWith;
 
 import com.indexdata.reservoir.util.XmlMetadataParserMarcInJson;
 import com.indexdata.reservoir.util.XmlMetadataStreamParser;
-import com.indexdata.reservoir.util.oai.OaiParserStream;
-import com.indexdata.reservoir.util.oai.OaiRecord;
 import com.indexdata.reservoir.util.readstream.XmlParser;
 
 import java.util.ArrayList;

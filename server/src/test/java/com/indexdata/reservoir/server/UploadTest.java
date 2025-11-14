@@ -5,6 +5,8 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.startsWith;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Timer;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.file.FileSystem;
 import io.vertx.core.http.HttpResponseExpectation;
@@ -17,6 +19,9 @@ import org.folio.okapi.common.XOkapiHeaders;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import com.indexdata.reservoir.server.metrics.IngestMetricsMicrometer;
+import com.indexdata.reservoir.util.SourceId;
 
 @RunWith(VertxUnitRunner.class)
 public class UploadTest extends TestBase {
@@ -111,6 +116,21 @@ public class UploadTest extends TestBase {
 
   @Test
   public void uploadIso2709WithIngest(TestContext context) {
+    SourceId sourceId = new SourceId("SOURCE-1");
+    Counter ignored_counter = IngestMetricsMicrometer.createCounter(sourceId, "ignored");
+    Counter inserted_counter = IngestMetricsMicrometer.createCounter(sourceId, "inserted");
+    Counter deleted_counter = IngestMetricsMicrometer.createCounter(sourceId, "deleted");
+    Counter updated_counter = IngestMetricsMicrometer.createCounter(sourceId, "updated");
+    Timer matcher_timer = IngestMetricsMicrometer.createTimer(sourceId, "matcher");
+    Timer storing_timer = IngestMetricsMicrometer.createTimer(sourceId, "storing");
+
+    double inserted_before = inserted_counter.count();
+    double deleted_before = deleted_counter.count();
+    double ignored_before = ignored_counter.count();
+    double updated_before = updated_counter.count();
+    long matcher_before = matcher_timer.count();
+    long storing_before = storing_timer.count();
+
     MultipartForm requestForm = MultipartForm.create()
         .binaryFileUpload("records", "marc3.mrc", marc3marcBuffer,  "application/marc")
         .binaryFileUpload("records", "marc1-delete.xml", marc1xmlBuffer,  "text/xml");
@@ -144,6 +164,12 @@ public class UploadTest extends TestBase {
         .map(res -> {
           JsonObject responseBody = res.bodyAsJsonObject();
           assertThat(responseBody.getJsonArray("items").size(), is(2));
+          assertThat(inserted_counter.count(), is(inserted_before + 3.0));
+          assertThat(deleted_counter.count(), is(deleted_before + 1.0));
+          assertThat(ignored_counter.count(), is(ignored_before));
+          assertThat(updated_counter.count(), is(updated_before));
+          assertThat(matcher_timer.count(), is(matcher_before));
+          assertThat(storing_timer.count(), is(storing_before + 4L));
           return null;
         })
         .onComplete(context.asyncAssertSuccess());

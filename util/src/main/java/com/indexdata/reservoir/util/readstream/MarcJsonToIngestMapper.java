@@ -6,6 +6,8 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 
 /**
  * Converts stream of JSON-in-MARC to payload JSON objects.
@@ -18,8 +20,28 @@ public class MarcJsonToIngestMapper implements Mapper<JsonObject, JsonObject> {
 
   List<JsonObject> marc = new LinkedList<>();
 
+  protected final BiConsumer<Long, TimeUnit> timingConsumer;
+
+  long startTime;
+
+  public MarcJsonToIngestMapper(BiConsumer<Long, TimeUnit> timingConsumer) {
+    this.timingConsumer = timingConsumer;
+  }
+
+  private void recordTime() {
+    long currentTime = System.nanoTime();
+    if (startTime != 0) {
+      long duration = currentTime - startTime;
+      if (timingConsumer != null) {
+        timingConsumer.accept(duration, TimeUnit.NANOSECONDS);
+      }
+    }
+    startTime = currentTime;
+  }
+
   @Override
   public void push(JsonObject value) {
+    recordTime();
     marc.add(value);
   }
 
@@ -89,6 +111,10 @@ public class MarcJsonToIngestMapper implements Mapper<JsonObject, JsonObject> {
 
   @Override
   public void end() {
+    if (ended) {
+      throw new IllegalStateException("Parsing already done");
+    }
+    recordTime();
     ended = true;
   }
 }

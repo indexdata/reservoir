@@ -2,6 +2,8 @@ package com.indexdata.reservoir.util.readstream;
 
 import io.vertx.core.Handler;
 import io.vertx.core.streams.ReadStream;
+import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 
 public class MappingReadStream<T,V> implements ReadStream<T>, Handler<V> {
 

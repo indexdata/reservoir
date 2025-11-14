@@ -7,9 +7,10 @@ import org.marc4j.marc.Record;
 
 public class MarcToJsonParser extends MappingReadStream<JsonObject, Record> {
 
-
+  /** Read MARC and convert to JSON-in-MARC. */
   public MarcToJsonParser(ReadStream<Buffer> stream) {
-    super(new MappingReadStream<>(stream, new Marc4jMapper()), new MarcToJsonObjectMapper());
+    super(
+        new MappingReadStream<>(stream, new Marc4jMapper()), new MarcToJsonObjectMapper());
   }
 
 }
