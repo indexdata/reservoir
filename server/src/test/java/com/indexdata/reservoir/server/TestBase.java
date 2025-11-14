@@ -8,6 +8,7 @@ import io.restassured.config.RestAssuredConfig;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.VertxOptions;
 import io.vertx.core.http.HttpResponseExpectation;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonArray;
@@ -17,6 +18,8 @@ import io.vertx.core.net.NetSocket;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.client.WebClient;
+import io.vertx.micrometer.MicrometerMetricsOptions;
+import io.vertx.micrometer.VertxJmxMetricsOptions;
 import javax.xml.XMLConstants;
 import javax.xml.validation.Schema;
 import javax.xml.validation.SchemaFactory;
@@ -78,7 +81,13 @@ public class TestBase {
     Schema schema = schemaFactory.newSchema(schemaFile);
     oaiSchemaValidator = schema.newValidator();
 
-    vertx = Vertx.vertx();
+    MicrometerMetricsOptions metricsOpts = new MicrometerMetricsOptions();
+    metricsOpts.setEnabled(true);
+    // enable is not enough for JMX metrics we also need registry backend
+    metricsOpts.setJmxMetricsOptions(new VertxJmxMetricsOptions().setEnabled(true));
+
+    VertxOptions vo = new VertxOptions().setMetricsOptions(metricsOpts);
+    vertx = Vertx.vertx(vo);
     webClient = WebClient.create(vertx);
 
     RestAssured.config = RestAssuredConfig.config()

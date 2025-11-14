@@ -5,6 +5,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.startsWith;
 
+import io.micrometer.core.instrument.Counter;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.file.FileSystem;
 import io.vertx.core.http.HttpResponseExpectation;
@@ -13,6 +14,7 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.multipart.MultipartForm;
+import io.vertx.micrometer.backends.BackendRegistries;
 import org.folio.okapi.common.XOkapiHeaders;
 import org.junit.Before;
 import org.junit.Test;
@@ -111,6 +113,18 @@ public class UploadTest extends TestBase {
 
   @Test
   public void uploadIso2709WithIngest(TestContext context) {
+    var registry = BackendRegistries.getDefaultNow();
+    Counter inserted_counter = Counter.builder("reservoir_records_ingested_total")
+          .tag("source_id", "SOURCE-1")
+          .tag("result", "inserted")
+          .register(registry);
+    Counter deleted_counter = Counter.builder("reservoir_records_ingested_total")
+          .tag("source_id", "SOURCE-1")
+          .tag("result", "deleted")
+          .register(registry);
+    double inserted_before = inserted_counter.count();
+    double deleted_before = deleted_counter.count();
+
     MultipartForm requestForm = MultipartForm.create()
         .binaryFileUpload("records", "marc3.mrc", marc3marcBuffer,  "application/marc")
         .binaryFileUpload("records", "marc1-delete.xml", marc1xmlBuffer,  "text/xml");
@@ -144,6 +158,8 @@ public class UploadTest extends TestBase {
         .map(res -> {
           JsonObject responseBody = res.bodyAsJsonObject();
           assertThat(responseBody.getJsonArray("items").size(), is(2));
+          assertThat(inserted_counter.count(), is(inserted_before + 3.0));
+          assertThat(deleted_counter.count(), is(deleted_before + 1.0));
           return null;
         })
         .onComplete(context.asyncAssertSuccess());
