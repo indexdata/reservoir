@@ -24,4 +24,7 @@ public class IngestMetricsNop implements IngestMetrics {
   public void recordMatcher(long amount, TimeUnit unit) {
   }
 
+  public void recordStoring(long amount, TimeUnit unit) {
+  }
+
 }

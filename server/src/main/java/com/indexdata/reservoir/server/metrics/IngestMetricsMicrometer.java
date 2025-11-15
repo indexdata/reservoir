@@ -15,12 +15,14 @@ class IngestMetricsMicrometer implements IngestMetrics {
   static ConcurrentHashMap<String, Counter> recordsDeletedMap = new ConcurrentHashMap<>();
   static ConcurrentHashMap<String, Counter> recordsUpdatedMap = new ConcurrentHashMap<>();
   static ConcurrentHashMap<String, Timer> timerMatcherMap = new ConcurrentHashMap<>();
+  static ConcurrentHashMap<String, Timer> timerStoringMap = new ConcurrentHashMap<>();
 
   Counter recordsIgnoredTotal;
   Counter recordsInsertedTotal;
   Counter recordsDeletedTotal;
   Counter recordsUpdatedTotal;
   Timer timerMatcher;
+  Timer timerStoring;
 
   private Counter updateCounter(Map<String, Counter> counterMap, SourceId sourceId, String result) {
     return counterMap.computeIfAbsent(sourceId.toString() + "_" + result,
@@ -36,8 +38,8 @@ class IngestMetricsMicrometer implements IngestMetrics {
         id -> Timer.builder("reservoir_ingestion_duration_seconds")
           .description("Time spent ingesting reservoir records")
           .publishPercentileHistogram()
-          .minimumExpectedValue(Duration.ofNanos(1000))
-          .maximumExpectedValue(Duration.ofMillis(500))
+          .minimumExpectedValue(Duration.ofNanos(10000))
+          .maximumExpectedValue(Duration.ofSeconds(1))
           .tag("source_id", sourceId.toString())
           .tag("phase", phase)
           .register(BackendRegistries.getDefaultNow()));
@@ -50,6 +52,7 @@ class IngestMetricsMicrometer implements IngestMetrics {
     recordsDeletedTotal = updateCounter(recordsDeletedMap, sourceId, "deleted");
     recordsUpdatedTotal = updateCounter(recordsUpdatedMap, sourceId, "updated");
     timerMatcher = updateTimer(timerMatcherMap, sourceId, "matcher");
+    timerStoring = updateTimer(timerStoringMap, sourceId, "storing");
     return this;
   }
 
@@ -76,5 +79,10 @@ class IngestMetricsMicrometer implements IngestMetrics {
   @Override
   public void recordMatcher(long amount, TimeUnit unit) {
     timerMatcher.record(amount, unit);
+  }
+
+  @Override
+  public void recordStoring(long amount, TimeUnit unit) {
+    timerStoring.record(amount, unit);
   }
 }

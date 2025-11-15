@@ -288,6 +288,18 @@ public class Storage {
       SourceId sourceId, int sourceVersion, JsonObject globalRecord,
       List<IngestMatcher> ingestMatches, IngestMetrics ingestMetrics) {
 
+    long startTime = System.nanoTime();
+    return ingestGlobalRecord2(vertx, sourceId, sourceVersion, globalRecord,
+        ingestMatches, ingestMetrics)
+        .onComplete(x -> ingestMetrics.recordStoring(
+            System.nanoTime() - startTime, TimeUnit.NANOSECONDS)
+        );
+  }
+
+  private Future<Boolean> ingestGlobalRecord2(Vertx vertx,
+      SourceId sourceId, int sourceVersion, JsonObject globalRecord,
+      List<IngestMatcher> ingestMatches, IngestMetrics ingestMetrics) {
+
     final String localIdentifier = globalRecord.getString("localId");
     if (localIdentifier == null) {
       ingestMetrics.incrementRecordsIgnored();

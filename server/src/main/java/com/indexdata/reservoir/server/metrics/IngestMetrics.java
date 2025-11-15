@@ -17,6 +17,8 @@ public interface IngestMetrics {
 
   void recordMatcher(long amount, TimeUnit unit);
 
+  void recordStoring(long amount, TimeUnit unit);
+
   /** Create IngestMetrics instance and use default backend if available. */
   static IngestMetrics create() {
     if (BackendRegistries.getDefaultNow() != null) {
