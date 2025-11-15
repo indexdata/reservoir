@@ -36,7 +36,7 @@ public class MarcXmlParserToJsonTest {
   Future<MarcXmlParserToJson> marcXmlParserFromFile(String fname) {
     return vertx.fileSystem().open(fname, new OpenOptions())
         .map(asyncFile -> {
-          MarcXmlParserToJson parser = new MarcXmlParserToJson(XmlParser.newParser(asyncFile));
+          MarcXmlParserToJson parser = new MarcXmlParserToJson(XmlParser.newParser(asyncFile, null));
           parser.pause();
           return parser;
         });
@@ -184,7 +184,7 @@ public class MarcXmlParserToJsonTest {
   @Test
   public void testNoCollectionElement(TestContext context) {
     MemoryReadStream rs = new MemoryReadStream(Buffer.buffer("<x/>"), vertx);
-    MarcXmlParserToJson parser = new MarcXmlParserToJson(XmlParser.newParser(rs));
+    MarcXmlParserToJson parser = new MarcXmlParserToJson(XmlParser.newParser(rs, null));
     Promise<Void> promise = Promise.promise();
     parser.exceptionHandler(promise::tryFail);
     parser.endHandler(x -> promise.complete());
@@ -197,7 +197,7 @@ public class MarcXmlParserToJsonTest {
   @Test
   public void testNoRecordElement(TestContext context) {
     MemoryReadStream rs = new MemoryReadStream(Buffer.buffer("<collec"), null, null, Buffer.buffer("tion><y/></collection>"), 0, vertx);
-    MarcXmlParserToJson parser = new MarcXmlParserToJson(XmlParser.newParser(rs));
+    MarcXmlParserToJson parser = new MarcXmlParserToJson(XmlParser.newParser(rs, null));
     Promise<Void> promise = Promise.promise();
     parser.exceptionHandler(promise::tryFail);
     parser.endHandler(x -> promise.complete());
@@ -210,7 +210,7 @@ public class MarcXmlParserToJsonTest {
   @Test
   public void testNoRecordElement2(TestContext context) {
     MemoryReadStream rs = new MemoryReadStream(Buffer.buffer("<collection>ignored<y/></collection>"), vertx);
-    MarcXmlParserToJson parser = new MarcXmlParserToJson(XmlParser.newParser(rs));
+    MarcXmlParserToJson parser = new MarcXmlParserToJson(XmlParser.newParser(rs, null));
     Promise<Void> promise = Promise.promise();
     parser.exceptionHandler(promise::tryFail);
     parser.endHandler(x -> promise.complete());
@@ -224,7 +224,7 @@ public class MarcXmlParserToJsonTest {
   @Test
   public void testNoRecordElementNoExceptionHandler(TestContext context) {
     MemoryReadStream rs = new MemoryReadStream(Buffer.buffer("<collec"), null, null, Buffer.buffer("tion><y/></collection>"), 0, vertx);
-    MarcXmlParserToJson parser = new MarcXmlParserToJson(XmlParser.newParser(rs));
+    MarcXmlParserToJson parser = new MarcXmlParserToJson(XmlParser.newParser(rs, null));
     Promise<Void> promise = Promise.promise();
     parser.endHandler(x -> promise.complete());
     rs.run();
@@ -235,7 +235,7 @@ public class MarcXmlParserToJsonTest {
   @Test
   public void testEmptyCollection(TestContext context) {
     MemoryReadStream rs = new MemoryReadStream(Buffer.buffer("<collection>ignored</collection>"), vertx);
-    MarcXmlParserToJson parser = new MarcXmlParserToJson(XmlParser.newParser(rs));
+    MarcXmlParserToJson parser = new MarcXmlParserToJson(XmlParser.newParser(rs, null));
     Promise<Void> promise = Promise.promise();
     parser.exceptionHandler(promise::tryFail);
     parser.endHandler(x -> promise.complete());
@@ -246,7 +246,7 @@ public class MarcXmlParserToJsonTest {
   @Test
   public void testExceptionInStream(TestContext context) {
     MemoryReadStream rs = new MemoryReadStream(null, vertx);
-    MarcXmlParserToJson parser = new MarcXmlParserToJson(XmlParser.newParser(rs));
+    MarcXmlParserToJson parser = new MarcXmlParserToJson(XmlParser.newParser(rs, null));
     Promise<Void> promise = Promise.promise();
     parser.exceptionHandler(promise::tryFail);
     parser.endHandler(x -> promise.complete());

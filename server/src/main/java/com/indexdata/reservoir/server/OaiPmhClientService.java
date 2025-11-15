@@ -602,7 +602,7 @@ public class OaiPmhClientService {
     }
     JsonObject config = job.getConfig();
     boolean xmlFixing = config.getBoolean("xmlFixing", false);
-    XmlParser xmlParser = XmlParser.newParser(xmlFixing ? new XmlFixer(res) : res);
+    XmlParser xmlParser = XmlParser.newParser(xmlFixing ? new XmlFixer(res, null) : res, null);
     XmlMetadataStreamParser<JsonObject> metadataParser
         = new XmlMetadataParserMarcInJson();
     SourceId sourceId = new SourceId(config.getString("sourceId"));

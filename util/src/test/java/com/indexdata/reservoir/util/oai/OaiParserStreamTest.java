@@ -45,7 +45,7 @@ public class OaiParserStreamTest {
 
   Future<OaiParserStream<JsonObject>> parseOai(String fname, Consumer<OaiRecord<JsonObject>> recordHandler) {
     return vertx.fileSystem().open(fname, new OpenOptions()).compose(asyncFile -> {
-      XmlParser xmlParser = XmlParser.newParser(asyncFile);
+      XmlParser xmlParser = XmlParser.newParser(asyncFile, null);
       XmlMetadataStreamParser<JsonObject> metadataParser = new XmlMetadataParserMarcInJson();
       OaiParserStream<JsonObject> oaiParserStream = new OaiParserStream<>(xmlParser, metadataParser);
       oaiParserStream.parse(recordHandler);

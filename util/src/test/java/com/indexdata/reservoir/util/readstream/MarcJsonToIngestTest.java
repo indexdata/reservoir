@@ -41,9 +41,9 @@ public class MarcJsonToIngestTest {
   Future<ReadStream<JsonObject>> marcFromFile(String fname) {
     return vertx.fileSystem()
         .open(fname, new OpenOptions())
-        .map(file -> new MappingReadStream<>(new MarcToJsonParser(file),
-            new MarcJsonToIngestMapper())
-            .pause());
+        .map(file -> new MappingReadStream<>(new MarcToJsonParser(file, null),
+            new MarcJsonToIngestMapper(), null)
+        .pause());
   }
 
   String get001(JsonObject marc) {

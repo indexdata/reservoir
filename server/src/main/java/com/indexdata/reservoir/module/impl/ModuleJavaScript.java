@@ -4,7 +4,6 @@ import com.indexdata.reservoir.module.Module;
 import com.indexdata.reservoir.server.entity.CodeModuleEntity;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
 import java.io.IOException;
