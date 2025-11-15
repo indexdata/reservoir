@@ -37,7 +37,7 @@ class IngestMetricsMicrometer implements IngestMetrics {
           .description("Time spent ingesting reservoir records")
           .publishPercentileHistogram()
           .minimumExpectedValue(Duration.ofNanos(1000))
-          .maximumExpectedValue(Duration.ofMillis(200))
+          .maximumExpectedValue(Duration.ofMillis(500))
           .tag("source_id", sourceId.toString())
           .tag("phase", phase)
           .register(BackendRegistries.getDefaultNow()));
