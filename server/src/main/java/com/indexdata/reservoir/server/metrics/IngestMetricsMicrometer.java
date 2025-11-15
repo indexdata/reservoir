@@ -4,6 +4,7 @@ import com.indexdata.reservoir.util.SourceId;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Timer;
 import io.vertx.micrometer.backends.BackendRegistries;
+import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -35,6 +36,8 @@ class IngestMetricsMicrometer implements IngestMetrics {
         id -> Timer.builder("reservoir_ingestion_duration_seconds")
           .description("Time spent ingesting reservoir records")
           .publishPercentileHistogram()
+          .minimumExpectedValue(Duration.ofNanos(1000))
+          .maximumExpectedValue(Duration.ofMillis(200))
           .tag("source_id", sourceId.toString())
           .tag("phase", phase)
           .register(BackendRegistries.getDefaultNow()));
