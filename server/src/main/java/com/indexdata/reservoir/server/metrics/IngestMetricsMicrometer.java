@@ -9,13 +9,14 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
-class IngestMetricsMicrometer implements IngestMetrics {
+public class IngestMetricsMicrometer implements IngestMetrics {
   static ConcurrentHashMap<String, Counter> recordsIgnoredMap = new ConcurrentHashMap<>();
   static ConcurrentHashMap<String, Counter> recordsInsertedMap = new ConcurrentHashMap<>();
   static ConcurrentHashMap<String, Counter> recordsDeletedMap = new ConcurrentHashMap<>();
   static ConcurrentHashMap<String, Counter> recordsUpdatedMap = new ConcurrentHashMap<>();
   static ConcurrentHashMap<String, Timer> timerMatcherMap = new ConcurrentHashMap<>();
   static ConcurrentHashMap<String, Timer> timerStoringMap = new ConcurrentHashMap<>();
+  static ConcurrentHashMap<String, Timer> timerParsingMap = new ConcurrentHashMap<>();
 
   Counter recordsIgnoredTotal;
   Counter recordsInsertedTotal;
@@ -23,36 +24,58 @@ class IngestMetricsMicrometer implements IngestMetrics {
   Counter recordsUpdatedTotal;
   Timer timerMatcher;
   Timer timerStoring;
+  Timer timerParsing;
 
-  private Counter updateCounter(Map<String, Counter> counterMap, SourceId sourceId, String result) {
-    return counterMap.computeIfAbsent(sourceId.toString() + "_" + result,
-        id -> Counter.builder("reservoir_records_ingested_total")
-          .description("Total number of reservoir records ingested")
-          .tag("source_id", sourceId.toString())
-          .tag("result", result)
-          .register(BackendRegistries.getDefaultNow()));
+  /** create counter for source and with result.
+   * This is public, so we can use it for tests.
+   * @param sourceId source_id tag for counter
+   * @param result result tag for counter
+   * @return created counter
+   */
+  public static Counter createCounter(SourceId sourceId, String result) {
+    return Counter.builder("reservoir_records_ingested_total")
+      .description("Total number of reservoir records ingested")
+      .tag("source_id", sourceId.toString())
+      .tag("result", result)
+      .register(BackendRegistries.getDefaultNow());
   }
 
-  private Timer updateTimer(Map<String, Timer> timerMap, SourceId sourceId, String phase) {
+  private Counter getCounter(Map<String, Counter> counterMap, SourceId sourceId, String result) {
+    return counterMap.computeIfAbsent(sourceId.toString() + "_" + result,
+        id -> createCounter(sourceId, result));
+  }
+
+  /** create timer for source and with phase.
+   * This is public, so we can use it for tests.
+   * @param sourceId source_id tag for timer
+   * @param phase phase tag for timer
+   * @return created timer
+  */
+  public static Timer createTimer(SourceId sourceId, String phase) {
+    return Timer.builder("reservoir_ingestion_duration_seconds")
+      .description("Time spent ingesting reservoir records")
+      .publishPercentileHistogram()
+      .minimumExpectedValue(Duration.ofNanos(20000))
+      .maximumExpectedValue(Duration.ofMillis(500))
+      .tag("source_id", sourceId.toString())
+      .tag("phase", phase)
+      .register(BackendRegistries.getDefaultNow());
+  }
+
+  private Timer getTimer(Map<String, Timer> timerMap, SourceId sourceId, String phase) {
     return timerMap.computeIfAbsent(sourceId.toString() + "_" + phase,
-        id -> Timer.builder("reservoir_ingestion_duration_seconds")
-          .description("Time spent ingesting reservoir records")
-          .publishPercentileHistogram()
-          .minimumExpectedValue(Duration.ofNanos(20000))
-          .maximumExpectedValue(Duration.ofMillis(500))
-          .tag("source_id", sourceId.toString())
-          .tag("phase", phase)
-          .register(BackendRegistries.getDefaultNow()));
+        id -> createTimer(sourceId, phase));
   }
 
   @Override
   public IngestMetrics withSource(SourceId sourceId) {
-    recordsIgnoredTotal = updateCounter(recordsIgnoredMap, sourceId, "ignored");
-    recordsInsertedTotal = updateCounter(recordsInsertedMap, sourceId, "inserted");
-    recordsDeletedTotal = updateCounter(recordsDeletedMap, sourceId, "deleted");
-    recordsUpdatedTotal = updateCounter(recordsUpdatedMap, sourceId, "updated");
-    timerMatcher = updateTimer(timerMatcherMap, sourceId, "matcher");
-    timerStoring = updateTimer(timerStoringMap, sourceId, "storing");
+    recordsIgnoredTotal = getCounter(recordsIgnoredMap, sourceId, "ignored");
+    recordsInsertedTotal = getCounter(recordsInsertedMap, sourceId, "inserted");
+    recordsDeletedTotal = getCounter(recordsDeletedMap, sourceId, "deleted");
+    recordsUpdatedTotal = getCounter(recordsUpdatedMap, sourceId, "updated");
+    timerMatcher = getTimer(timerMatcherMap, sourceId, "matcher");
+    timerStoring = getTimer(timerStoringMap, sourceId, "storing");
+    timerParsing = getTimer(timerParsingMap, sourceId, "parsing");
     return this;
   }
 
@@ -85,4 +108,10 @@ class IngestMetricsMicrometer implements IngestMetrics {
   public void recordStoring(long amount, TimeUnit unit) {
     timerStoring.record(amount, unit);
   }
+
+  @Override
+  public void recordParsing(long amount, TimeUnit unit) {
+    timerParsing.record(amount, unit);
+  }
+
 }

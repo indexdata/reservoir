@@ -1,7 +1,6 @@
 package com.indexdata.reservoir.server;
 
 import com.indexdata.reservoir.module.impl.ModuleJsonPath;
-import com.indexdata.reservoir.server.metrics.IngestMetrics;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -22,7 +21,6 @@ public class IngestWriteStream implements WriteStream<JsonObject> {
   final IngestStats stats;
   final String fileName;
   final String contentType;
-  final IngestMetrics ingestMetrics;
   Handler<Throwable> exceptionHandler;
   Promise<Void> endHandler;
   boolean ended;
@@ -45,7 +43,6 @@ public class IngestWriteStream implements WriteStream<JsonObject> {
     this.stats = new IngestStats(fileName);
     this.ingest = params.ingest;
     this.endHandler = Promise.promise();
-    this.ingestMetrics = IngestMetrics.create().withSource(params.sourceId);
   }
 
   @Override
@@ -73,7 +70,8 @@ public class IngestWriteStream implements WriteStream<JsonObject> {
             future = future
                 .compose(x -> storage
                   .ingestGlobalRecord(
-                    vertx, params.sourceId, params.sourceVersion, rec, ingestMatches, ingestMetrics)
+                      vertx, params.sourceId, params.sourceVersion, rec, ingestMatches,
+                      params.ingestMetrics)
                   .onSuccess(r -> {
                     if (r == null) {
                       stats.incrementDeleted();

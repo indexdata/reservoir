@@ -42,7 +42,7 @@ public class XmlParserTest {
   Future<XmlParser> xmlParserFromFile(String fname) {
     return vertx.fileSystem().open(fname, new OpenOptions())
         .map(asyncFile -> {
-          XmlParser xmlParser = XmlParser.newParser(asyncFile);
+          XmlParser xmlParser = XmlParser.newParser(asyncFile, null);
           xmlParser.pause();
           return xmlParser;
         });

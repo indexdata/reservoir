@@ -346,8 +346,8 @@ public class Storage {
   Future<Void> updateMatchKeyValues(Vertx vertx, SqlConnection conn, UUID globalId,
       JsonObject payload, IngestMatcher ingestMatch, IngestMetrics ingestMetrics) {
 
+    var startTime = System.nanoTime();
     if (ingestMatch.moduleExecutable != null) {
-      var startTime = System.nanoTime();
       return ingestMatch.moduleExecutable.executeAsCollection(payload)
           .compose(values -> {
             ingestMetrics.recordMatcher(System.nanoTime() - startTime, TimeUnit.NANOSECONDS);
@@ -355,7 +355,6 @@ public class Storage {
           });
     }
     if (ingestMatch.matchKeyMethod != null) {
-      var startTime = System.nanoTime();
       Set<String> keys = new HashSet<>();
       ingestMatch.matchKeyMethod.getKeys(payload, keys);
       ingestMetrics.recordMatcher(System.nanoTime() - startTime, TimeUnit.NANOSECONDS);

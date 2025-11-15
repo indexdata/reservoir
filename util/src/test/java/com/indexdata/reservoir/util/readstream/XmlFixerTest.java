@@ -38,7 +38,7 @@ public class XmlFixerTest {
   Future<Buffer> bufferFromFile(String fname) {
     return vertx.fileSystem().open(fname, new OpenOptions())
         .compose(asyncFile -> {
-          XmlFixer xmlFixer = new XmlFixer(asyncFile);
+          XmlFixer xmlFixer = new XmlFixer(asyncFile, null);
           Buffer buffer = Buffer.buffer();
           Promise<Buffer> promise = Promise.promise();
           xmlFixer.handler(buffer::appendBuffer);
@@ -51,7 +51,7 @@ public class XmlFixerTest {
   Future<XmlParser> xmlParserFromFile(String fname) {
     return vertx.fileSystem().open(fname, new OpenOptions())
         .map(asyncFile -> {
-          XmlParser xmlParser = XmlParser.newParser(new XmlFixer(asyncFile));
+          XmlParser xmlParser = XmlParser.newParser(new XmlFixer(asyncFile, null), null);
           xmlParser.pause();
           return xmlParser;
         });

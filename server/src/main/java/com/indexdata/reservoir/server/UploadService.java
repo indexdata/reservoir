@@ -1,5 +1,6 @@
 package com.indexdata.reservoir.server;
 
+import com.indexdata.reservoir.server.metrics.IngestMetrics;
 import com.indexdata.reservoir.util.readstream.MappingReadStream;
 import com.indexdata.reservoir.util.readstream.MarcJsonToIngestMapper;
 import com.indexdata.reservoir.util.readstream.MarcToJsonParser;
@@ -18,7 +19,9 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BiConsumer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.HttpResponse;
@@ -95,29 +98,35 @@ public class UploadService {
       var ingestWriteStream = new IngestWriteStream(
           ctx.vertx(), storage, params, fileName, contentType);
       ingestWriteStream.setWriteQueueMaxSize(queueSize);
-      return uploadContent(readStream, ingestWriteStream, contentType, params.xmlFixing);
+      return uploadContent(readStream, ingestWriteStream, contentType, params.xmlFixing,
+          params.ingestMetrics);
     } catch (Exception e) {
       return Future.failedFuture(e);
     }
   }
 
   private Future<IngestStats> uploadContent(ReadStream<Buffer> request,
-      IngestWriteStream ingestWriteStream, String contentType, boolean xmlFixing) {
+      IngestWriteStream ingestWriteStream, String contentType, boolean xmlFixing,
+      IngestMetrics ingestMetrics) {
     ReadStream<JsonObject> parser;
     if (contentType == null) {
       contentType = "application/octet-stream";
     }
+
+    BiConsumer<Long, TimeUnit> timingConsumer = ingestMetrics::recordParsing;
+
     switch (contentType) {
       case "application/octet-stream", "application/marc" ->
-          parser = new MarcToJsonParser(request);
+          parser = new MarcToJsonParser(request, timingConsumer);
       case "application/xml", "text/xml" ->
           parser = new MarcXmlParserToJson(
-              XmlParser.newParser(xmlFixing ? new XmlFixer(request) : request));
+              XmlParser.newParser(xmlFixing ? new XmlFixer(request, timingConsumer) : request,
+                  timingConsumer));
       default -> {
         return Future.failedFuture("Unsupported content-type: " + contentType);
       }
     }
-    parser = new MappingReadStream<>(parser, new MarcJsonToIngestMapper());
+    parser = new MappingReadStream<>(parser, new MarcJsonToIngestMapper(), timingConsumer);
     return uploadPayloadStream(parser, ingestWriteStream);
   }
 

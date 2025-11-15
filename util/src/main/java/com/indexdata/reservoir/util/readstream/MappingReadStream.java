@@ -2,6 +2,8 @@ package com.indexdata.reservoir.util.readstream;
 
 import io.vertx.core.Handler;
 import io.vertx.core.streams.ReadStream;
+import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 
 public class MappingReadStream<T,V> implements ReadStream<T>, Handler<V> {
 
@@ -12,6 +14,8 @@ public class MappingReadStream<T,V> implements ReadStream<T>, Handler<V> {
   boolean ended;
 
   protected final ReadStream<V> stream;
+
+  protected final BiConsumer<Long, TimeUnit> timingConsumer;
 
   Handler<T> eventHandler;
 
@@ -25,10 +29,13 @@ public class MappingReadStream<T,V> implements ReadStream<T>, Handler<V> {
    * Wrap a read stream with a stream capable of applying mapper to the stream's elements.
    * @param stream stream to wrap
    * @param mapper mapper to apply
+   * @param timingConsumer consumer of timing information for mapping operations
    */
-  public MappingReadStream(ReadStream<V> stream, Mapper<V, T> mapper) {
+  public MappingReadStream(ReadStream<V> stream, Mapper<V, T> mapper,
+      BiConsumer<Long, TimeUnit> timingConsumer) {
     this.stream = stream;
     this.mapper = mapper;
+    this.timingConsumer = timingConsumer;
     stream.handler(this);
     stream.endHandler(v -> {
       //might be already ended due to exception
@@ -107,7 +114,11 @@ public class MappingReadStream<T,V> implements ReadStream<T>, Handler<V> {
     boolean endedBegin = this.ended;
     try {
       while (demand > 0L) {
+        long startTime = System.nanoTime();
         T t = mapper.poll();
+        if (timingConsumer != null) {
+          timingConsumer.accept(System.nanoTime() - startTime, TimeUnit.NANOSECONDS);
+        }
         if (t == null) {
           if (ended) {
             Handler<Void> handler = endHandler;

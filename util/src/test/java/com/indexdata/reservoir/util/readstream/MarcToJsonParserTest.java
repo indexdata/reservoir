@@ -37,7 +37,7 @@ public class MarcToJsonParserTest {
 
   Future<ReadStream<JsonObject>> marc4ParserToXmlFromFile(String fname) {
     return vertx.fileSystem().open(fname, new OpenOptions())
-        .map(f -> new MarcToJsonParser(f).pause());
+        .map(f -> new MarcToJsonParser(f, null).pause());
   }
 
   Future<ReadStream<JsonObject>> marc4ParserToXmlFromFile() {
@@ -179,7 +179,7 @@ public class MarcToJsonParserTest {
   @Test
   public void testSkipLead(TestContext context) {
     MemoryReadStream rs = new MemoryReadStream(Buffer.buffer("!" + "x".repeat(24)), vertx);
-    MappingReadStream<Record, Buffer> parser = new MappingReadStream<>(rs, new Marc4jMapper());
+    MappingReadStream<Record, Buffer> parser = new MappingReadStream<>(rs, new Marc4jMapper(), null);
     Promise<Void> promise = Promise.promise();
     parser.exceptionHandler(promise::tryFail);
     parser.endHandler(x -> promise.complete());
@@ -191,7 +191,7 @@ public class MarcToJsonParserTest {
   @Test
   public void testAllLeadBad(TestContext context) {
     MemoryReadStream rs = new MemoryReadStream(Buffer.buffer("!".repeat(4) + "9".repeat(23)), vertx);
-    MappingReadStream<Record, Buffer> parser = new MappingReadStream<>(rs, new Marc4jMapper());
+    MappingReadStream<Record, Buffer> parser = new MappingReadStream<>(rs, new Marc4jMapper(), null);
     Promise<Void> promise = Promise.promise();
     parser.exceptionHandler(promise::tryFail);
     parser.endHandler(x -> promise.complete());
@@ -203,7 +203,7 @@ public class MarcToJsonParserTest {
   @Test
   public void testExceptionInStream(TestContext context) {
     MemoryReadStream rs = new MemoryReadStream(null, vertx);
-    MappingReadStream<Record, Buffer> parser = new MappingReadStream<>(rs, new Marc4jMapper());
+    MappingReadStream<Record, Buffer> parser = new MappingReadStream<>(rs, new Marc4jMapper(), null);
     Promise<Void> promise = Promise.promise();
     parser.exceptionHandler(promise::tryFail);
     parser.endHandler(x -> promise.complete());
@@ -217,7 +217,7 @@ public class MarcToJsonParserTest {
   @Test
   public void testExceptionInStreamNoExceptionHandler(TestContext context) {
     MemoryReadStream rs = new MemoryReadStream(null, vertx);
-    MappingReadStream<Record, Buffer> parser = new MappingReadStream<>(rs, new Marc4jMapper());
+    MappingReadStream<Record, Buffer> parser = new MappingReadStream<>(rs, new Marc4jMapper(), null);
     Promise<Void> promise = Promise.promise();
     parser.endHandler(x -> promise.complete());
     rs.run();
