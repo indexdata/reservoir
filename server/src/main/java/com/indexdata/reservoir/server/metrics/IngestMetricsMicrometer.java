@@ -38,8 +38,8 @@ class IngestMetricsMicrometer implements IngestMetrics {
         id -> Timer.builder("reservoir_ingestion_duration_seconds")
           .description("Time spent ingesting reservoir records")
           .publishPercentileHistogram()
-          .minimumExpectedValue(Duration.ofNanos(10000))
-          .maximumExpectedValue(Duration.ofSeconds(1))
+          .minimumExpectedValue(Duration.ofNanos(20000))
+          .maximumExpectedValue(Duration.ofMillis(500))
           .tag("source_id", sourceId.toString())
           .tag("phase", phase)
           .register(BackendRegistries.getDefaultNow()));
