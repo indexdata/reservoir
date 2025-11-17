@@ -117,19 +117,21 @@ public class UploadTest extends TestBase {
   @Test
   public void uploadIso2709WithIngest(TestContext context) {
     SourceId sourceId = new SourceId("SOURCE-1");
-    Counter ignored_counter = IngestMetricsMicrometer.createCounter(sourceId, "ignored");
-    Counter inserted_counter = IngestMetricsMicrometer.createCounter(sourceId, "inserted");
-    Counter deleted_counter = IngestMetricsMicrometer.createCounter(sourceId, "deleted");
-    Counter updated_counter = IngestMetricsMicrometer.createCounter(sourceId, "updated");
-    Timer matcher_timer = IngestMetricsMicrometer.createTimer(sourceId, "matcher");
-    Timer storing_timer = IngestMetricsMicrometer.createTimer(sourceId, "storing");
+    Counter ignoredCounter = IngestMetricsMicrometer.createCounter(sourceId, "ignored");
+    Counter insertedCounter = IngestMetricsMicrometer.createCounter(sourceId, "inserted");
+    Counter deletedCounter = IngestMetricsMicrometer.createCounter(sourceId, "deleted");
+    Counter updatedCounter = IngestMetricsMicrometer.createCounter(sourceId, "updated");
+    Timer matcherTimer = IngestMetricsMicrometer.createTimer(sourceId, "matcher");
+    Timer storingTimer = IngestMetricsMicrometer.createTimer(sourceId, "storing");
+    Timer parsingTimer = IngestMetricsMicrometer.createTimer(sourceId, "parsing");
 
-    double inserted_before = inserted_counter.count();
-    double deleted_before = deleted_counter.count();
-    double ignored_before = ignored_counter.count();
-    double updated_before = updated_counter.count();
-    long matcher_before = matcher_timer.count();
-    long storing_before = storing_timer.count();
+    double ignoredBefore = ignoredCounter.count();
+    double insertedBefore = insertedCounter.count();
+    double deletedBefore = deletedCounter.count();
+    double updatedBefore = updatedCounter.count();
+    long matcherBefore = matcherTimer.count();
+    long storingBefore = storingTimer.count();
+    long parsingBefore = parsingTimer.count();
 
     MultipartForm requestForm = MultipartForm.create()
         .binaryFileUpload("records", "marc3.mrc", marc3marcBuffer,  "application/marc")
@@ -164,12 +166,13 @@ public class UploadTest extends TestBase {
         .map(res -> {
           JsonObject responseBody = res.bodyAsJsonObject();
           assertThat(responseBody.getJsonArray("items").size(), is(2));
-          assertThat(inserted_counter.count(), is(inserted_before + 3.0));
-          assertThat(deleted_counter.count(), is(deleted_before + 1.0));
-          assertThat(ignored_counter.count(), is(ignored_before));
-          assertThat(updated_counter.count(), is(updated_before));
-          assertThat(matcher_timer.count(), is(matcher_before));
-          assertThat(storing_timer.count(), is(storing_before + 4L));
+          assertThat(insertedCounter.count(), is(insertedBefore + 3.0));
+          assertThat(deletedCounter.count(), is(deletedBefore + 1.0));
+          assertThat(ignoredCounter.count(), is(ignoredBefore));
+          assertThat(updatedCounter.count(), is(updatedBefore));
+          assertThat(matcherTimer.count(), is(matcherBefore));
+          assertThat(storingTimer.count(), is(storingBefore + 4L));
+          assertThat(parsingTimer.count(), is(parsingBefore + 4L));
           return null;
         })
         .onComplete(context.asyncAssertSuccess());
