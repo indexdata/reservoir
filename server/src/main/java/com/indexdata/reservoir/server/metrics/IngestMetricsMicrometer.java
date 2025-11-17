@@ -52,11 +52,17 @@ public class IngestMetricsMicrometer implements IngestMetrics {
    * @return created timer
   */
   public static Timer createTimer(SourceId sourceId, String phase) {
+    long minExpectedNs = 10_000_000; // 10 ms
+    long maxExpectedNS = 1_000_000_000; // 1 second
+    if (phase.equals("matcher")) {
+      minExpectedNs = 10_000; // 10 us
+      maxExpectedNS = 500_000_000; // 500 ms
+    }
     return Timer.builder("reservoir_ingestion_duration_seconds")
       .description("Time spent ingesting reservoir records")
       .publishPercentileHistogram()
-      .minimumExpectedValue(Duration.ofNanos(20000))
-      .maximumExpectedValue(Duration.ofMillis(500))
+      .minimumExpectedValue(Duration.ofNanos(minExpectedNs))
+      .maximumExpectedValue(Duration.ofNanos(maxExpectedNS))
       .tag("source_id", sourceId.toString())
       .tag("phase", phase)
       .register(BackendRegistries.getDefaultNow());
