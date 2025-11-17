@@ -5,6 +5,8 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.startsWith;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Timer;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.file.FileSystem;
 import io.vertx.core.http.HttpResponseExpectation;
@@ -17,6 +19,9 @@ import org.folio.okapi.common.XOkapiHeaders;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import com.indexdata.reservoir.server.metrics.IngestMetricsMicrometer;
+import com.indexdata.reservoir.util.SourceId;
 
 @RunWith(VertxUnitRunner.class)
 public class UploadTest extends TestBase {
@@ -111,6 +116,23 @@ public class UploadTest extends TestBase {
 
   @Test
   public void uploadIso2709WithIngest(TestContext context) {
+    SourceId sourceId = new SourceId("SOURCE-1");
+    Counter ignoredCounter = IngestMetricsMicrometer.createCounter(sourceId, "ignored");
+    Counter insertedCounter = IngestMetricsMicrometer.createCounter(sourceId, "inserted");
+    Counter deletedCounter = IngestMetricsMicrometer.createCounter(sourceId, "deleted");
+    Counter updatedCounter = IngestMetricsMicrometer.createCounter(sourceId, "updated");
+    Timer matcherTimer = IngestMetricsMicrometer.createTimer(sourceId, "matcher");
+    Timer storingTimer = IngestMetricsMicrometer.createTimer(sourceId, "storing");
+    Timer parsingTimer = IngestMetricsMicrometer.createTimer(sourceId, "parsing");
+
+    double ignoredBefore = ignoredCounter.count();
+    double insertedBefore = insertedCounter.count();
+    double deletedBefore = deletedCounter.count();
+    double updatedBefore = updatedCounter.count();
+    long matcherBefore = matcherTimer.count();
+    long storingBefore = storingTimer.count();
+    long parsingBefore = parsingTimer.count();
+
     MultipartForm requestForm = MultipartForm.create()
         .binaryFileUpload("records", "marc3.mrc", marc3marcBuffer,  "application/marc")
         .binaryFileUpload("records", "marc1-delete.xml", marc1xmlBuffer,  "text/xml");
@@ -144,6 +166,13 @@ public class UploadTest extends TestBase {
         .map(res -> {
           JsonObject responseBody = res.bodyAsJsonObject();
           assertThat(responseBody.getJsonArray("items").size(), is(2));
+          assertThat(insertedCounter.count(), is(insertedBefore + 3.0));
+          assertThat(deletedCounter.count(), is(deletedBefore + 1.0));
+          assertThat(ignoredCounter.count(), is(ignoredBefore));
+          assertThat(updatedCounter.count(), is(updatedBefore));
+          assertThat(matcherTimer.count(), is(matcherBefore));
+          assertThat(storingTimer.count(), is(storingBefore + 4L));
+          assertThat(parsingTimer.count(), is(parsingBefore + 4L));
           return null;
         })
         .onComplete(context.asyncAssertSuccess());

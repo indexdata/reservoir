@@ -2,68 +2,122 @@ package com.indexdata.reservoir.server.metrics;
 
 import com.indexdata.reservoir.util.SourceId;
 import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Timer;
 import io.vertx.micrometer.backends.BackendRegistries;
-import java.util.HashMap;
+import java.time.Duration;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
-class IngestMetricsMicrometer implements IngestMetrics {
-  static Map<String, Counter> recordsProcessedMap = new HashMap<>();
-  static Map<String, Counter> recordsIgnoredMap = new HashMap<>();
-  static Map<String, Counter> recordsInsertedMap = new HashMap<>();
-  static Map<String, Counter> recordsDeletedMap = new HashMap<>();
-  static Map<String, Counter> recordsUpdatedMap = new HashMap<>();
+public class IngestMetricsMicrometer implements IngestMetrics {
+  static ConcurrentHashMap<String, Counter> recordsIgnoredMap = new ConcurrentHashMap<>();
+  static ConcurrentHashMap<String, Counter> recordsInsertedMap = new ConcurrentHashMap<>();
+  static ConcurrentHashMap<String, Counter> recordsDeletedMap = new ConcurrentHashMap<>();
+  static ConcurrentHashMap<String, Counter> recordsUpdatedMap = new ConcurrentHashMap<>();
+  static ConcurrentHashMap<String, Timer> timerMatcherMap = new ConcurrentHashMap<>();
+  static ConcurrentHashMap<String, Timer> timerStoringMap = new ConcurrentHashMap<>();
+  static ConcurrentHashMap<String, Timer> timerParsingMap = new ConcurrentHashMap<>();
 
-  Counter recordsProcessedTotal;
   Counter recordsIgnoredTotal;
   Counter recordsInsertedTotal;
   Counter recordsDeletedTotal;
   Counter recordsUpdatedTotal;
+  Timer timerMatcher;
+  Timer timerStoring;
+  Timer timerParsing;
 
-  private Counter updateCounter(Map<String, Counter> counterMap, String metricName,
-      String description, SourceId sourceId) {
-    return counterMap.computeIfAbsent(sourceId.toString(),
-        id -> Counter.builder(metricName)
-          .description(description)
-          .tag("source_id", id)
-          .register(BackendRegistries.getDefaultNow()));
+  /** create counter for source and with result.
+   * This is public, so we can use it for tests.
+   * @param sourceId source_id tag for counter
+   * @param result result tag for counter
+   * @return created counter
+   */
+  public static Counter createCounter(SourceId sourceId, String result) {
+    return Counter.builder("reservoir_records_ingested_total")
+      .description("Total number of reservoir records ingested")
+      .tag("source_id", sourceId.toString())
+      .tag("result", result)
+      .register(BackendRegistries.getDefaultNow());
+  }
+
+  private Counter getCounter(Map<String, Counter> counterMap, SourceId sourceId, String result) {
+    return counterMap.computeIfAbsent(sourceId.toString() + "_" + result,
+        id -> createCounter(sourceId, result));
+  }
+
+  /** create timer for source and with phase.
+   * This is public, so we can use it for tests.
+   * @param sourceId source_id tag for timer
+   * @param phase phase tag for timer
+   * @return created timer
+  */
+  public static Timer createTimer(SourceId sourceId, String phase) {
+    long minExpectedNs = 10_000_000; // 10 ms
+    long maxExpectedNS = 1_000_000_000; // 1 second
+    if (phase.equals("matcher")) {
+      minExpectedNs = 10_000; // 10 us
+      maxExpectedNS = 500_000_000; // 500 ms
+    }
+    return Timer.builder("reservoir_ingestion_duration_seconds")
+      .description("Time spent ingesting reservoir records")
+      .publishPercentileHistogram()
+      .minimumExpectedValue(Duration.ofNanos(minExpectedNs))
+      .maximumExpectedValue(Duration.ofNanos(maxExpectedNS))
+      .tag("source_id", sourceId.toString())
+      .tag("phase", phase)
+      .register(BackendRegistries.getDefaultNow());
+  }
+
+  private Timer getTimer(Map<String, Timer> timerMap, SourceId sourceId, String phase) {
+    return timerMap.computeIfAbsent(sourceId.toString() + "_" + phase,
+        id -> createTimer(sourceId, phase));
   }
 
   @Override
   public IngestMetrics withSource(SourceId sourceId) {
-    recordsProcessedTotal = updateCounter(recordsProcessedMap, "reservoir_records_processed_total",
-        "Total number of reservoir records processed", sourceId);
-    recordsIgnoredTotal = updateCounter(recordsIgnoredMap, "reservoir_records_ignored_total",
-        "Total number of reservoir records ignored", sourceId);
-    recordsInsertedTotal = updateCounter(recordsInsertedMap, "reservoir_records_inserted_total",
-        "Total number of reservoir records inserted", sourceId);
-    recordsDeletedTotal = updateCounter(recordsDeletedMap, "reservoir_records_deleted_total",
-        "Total number of reservoir records deleted", sourceId);
-    recordsUpdatedTotal = updateCounter(recordsUpdatedMap, "reservoir_records_updated_total",
-        "Total number of reservoir records updated", sourceId);
+    recordsIgnoredTotal = getCounter(recordsIgnoredMap, sourceId, "ignored");
+    recordsInsertedTotal = getCounter(recordsInsertedMap, sourceId, "inserted");
+    recordsDeletedTotal = getCounter(recordsDeletedMap, sourceId, "deleted");
+    recordsUpdatedTotal = getCounter(recordsUpdatedMap, sourceId, "updated");
+    timerMatcher = getTimer(timerMatcherMap, sourceId, "matcher");
+    timerStoring = getTimer(timerStoringMap, sourceId, "storing");
+    timerParsing = getTimer(timerParsingMap, sourceId, "parsing");
     return this;
   }
 
   @Override
   public void incrementRecordsIgnored() {
-    recordsProcessedTotal.increment();
     recordsIgnoredTotal.increment();
   }
 
   @Override
   public void incrementRecordsInserted() {
-    recordsProcessedTotal.increment();
     recordsInsertedTotal.increment();
   }
 
   @Override
   public void incrementRecordsDeleted() {
-    recordsProcessedTotal.increment();
     recordsDeletedTotal.increment();
   }
 
   @Override
   public void incrementRecordsUpdated() {
-    recordsProcessedTotal.increment();
     recordsUpdatedTotal.increment();
   }
+
+  @Override
+  public void recordMatcher(long amount, TimeUnit unit) {
+    timerMatcher.record(amount, unit);
+  }
+
+  @Override
+  public void recordStoring(long amount, TimeUnit unit) {
+    timerStoring.record(amount, unit);
+  }
+
+  @Override
+  public void recordParsing(long amount, TimeUnit unit) {
+    timerParsing.record(amount, unit);
+  }
+
 }

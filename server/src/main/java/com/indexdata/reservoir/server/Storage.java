@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
@@ -215,16 +216,18 @@ public class Storage {
   }
 
   private Future<Boolean> upsertGlobalRecord(Vertx vertx, String localIdentifier, SourceId sourceId,
-      int sourceVersion, JsonObject payload, List<IngestMatcher> ingestMatches) {
+      int sourceVersion, JsonObject payload, List<IngestMatcher> ingestMatches,
+      IngestMetrics ingestMetrics) {
     return upsertGlobalRecord(vertx, ingestMatches.size(), localIdentifier, sourceId,
-        sourceVersion, payload, ingestMatches);
+        sourceVersion, payload, ingestMatches, ingestMetrics);
   }
 
   private Future<Boolean> upsertGlobalRecord(Vertx vertx, int retryCount, String localIdentifier,
-      SourceId sourceId, int sourceVersion, JsonObject payload, List<IngestMatcher> ingestMatches) {
+      SourceId sourceId, int sourceVersion, JsonObject payload, List<IngestMatcher> ingestMatches,
+      IngestMetrics ingestMetrics) {
     return pool.withTransaction(conn ->
             upsertGlobalRecord(vertx, conn, localIdentifier, sourceId, sourceVersion,
-                payload, ingestMatches))
+                payload, ingestMatches, ingestMetrics))
         // addValuesToCluster may fail if for same new match key for parallel operations
         // we recover just once for that. 2nd will find the new value for the one that
         // succeeded.
@@ -233,12 +236,13 @@ public class Storage {
             return Future.failedFuture(e);
           }
           return upsertGlobalRecord(vertx, retryCount - 1, localIdentifier, sourceId, sourceVersion,
-              payload, ingestMatches);
+              payload, ingestMatches, ingestMetrics);
         });
   }
 
   Future<Boolean> upsertGlobalRecord(Vertx vertx, SqlConnection conn, String localIdentifier,
-      SourceId sourceId, int sourceVersion, JsonObject payload, List<IngestMatcher> ingestMatches) {
+      SourceId sourceId, int sourceVersion, JsonObject payload, List<IngestMatcher> ingestMatches,
+      IngestMetrics ingestMetrics) {
     UUID startId = UUID.randomUUID();
     return conn.preparedQuery(
             "INSERT INTO " + globalRecordTable
@@ -250,7 +254,7 @@ public class Storage {
         )
         .execute(Tuple.of(startId, localIdentifier, sourceId.toString(), sourceVersion, payload))
         .map(rowSet -> rowSet.iterator().next().getUUID("id"))
-        .compose(id -> updateMatchKeyValues(vertx, conn, id, payload, ingestMatches)
+        .compose(id -> updateMatchKeyValues(vertx, conn, id, payload, ingestMatches, ingestMetrics)
             .map(x -> id.equals(startId)));
   }
 
@@ -284,6 +288,18 @@ public class Storage {
       SourceId sourceId, int sourceVersion, JsonObject globalRecord,
       List<IngestMatcher> ingestMatches, IngestMetrics ingestMetrics) {
 
+    long startTime = System.nanoTime();
+    return ingestGlobalRecord2(vertx, sourceId, sourceVersion, globalRecord,
+        ingestMatches, ingestMetrics)
+        .onComplete(x -> ingestMetrics.recordStoring(
+            System.nanoTime() - startTime, TimeUnit.NANOSECONDS)
+        );
+  }
+
+  private Future<Boolean> ingestGlobalRecord2(Vertx vertx,
+      SourceId sourceId, int sourceVersion, JsonObject globalRecord,
+      List<IngestMatcher> ingestMatches, IngestMetrics ingestMetrics) {
+
     final String localIdentifier = globalRecord.getString("localId");
     if (localIdentifier == null) {
       ingestMetrics.incrementRecordsIgnored();
@@ -306,7 +322,7 @@ public class Storage {
       return Future.failedFuture("sourceId required");
     }
     return upsertGlobalRecord(vertx, localIdentifier, sourceId,
-        sourceVersion, payload, ingestMatches)
+        sourceVersion, payload, ingestMatches, ingestMetrics)
         .map(inserted -> {
           if (inserted) {
             ingestMetrics.incrementRecordsInserted();
@@ -318,25 +334,30 @@ public class Storage {
   }
 
   Future<Void> updateMatchKeyValues(Vertx vertx, SqlConnection conn, UUID globalId,
-      JsonObject payload, List<IngestMatcher> ingestMatches) {
+      JsonObject payload, List<IngestMatcher> ingestMatches, IngestMetrics ingestMetrics) {
     Future<Void> future = Future.succeededFuture();
     for (IngestMatcher ingestMatch : ingestMatches) {
       future = future.compose(
-          x -> updateMatchKeyValues(vertx, conn, globalId, payload, ingestMatch));
+          x -> updateMatchKeyValues(vertx, conn, globalId, payload, ingestMatch, ingestMetrics));
     }
     return future;
   }
 
   Future<Void> updateMatchKeyValues(Vertx vertx, SqlConnection conn, UUID globalId,
-      JsonObject payload, IngestMatcher ingestMatch) {
+      JsonObject payload, IngestMatcher ingestMatch, IngestMetrics ingestMetrics) {
 
+    var startTime = System.nanoTime();
     if (ingestMatch.moduleExecutable != null) {
       return ingestMatch.moduleExecutable.executeAsCollection(payload)
-          .compose(values -> updateMatchKeyValues(conn, globalId, ingestMatch.matchKeyId, values));
+          .compose(values -> {
+            ingestMetrics.recordMatcher(System.nanoTime() - startTime, TimeUnit.NANOSECONDS);
+            return updateMatchKeyValues(conn, globalId, ingestMatch.matchKeyId, values);
+          });
     }
     if (ingestMatch.matchKeyMethod != null) {
       Set<String> keys = new HashSet<>();
       ingestMatch.matchKeyMethod.getKeys(payload, keys);
+      ingestMetrics.recordMatcher(System.nanoTime() - startTime, TimeUnit.NANOSECONDS);
       return updateMatchKeyValues(conn, globalId, ingestMatch.matchKeyId, keys);
     }
     return Future.succeededFuture();
@@ -858,6 +879,7 @@ public class Storage {
             stream.pause();
             totalRecords.incrementAndGet();
             UUID globalId = row.getUUID("id");
+            // TODO: metrics for matching here..
             if (matcher != null) {
               matcher.executeAsCollection(row.getJsonObject("payload"))
                   .compose(values ->

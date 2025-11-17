@@ -1,6 +1,7 @@
 package com.indexdata.reservoir.server;
 
 import com.indexdata.reservoir.module.impl.ModuleJsonPath;
+import com.indexdata.reservoir.server.metrics.IngestMetrics;
 import com.indexdata.reservoir.util.SourceId;
 import com.jayway.jsonpath.InvalidPathException;
 import io.vertx.core.http.HttpServerRequest;
@@ -14,6 +15,7 @@ public class IngestParams {
   final boolean ingest;
   final boolean raw;
   final boolean xmlFixing;
+  final IngestMetrics ingestMetrics;
 
   /**
    * Create ingest params from request.
@@ -33,6 +35,7 @@ public class IngestParams {
     xmlFixing = request.getParam("xmlFixing", "false").equals("true");
     raw = request.getParam("raw", "false").equals("true");
     fileName = request.getParam("fileName", "<noname>");
+    ingestMetrics = IngestMetrics.create().withSource(sourceId);
   }
 
   /**
