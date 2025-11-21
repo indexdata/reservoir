@@ -25,7 +25,7 @@ public class IngestWriteStream implements WriteStream<JsonObject> {
   Promise<Void> endHandler;
   boolean ended;
   Handler<Void> drainHandler;
-  List<IngestMatcher> ingestMatches;
+  List<IngestMatcher> ingestMatchers;
   AtomicInteger ops = new AtomicInteger();
   int queueSize = 40;
   boolean ingest;
@@ -60,17 +60,17 @@ public class IngestWriteStream implements WriteStream<JsonObject> {
           Future<Void> future = Future.succeededFuture();
           String localId = rec.getString(LOCAL_ID);
           if (ingest && localId != null) {
-            if (ingestMatches == null) {
+            if (ingestMatchers == null) {
               future = storage.availableIngestMatchers(vertx)
                 .map(x -> {
-                  ingestMatches = x;
+                  ingestMatchers = x;
                   return null;
                 });
             }
             future = future
                 .compose(x -> storage
                   .ingestGlobalRecord(
-                      vertx, params.sourceId, params.sourceVersion, rec, ingestMatches,
+                      vertx, params.sourceId, params.sourceVersion, rec, ingestMatchers,
                       params.ingestMetrics)
                   .onSuccess(r -> {
                     if (r == null) {
