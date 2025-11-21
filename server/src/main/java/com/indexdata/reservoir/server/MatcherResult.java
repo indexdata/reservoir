@@ -3,7 +3,6 @@ package com.indexdata.reservoir.server;
 import java.util.Collection;
 
 public class MatcherResult {
-  Collection<String> keys;
-  int diff;
-  String matchKeyId;
+  /* package-private */ Collection<String> keys;
+  /* package-private */ String matchKeyId;
 }

@@ -371,13 +371,11 @@ public class Storage {
 
   Future<Void> updateMatchKeyValues(SqlConnection conn, UUID globalId,
       List<MatcherResult> matcherResults, IngestMetrics ingestMetrics) {
-    Future<Void> future = Future.succeededFuture();
+    List<Future<Void>> futures = new ArrayList<>();
     for (MatcherResult matcherResult : matcherResults) {
-      future = future.compose(
-          x -> updateClusterForRecord(conn, globalId, matcherResult)
-              .mapEmpty());
+      futures.add(updateClusterForRecord(conn, globalId, matcherResult));
     }
-    return future;
+    return Future.all(futures).mapEmpty();
   }
 
   Future<IngestMatcher> createIngestMatcher(JsonObject matchKeyConfig, Vertx vertx) {
