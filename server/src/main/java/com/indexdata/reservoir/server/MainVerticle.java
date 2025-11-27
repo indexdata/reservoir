@@ -1,8 +1,7 @@
 package com.indexdata.reservoir.server;
 
-import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
+import io.vertx.core.VerticleBase;
 import io.vertx.core.http.HttpServerOptions;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -13,11 +12,11 @@ import org.folio.tlib.api.HealthApi;
 import org.folio.tlib.api.Tenant2Api;
 import org.folio.tlib.postgres.TenantPgPool;
 
-public class MainVerticle extends AbstractVerticle {
+public class MainVerticle extends VerticleBase {
   final Logger log = LogManager.getLogger(MainVerticle.class);
 
   @Override
-  public void start(Promise<Void> promise) {
+  public Future<?> start() {
     System.setProperty("org.marc4j.marc.MarcFactory", "org.marc4j.marc.impl.MarcFactoryImpl");
     TenantPgPool.setModule("mod-reservoir");
     ModuleVersionReporter m = new ModuleVersionReporter("com.indexdata/reservoir-server");
@@ -39,7 +38,7 @@ public class MainVerticle extends AbstractVerticle {
     Future<Void> future = Config.getSysConfBoolean("db_check", true, config())
         ? Healthz.checkDb(vertx)
         : Future.succeededFuture();
-    future
+    return future
         .compose(x -> RouterCreator.mountAll(vertx, routerCreators, "reservoir"))
         .compose(router -> {
           HttpServerOptions so = new HttpServerOptions()
@@ -56,13 +55,11 @@ public class MainVerticle extends AbstractVerticle {
             JavaScriptCheck.check();
             return null;
           })
-        )
-        .onComplete(x -> promise.handle(x.mapEmpty()));
+        );
   }
 
   @Override
-  public void stop(Promise<Void> promise) {
-    TenantPgPool.closeAll()
-        .onComplete(promise);
+  public Future<?> stop() {
+    return TenantPgPool.closeAll();
   }
 }
