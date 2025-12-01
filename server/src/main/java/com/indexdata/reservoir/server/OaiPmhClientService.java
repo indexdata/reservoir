@@ -653,21 +653,28 @@ public class OaiPmhClientService {
                 if (queue.get() < 2) {
                   xmlParser.resume();
                 }
-                if (queue.get() == 0 && Boolean.TRUE.equals(ended.get())) {
-                  endResponse(oaiParserStream.getResumptionToken(), oaiParserStream.getError(), job)
-                      .onComplete(promise);
+                if (Boolean.TRUE.equals(ended.get())) {
+                  checkEndOfResponse(oaiParserStream, job, promise, queue);
                 }
               });
         });
     oaiParserStream.exceptionHandler(promise::tryFail);
     xmlParser.endHandler(end -> {
       ended.set(true);
-      if (queue.get() == 0) {
-        endResponse(oaiParserStream.getResumptionToken(), oaiParserStream.getError(), job)
-            .onComplete(promise);
-      }
+      checkEndOfResponse(oaiParserStream, job, promise, queue);
     });
     return promise.future();
+  }
+
+  void checkEndOfResponse(OaiParserStream<JsonObject> oaiParserStream, OaiPmhStatus job,
+      Promise<Void> promise, AtomicInteger queue) {
+    // only call endResponse if not already completed .. in particular if there are
+    // exceptions on oaiParserStream or xmlParser, do not reset resumption token
+    // due to retry
+    if (queue.get() == 0 && !promise.future().isComplete()) {
+      endResponse(oaiParserStream.getResumptionToken(), oaiParserStream.getError(), job)
+          .andThen(promise);
+    }
   }
 
   void oaiHarvestLoop(Vertx vertx, Storage storage, String id, OaiPmhStatus job, UUID owner,
