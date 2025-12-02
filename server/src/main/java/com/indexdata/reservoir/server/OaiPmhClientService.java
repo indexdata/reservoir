@@ -36,6 +36,8 @@ import io.vertx.sqlclient.Tuple;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
@@ -576,7 +578,26 @@ public class OaiPmhClientService {
     }
   }
 
-  private Future<Void> handleBadResponse(HttpClientResponse res) {
+  static class HttpStatusError extends VertxException {
+    private final int statusCode;
+    private final String retryAfter;
+
+    public HttpStatusError(int statusCode, String retryAfter, String message) {
+      super(message);
+      this.statusCode = statusCode;
+      this.retryAfter = retryAfter;
+    }
+
+    public int getStatusCode() {
+      return statusCode;
+    }
+
+    public String getRetryAfter() {
+      return retryAfter;
+    }
+  }
+
+  private Future<Void> handleStatusError(HttpClientResponse res) {
     Promise<Void> promise = Promise.promise();
     Buffer buffer = Buffer.buffer();
     res.handler(x -> {
@@ -589,7 +610,9 @@ public class OaiPmhClientService {
     res.endHandler(end -> {
       String msg = buffer.length() > 80
           ? buffer.getString(0, 80) : buffer.toString();
-      promise.tryFail("Returned HTTP status " + res.statusCode() + ": " + msg);
+      var e = new HttpStatusError(res.statusCode(), res.getHeader("Retry-After"),
+          "Returned HTTP status " + res.statusCode() + ": " + msg);
+      promise.tryFail(e);
     });
     return promise.future();
   }
@@ -598,7 +621,7 @@ public class OaiPmhClientService {
       List<IngestMatcher> ingestMatches, HttpClientResponse res) {
     job.incrementTotalRequests();
     if (res.statusCode() != 200) {
-      return handleBadResponse(res);
+      return handleStatusError(res);
     }
     JsonObject config = job.getConfig();
     boolean xmlFixing = config.getBoolean("xmlFixing", false);
@@ -677,6 +700,52 @@ public class OaiPmhClientService {
     }
   }
 
+  static Long parseRetryAfter(String retryAfter) {
+    if (retryAfter == null) {
+      return null;
+    }
+    try {
+      long raSec = Long.parseLong(retryAfter);
+      if (raSec > 0) {
+        return raSec * 1000;
+      }
+    } catch (NumberFormatException ex) {
+      try {
+        ZonedDateTime date = ZonedDateTime.parse(retryAfter, DateTimeFormatter.RFC_1123_DATE_TIME);
+        long dateMs = date.toInstant().toEpochMilli();
+        long nowMs = System.currentTimeMillis();
+        if (dateMs > nowMs) {
+          return dateMs - nowMs;
+        }
+      } catch (Exception ex2) {
+        // ignore
+      }
+    }
+    return null;
+  }
+
+  static Long checkRetryWait(Throwable e, JsonObject config) {
+    final int w = config.getInteger("waitRetries", 10);
+    final long ms = w == 0 ? 1 : 1000 * w; // 0 means immediate
+    if (e instanceof HttpStatusError httpStatusError) {
+      int statusCode = httpStatusError.getStatusCode();
+      if (statusCode == 408 || statusCode == 429 || statusCode == 500
+          || statusCode == 502 || statusCode == 503 || statusCode == 504) {
+        Long retryMs = parseRetryAfter(httpStatusError.getRetryAfter());
+        if (retryMs != null) {
+          return retryMs;
+        }
+        return ms;
+      }
+    }
+    if (e instanceof io.vertx.core.http.HttpClosedException
+        || e instanceof java.net.ConnectException
+        || e instanceof java.net.UnknownHostException) {
+      return ms;
+    }
+    return null;
+  }
+
   void oaiHarvestLoop(Vertx vertx, Storage storage, String id, OaiPmhStatus job, UUID owner,
       int retries) {
     job.setError(null);
@@ -702,13 +771,12 @@ public class OaiPmhClientService {
                           listRecordsResponse(storage, job, ingestMatches, res)))
               .map(0)
               .recover(e -> {
-                if (e instanceof VertxException && "Connection was closed".equals(e.getMessage())
-                    && retries < config.getInteger("numberRetries", 3)) {
-                  log.info("harvest loop id={} owner={} rt={} error={}, will retry",
-                      id, owner, getRt(config), e.getMessage());
+                Long waitMs = checkRetryWait(e, config);
+                if (waitMs != null && retries < config.getInteger("numberRetries", 3)) {
+                  log.info("harvest loop id={} owner={} rt={} error={}, will retry in {} ms",
+                      id, owner, getRt(config), e.getMessage(), waitMs);
                   Promise<Integer> promise = Promise.promise();
-                  long w = config.getInteger("waitRetries", 10);
-                  vertx.setTimer(1000 * w, x -> promise.complete(retries + 1));
+                  vertx.setTimer(waitMs, x -> promise.complete(retries + 1));
                   return promise.future();
                 }
                 log.info("harvest loop id={} owner={} rt={} error={}, will not retry",
