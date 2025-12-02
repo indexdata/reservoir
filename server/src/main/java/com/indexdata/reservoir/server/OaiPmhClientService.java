@@ -726,14 +726,9 @@ public class OaiPmhClientService {
         return ms;
       }
     }
-    System.out.println("AD: check class " + e.getClass().getName());
-    if (e instanceof java.net.ConnectException) {
-      System.out.println("AD: check class is java.net.ConnectException");
-    }
     if (e instanceof io.vertx.core.http.HttpClosedException
         || e instanceof java.net.SocketException
         || e instanceof java.net.SocketTimeoutException
-        || e instanceof java.net.ConnectException
         || e instanceof java.net.UnknownHostException) {
       return ms;
     }
