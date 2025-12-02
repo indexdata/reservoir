@@ -676,29 +676,23 @@ public class OaiPmhClientService {
                 if (queue.get() < 2) {
                   xmlParser.resume();
                 }
-                if (Boolean.TRUE.equals(ended.get())) {
-                  checkEndOfResponse(oaiParserStream, job, promise, queue);
+                if (Boolean.TRUE.equals(ended.get()) && queue.get() == 0) {
+                  promise.tryComplete();
                 }
               });
         });
     oaiParserStream.exceptionHandler(promise::tryFail);
     xmlParser.endHandler(end -> {
       ended.set(true);
-      checkEndOfResponse(oaiParserStream, job, promise, queue);
+      if (queue.get() == 0) {
+        promise.tryComplete();
+      }
     });
-    return promise.future();
+    return promise.future()
+      .compose(xx ->
+        endResponse(oaiParserStream.getResumptionToken(), oaiParserStream.getError(), job));
   }
 
-  void checkEndOfResponse(OaiParserStream<JsonObject> oaiParserStream, OaiPmhStatus job,
-      Promise<Void> promise, AtomicInteger queue) {
-    // only call endResponse if not already completed .. in particular if there are
-    // exceptions on oaiParserStream or xmlParser, do not reset resumption token
-    // due to retry
-    if (queue.get() == 0 && !promise.future().isComplete()) {
-      endResponse(oaiParserStream.getResumptionToken(), oaiParserStream.getError(), job)
-          .andThen(promise);
-    }
-  }
 
   static Long parseRetryAfter(String retryAfter) {
     if (retryAfter == null) {
