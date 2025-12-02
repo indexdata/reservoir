@@ -582,18 +582,39 @@ public class OaiPmhClientService {
     private final int statusCode;
     private final String retryAfter;
 
-    public HttpStatusError(int statusCode, String retryAfter, String message) {
+    HttpStatusError(int statusCode, String retryAfter, String message) {
       super(message);
       this.statusCode = statusCode;
       this.retryAfter = retryAfter;
     }
 
-    public int getStatusCode() {
-      return statusCode;
+    Long checkRetryAfter() {
+      if (retryAfter == null) {
+        return null;
+      }
+      try {
+        long raSec = Long.parseLong(retryAfter);
+        if (raSec > 0) {
+          return raSec * 1000;
+        }
+      } catch (NumberFormatException ex) {
+        try {
+          ZonedDateTime zdt = ZonedDateTime.parse(retryAfter, DateTimeFormatter.RFC_1123_DATE_TIME);
+          long dateMs = zdt.toInstant().toEpochMilli();
+          long nowMs = System.currentTimeMillis();
+          if (dateMs > nowMs) {
+            return dateMs - nowMs;
+          }
+        } catch (Exception ex2) {
+          // ignore
+        }
+      }
+      return null;
     }
 
-    public String getRetryAfter() {
-      return retryAfter;
+    boolean checkRetryStatus() {
+      return statusCode == 408 || statusCode == 429 || statusCode == 500
+          || statusCode == 502 || statusCode == 503 || statusCode == 504;
     }
   }
 
@@ -693,46 +714,25 @@ public class OaiPmhClientService {
         endResponse(oaiParserStream.getResumptionToken(), oaiParserStream.getError(), job));
   }
 
-
-  static Long parseRetryAfter(String retryAfter) {
-    if (retryAfter == null) {
-      return null;
-    }
-    try {
-      long raSec = Long.parseLong(retryAfter);
-      if (raSec > 0) {
-        return raSec * 1000;
-      }
-    } catch (NumberFormatException ex) {
-      try {
-        ZonedDateTime date = ZonedDateTime.parse(retryAfter, DateTimeFormatter.RFC_1123_DATE_TIME);
-        long dateMs = date.toInstant().toEpochMilli();
-        long nowMs = System.currentTimeMillis();
-        if (dateMs > nowMs) {
-          return dateMs - nowMs;
-        }
-      } catch (Exception ex2) {
-        // ignore
-      }
-    }
-    return null;
-  }
-
   static Long checkRetryWait(Throwable e, JsonObject config) {
     final int w = config.getInteger("waitRetries", 10);
     final long ms = w == 0 ? 1L : 1000L * w; // 0 means immediate
     if (e instanceof HttpStatusError httpStatusError) {
-      int statusCode = httpStatusError.getStatusCode();
-      if (statusCode == 408 || statusCode == 429 || statusCode == 500
-          || statusCode == 502 || statusCode == 503 || statusCode == 504) {
-        Long retryMs = parseRetryAfter(httpStatusError.getRetryAfter());
+      if (httpStatusError.checkRetryStatus()) {
+        Long retryMs = httpStatusError.checkRetryAfter();
         if (retryMs != null) {
           return retryMs;
         }
         return ms;
       }
     }
+    System.out.println("AD: check class " + e.getClass().getName());
+    if (e instanceof java.net.ConnectException) {
+      System.out.println("AD: check class is java.net.ConnectException");
+    }
     if (e instanceof io.vertx.core.http.HttpClosedException
+        || e instanceof java.net.SocketException
+        || e instanceof java.net.SocketTimeoutException
         || e instanceof java.net.ConnectException
         || e instanceof java.net.UnknownHostException) {
       return ms;
