@@ -4242,6 +4242,8 @@ public class MainVerticleTest extends TestBase {
         .put("set", "isbn")
         .put("headers", new JsonObject().put(XOkapiHeaders.TENANT, TENANT_1))
         .put("sourceId", SOURCE_ID_1)
+        .put("waitRetries", 0)
+        .put("numberRetries", 1)
         .put("id", PMH_CLIENT_ID);
 
     RestAssured.given()
@@ -4281,7 +4283,7 @@ public class MainVerticleTest extends TestBase {
         .put("url", "http://localhost:" + NET_PORT + "/mock/oai")
         .put("set", "isbn")
         .put("sourceId", SOURCE_ID_1)
-        .put("waitRetries", 1)
+        .put("waitRetries", 0)
         .put("numberRetries", 1)
         .put("id", PMH_CLIENT_ID);
 
@@ -4315,13 +4317,15 @@ public class MainVerticleTest extends TestBase {
   }
 
   @Test
-  public void oaiPmhClientHttpStatus() {
+  public void oaiPmhClientHttpStatus400() {
     createIsbnMatchKey();
 
     JsonObject oaiPmhClient = new JsonObject()
         .put("url", MOCK_URL + "/mock/oai")
         .put("set", "isbn")
         .put("sourceId", SOURCE_ID_1)
+        .put("waitRetries", 0)
+        .put("numberRetries", 1)
         .put("id", PMH_CLIENT_ID);
 
     RestAssured.given()
@@ -4333,7 +4337,7 @@ public class MainVerticleTest extends TestBase {
         .contentType("application/json")
         .body(Matchers.is(oaiPmhClient.encode()));
 
-    mockBody = "mock error";
+    mockBody = "bad request";
     mockContentType = "text/plain";
     mockStatus = 400;
 
@@ -4352,7 +4356,52 @@ public class MainVerticleTest extends TestBase {
         .body("items[0].status", is("idle"))
         .body("items[0].totalRecords", is(0))
         .body("items[0].totalRequests", is(1))
-        .body("items[0].error", containsString("HTTP status 400: mock error"))
+        .body("items[0].error", containsString("HTTP status 400: bad request"))
+        .body("items[0].config.id", is(PMH_CLIENT_ID))
+        .body("items[0].config.sourceId", is(SOURCE_ID_1));
+  }
+
+  @Test
+  public void oaiPmhClientHttpStatus408() {
+    createIsbnMatchKey();
+
+    JsonObject oaiPmhClient = new JsonObject()
+        .put("url", MOCK_URL + "/mock/oai")
+        .put("set", "isbn")
+        .put("sourceId", SOURCE_ID_1)
+        .put("waitRetries", 0)
+        .put("numberRetries", 1)
+        .put("id", PMH_CLIENT_ID);
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .body(oaiPmhClient.encode())
+        .post("/reservoir/pmh-clients")
+        .then().statusCode(201)
+        .contentType("application/json")
+        .body(Matchers.is(oaiPmhClient.encode()));
+
+    mockBody = "request timed out";
+    mockContentType = "text/plain";
+    mockStatus = 408;
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .post("/reservoir/pmh-clients/" + PMH_CLIENT_ID + "/start")
+        .then().statusCode(204);
+
+    Awaitility.await().atMost(Duration.ofSeconds(2)).until(() -> harvestCompleted(TENANT_1, PMH_CLIENT_ID));
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .get("/reservoir/pmh-clients/" + PMH_CLIENT_ID + "/status")
+        .then().statusCode(200)
+        .contentType("application/json")
+        .body("items[0].status", is("idle"))
+        .body("items[0].totalRecords", is(0))
+        .body("items[0].totalRequests", is(2))
+        .body("items[0].error", containsString("HTTP status 408: request timed out"))
         .body("items[0].config.id", is(PMH_CLIENT_ID))
         .body("items[0].config.sourceId", is(SOURCE_ID_1));
   }
