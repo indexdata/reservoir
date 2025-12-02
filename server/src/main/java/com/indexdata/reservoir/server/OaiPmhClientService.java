@@ -720,7 +720,7 @@ public class OaiPmhClientService {
 
   static Long checkRetryWait(Throwable e, JsonObject config) {
     final int w = config.getInteger("waitRetries", 10);
-    final long ms = w == 0 ? 1 : 1000 * w; // 0 means immediate
+    final long ms = w == 0 ? 1L : 1000L * w; // 0 means immediate
     if (e instanceof HttpStatusError httpStatusError) {
       int statusCode = httpStatusError.getStatusCode();
       if (statusCode == 408 || statusCode == 429 || statusCode == 500

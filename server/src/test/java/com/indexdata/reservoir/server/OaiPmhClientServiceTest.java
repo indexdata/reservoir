@@ -9,6 +9,8 @@ import io.vertx.core.json.JsonObject;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 class OaiPmhClientServiceTest {
   @Test
@@ -25,24 +27,39 @@ class OaiPmhClientServiceTest {
     assertThat(OaiPmhClientService.parseRetryAfter(imfDate), lessThanOrEqualTo(2000L));
   }
 
-  @Test
-  void testCheckRetryWait400() {
-    var e = new OaiPmhClientService.HttpStatusError(400, null, "0");
-    Long waitMs = OaiPmhClientService.checkRetryWait(e, new JsonObject().put("waitRetries", 3));
-    assertThat(waitMs, is(nullValue()));
+  @ParameterizedTest
+  @CsvSource({
+      "400, null, 0, null",
+      "408, null, 10, 10000",
+      "429, null, 20, 20000",
+      "500, null, 1, 1000",
+      "502, null, 0, 1",
+      "503, null, 0, 1",
+      "504, null, 0, 1",
+      "503, 120, 0, 120000",
+      "503, invalid, 0, 1"
+  })
+  void testCheckRetryHttpStatusError(int statusCode, String retryAfter, int waitRetries, String expectedWaitMs) {
+    var e = new OaiPmhClientService.HttpStatusError(statusCode, retryAfter, "server error");
+    Long waitMs = OaiPmhClientService.checkRetryWait(e, new JsonObject().put("waitRetries", waitRetries));
+    if ("null".equals(expectedWaitMs)) {
+      assertThat(waitMs, is(nullValue()));
+    } else
+      assertThat(waitMs, is(Long.parseLong(expectedWaitMs)));
   }
 
-  @Test
-  void testCheckRetryWait500() {
-    var e = new OaiPmhClientService.HttpStatusError(500, null, "0");
-    Long waitMs = OaiPmhClientService.checkRetryWait(e, new JsonObject().put("waitRetries", 3));
+  void testCheckRetryConnectionClosed() {
+    var e = new io.vertx.core.http.HttpClosedException("Connection closed");
+    int waitRetries = 3;
+    Long waitMs = OaiPmhClientService.checkRetryWait(e, new JsonObject().put("waitRetries", waitRetries));
     assertThat(waitMs, is(3000L));
   }
 
-  @Test
-  void testCheckRetryWait503() {
-    var e = new OaiPmhClientService.HttpStatusError(503, "60", "0");
-    Long waitMs = OaiPmhClientService.checkRetryWait(e, new JsonObject().put("waitRetries", 3));
-    assertThat(waitMs, is(60000L));
+  void testCheckRetryConnectException() {
+    var e = new java.net.ConnectException("Connection refused");
+    int waitRetries = 3;
+    Long waitMs = OaiPmhClientService.checkRetryWait(e, new JsonObject().put("waitRetries", waitRetries));
+    assertThat(waitMs, is(3000L));
   }
+
 }
