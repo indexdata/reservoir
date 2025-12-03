@@ -265,7 +265,7 @@
             <goals>
               <goal>dereference</goal>
             </goals>
-            <phase>generate-resources</phase>
+            <phase>process-resources</phase>
           </execution>
         </executions>
       </plugin>
