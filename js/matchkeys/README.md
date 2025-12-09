@@ -27,11 +27,4 @@ The [js/matchkeys/deepdish](deepdish) utilises fields "020 International Standar
 ## Matchkeys tests of development code
 
 Do 'cd ..' to change to the 'reservoir/js' directory.
-
-Do 'npm install' to install and configure ESLint.
-
-Do 'npm run lint-goldrush2024' and 'npm run lint-test-goldrush2024' etc.
-
-There are some sample MARC files in the [js/test/records](../test/records) directory.
-
-The tests are basic at this stage. Do 'npm run test-goldrush2024' to process the samples.
+Follow the instructions there.
