@@ -40,3 +40,6 @@ for (let n = 0; n < testFiles.length; n += 1) {
   }
 }
 console.log(`\nProcessed ${testsNum} test files, failed ${testsFailedNum}`);
+if (testsFailedNum) {
+  process.exit(1);
+}
