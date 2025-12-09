@@ -2,21 +2,19 @@
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
+    "eslint-print-config": "eslint --print-config eslint.config.js",
+    "lint": "eslint . --ext js,mjs",
+    "prettier-check": "prettier . --check",
+    "prettier": "prettier . --write",
     "test-deepdish": "node test/deepdish.mjs",
-    "lint-deepdish": "eslint matchkeys/deepdish/deepdish.mjs",
-    "lint-test-deepdish": "eslint test/deepdish.mjs",
-    "lint-goldrush2024": "eslint matchkeys/goldrush2024/goldrush.mjs",
-    "explain-lint-goldrush2024": "eslint --print-config matchkeys/goldrush2024/goldrush.mjs",
-    "lint-test-goldrush2024": "eslint test/goldrush2024.mjs",
     "test-goldrush2024": "node test/goldrush2024.mjs",
-    "lint-goldrush2021": "eslint matchkeys/goldrush/goldrush.mjs",
-    "explain-lint-goldrush2021": "eslint --print-config matchkeys/goldrush/goldrush.mjs",
-    "lint-test-goldrush2021": "eslint test/goldrush2021.mjs",
     "test-goldrush2021": "node test/goldrush2021.mjs"
   },
   "devDependencies": {
-    "eslint": "^8.2.0",
-    "eslint-plugin-import": "^2.25.2",
-    "eslint-config-airbnb-base": "latest"
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-import": "^2.32.0",
+    "globals": "^16.5.0",
+    "prettier": "^3.7.4"
   }
 }
