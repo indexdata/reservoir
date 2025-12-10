@@ -2,7 +2,8 @@
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
-    "eslint-print-config": "eslint --print-config eslint.config.js",
+    "eslint-config-print": "eslint --print-config eslint.config.js",
+    "eslint-config-inspect": "eslint --inspect-config",
     "lint": "eslint . --ext js,mjs",
     "prettier-check": "prettier . --check",
     "prettier": "prettier . --write",
@@ -12,6 +13,7 @@
   },
   "devDependencies": {
     "eslint": "^9.39.1",
+    "@eslint/config-inspector": "^1.4.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import": "^2.32.0",
     "globals": "^16.5.0",
