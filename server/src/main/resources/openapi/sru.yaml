@@ -15,7 +15,7 @@ paths:
       - $ref: parameters/sru-operation.yaml
       - $ref: parameters/sru-record-schema.yaml
     get:
-      description: SRU service
+      description: "SRU service. Supported CQL fields are: cql.serverChoice and rec.id for searching by record cluster ID."
       operationId: sruService
       responses:
         "200":
