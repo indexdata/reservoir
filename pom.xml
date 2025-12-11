@@ -41,7 +41,7 @@
     <vertx.version>5.0.5</vertx.version>
     <okapi.version>7.0.1</okapi.version>
     <vertxlib.version>4.1.0</vertxlib.version>
-    <micrometer.version>1.16.0</micrometer.version>
+    <micrometer.version>1.16.1</micrometer.version>
     <!-- vert.x is shipped with 4.2.5.Final, but we pin here to be able to experiment with SNAPSHOT versions -->
     <netty.version>4.2.7.Final</netty.version>
   </properties>
@@ -489,7 +489,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-release-plugin</artifactId>
-        <version>3.2.0</version>
+        <version>3.3.0</version>
         <configuration>
           <preparationGoals>clean verify</preparationGoals>
           <tagNameFormat>v@{project.version}</tagNameFormat>
