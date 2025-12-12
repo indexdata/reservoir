@@ -49,8 +49,7 @@ function getRelevantSubField(record, tag, sf) {
   // Get the first repeating field that has the relevant subfield.
   let data = null;
   const fields = record.fields.filter((f) => f[tag]);
-  loop1:
-  for (let x = 0; x < fields.length; x += 1) {
+  loop1: for (let x = 0; x < fields.length; x += 1) {
     const f = fields[x];
     if (f[tag].subfields) {
       for (let n = 0; n < f[tag].subfields.length; n += 1) {
@@ -145,14 +144,14 @@ function doPublicationYear(fieldData) {
         if (dateType === 'r') {
           // Try for date1 from field 008 -- reissue
           dataStr = `${fieldData[n]}`.substring(7, 11).replace(/[^0-9]/g, '');
-          if ((dataStr.match(/[1-9][0-9]{3}/)) && (dataStr !== '9999')) {
+          if (dataStr.match(/[1-9][0-9]{3}/) && dataStr !== '9999') {
             fieldStr = dataStr;
             break;
           }
         } else {
           // Try for date2 from field 008
           dataStr = `${fieldData[n]}`.substring(11, 15).replace(/[^0-9]/g, '');
-          if ((dataStr.match(/[1-9][0-9]{3}/)) && (dataStr !== '9999')) {
+          if (dataStr.match(/[1-9][0-9]{3}/) && dataStr !== '9999') {
             fieldStr = dataStr;
             break;
           }
@@ -160,14 +159,14 @@ function doPublicationYear(fieldData) {
       } else if (n === 1) {
         // Try for date from field 264$c
         dataStr = `${fieldData[n]}`.replace(/[^0-9]/g, '');
-        if ((dataStr.match(/[1-9][0-9]{3}/)) && (dataStr !== '9999')) {
+        if (dataStr.match(/[1-9][0-9]{3}/) && dataStr !== '9999') {
           fieldStr = dataStr;
           break;
         }
       } else {
         // Try for date from field 260$c
         dataStr = `${fieldData[n]}`.replace(/[^0-9]/g, '');
-        if ((dataStr.match(/[1-9][0-9]{3}/)) && (dataStr !== '9999')) {
+        if (dataStr.match(/[1-9][0-9]{3}/) && dataStr !== '9999') {
           fieldStr = dataStr;
           break;
         }
@@ -287,29 +286,37 @@ function doStandardNum(snum) {
 
 function doAuthorTitle(marcObj) {
   let keyStr = '';
-  keyStr += addComponent(doTitle([
-    getRelevantSubField(marcObj, '245', 'a'),
-    getRelevantSubField(marcObj, '245', 'b'),
-    getRelevantSubField(marcObj, '245', 'p'),
-  ]));
-  keyStr += addComponent(doPublicationYear([
-    getField(marcObj, '008'),
-    getRelevantSubField(marcObj, '264', 'c'),
-    getRelevantSubField(marcObj, '260', 'c'),
-  ]));
-  keyStr += addComponent(doPublisherName([
-    getRelevantSubField(marcObj, '264', 'b'),
-    getRelevantSubField(marcObj, '260', 'b'),
-  ]));
+  keyStr += addComponent(
+    doTitle([
+      getRelevantSubField(marcObj, '245', 'a'),
+      getRelevantSubField(marcObj, '245', 'b'),
+      getRelevantSubField(marcObj, '245', 'p'),
+    ])
+  );
+  keyStr += addComponent(
+    doPublicationYear([
+      getField(marcObj, '008'),
+      getRelevantSubField(marcObj, '264', 'c'),
+      getRelevantSubField(marcObj, '260', 'c'),
+    ])
+  );
+  keyStr += addComponent(
+    doPublisherName([
+      getRelevantSubField(marcObj, '264', 'b'),
+      getRelevantSubField(marcObj, '260', 'b'),
+    ])
+  );
   keyStr += addComponent(doTypeOfRecord(marcObj.leader));
-  keyStr += addComponent(doAuthor([
-    getField(marcObj, '100', 'a'),
-    getField(marcObj, '110', 'a'),
-    getField(marcObj, '111', 'a'),
-    getField(marcObj, '130', 'a'),
-  ]));
+  keyStr += addComponent(
+    doAuthor([
+      getField(marcObj, '100', 'a'),
+      getField(marcObj, '110', 'a'),
+      getField(marcObj, '111', 'a'),
+      getField(marcObj, '130', 'a'),
+    ])
+  );
   keyStr += addComponent(doElectronicIndicator(marcObj));
-  return (keyStr);
+  return keyStr;
 }
 
 /**

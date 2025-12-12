@@ -147,13 +147,13 @@ function doPublicationYear(fieldData) {
       if (n === 0) {
         // Try for date2 from field 008
         dataStr = `${fieldData[n]}`.substring(11, 15).replace(/[^0-9]/g, '');
-        if ((dataStr.match(/[0-9]{4}/)) && (dataStr !== '9999')) {
+        if (dataStr.match(/[0-9]{4}/) && dataStr !== '9999') {
           fieldStr = dataStr;
           break;
         } else {
           // Try for date1 from field 008
           dataStr = `${fieldData[n]}`.substring(7, 11).replace(/[^0-9]/g, '');
-          if ((dataStr.match(/[0-9]{4}/)) && (dataStr !== '9999')) {
+          if (dataStr.match(/[0-9]{4}/) && dataStr !== '9999') {
             fieldStr = dataStr;
             break;
           }
@@ -161,14 +161,14 @@ function doPublicationYear(fieldData) {
       } else if (n === 1) {
         // Try for date from field 264$c
         dataStr = `${fieldData[n]}`.replace(/[^0-9]/g, '');
-        if ((dataStr.match(/[0-9]{4}/)) && (dataStr !== '9999')) {
+        if (dataStr.match(/[0-9]{4}/) && dataStr !== '9999') {
           fieldStr = dataStr;
           break;
         }
       } else {
         // Try for date from field 260$c
         dataStr = `${fieldData[n]}`.replace(/[^0-9]/g, '');
-        if ((dataStr.match(/[0-9]{4}/)) && (dataStr !== '9999')) {
+        if (dataStr.match(/[0-9]{4}/) && dataStr !== '9999') {
           fieldStr = dataStr;
           break;
         }
@@ -391,31 +391,36 @@ function addComponent(component) {
 export function matchkey(record) {
   let keyStr = '';
   const marcObj = loadMarcJson(record);
-  keyStr += addComponent(doTitle([
-    getField(marcObj, '245', 'a'),
-    getField(marcObj, '245', 'b'),
-    getField(marcObj, '245', 'p'),
-  ]));
+  keyStr += addComponent(
+    doTitle([
+      getField(marcObj, '245', 'a'),
+      getField(marcObj, '245', 'b'),
+      getField(marcObj, '245', 'p'),
+    ])
+  );
   keyStr += addComponent(doGMD(getField(marcObj, '245', 'h')));
-  keyStr += addComponent(doPublicationYear([
-    getField(marcObj, '008'),
-    getField(marcObj, '264', 'c'),
-    getField(marcObj, '260', 'c'),
-  ]));
+  keyStr += addComponent(
+    doPublicationYear([
+      getField(marcObj, '008'),
+      getField(marcObj, '264', 'c'),
+      getField(marcObj, '260', 'c'),
+    ])
+  );
   keyStr += addComponent(doPagination(getField(marcObj, '300', 'a')));
   keyStr += addComponent(doEditionStatement(getField(marcObj, '250', 'a')));
-  keyStr += addComponent(doPublisherName([
-    getField(marcObj, '264', 'b'),
-    getField(marcObj, '260', 'b'),
-  ]));
+  keyStr += addComponent(
+    doPublisherName([getField(marcObj, '264', 'b'), getField(marcObj, '260', 'b')])
+  );
   keyStr += addComponent(doTypeOfRecord(marcObj.leader));
   keyStr += addComponent(doTitlePart(getMultiSubfields(marcObj, '245', 'p')));
   keyStr += addComponent(doTitleNumber(getField(marcObj, '245', 'n')));
-  keyStr += addComponent(doAuthor([
-    getField(marcObj, '100', 'a'),
-    getField(marcObj, '110', 'a'),
-    getField(marcObj, '111', 'a'),
-  ]));
+  keyStr += addComponent(
+    doAuthor([
+      getField(marcObj, '100', 'a'),
+      getField(marcObj, '110', 'a'),
+      getField(marcObj, '111', 'a'),
+    ])
+  );
   keyStr += addComponent(doInclusiveDates(getField(marcObj, '245', 'f')));
   keyStr += addComponent(doGDCN(getField(marcObj, '086', 'a')));
   keyStr += addComponent(doElectronicIndicator(marcObj));

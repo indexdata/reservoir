@@ -13,4 +13,3 @@ This specification removed the component "General Media Designator (GMD)" that w
 Each component of the matchkey is padded with the underscore character to fill to its field width.
 
 The [diagram](explain-matchkey-goldrush.png) indicates the components.
-
