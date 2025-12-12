@@ -43,7 +43,7 @@
     <vertxlib.version>4.1.0</vertxlib.version>
     <micrometer.version>1.16.1</micrometer.version>
     <!-- vert.x is shipped with 4.2.5.Final, but we pin here to be able to experiment with SNAPSHOT versions -->
-    <netty.version>4.2.7.Final</netty.version>
+    <netty.version>4.2.8.Final</netty.version>
   </properties>
   <dependencyManagement>
     <dependencies>
@@ -142,7 +142,7 @@
       <dependency>
         <groupId>io.rest-assured</groupId>
         <artifactId>rest-assured</artifactId>
-        <version>5.5.6</version>
+        <version>6.0.0</version>
       </dependency>
       <dependency>
         <groupId>org.apache.solr</groupId>
