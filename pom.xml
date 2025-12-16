@@ -38,12 +38,12 @@
     <log4j2.version>3.0.0-beta3</log4j2.version>
     <snakeyaml.version>2.5</snakeyaml.version>
     <slf4j-api.version>2.0.17</slf4j-api.version>
-    <vertx.version>5.0.5</vertx.version>
+    <vertx.version>5.0.6</vertx.version>
     <okapi.version>7.0.1</okapi.version>
     <vertxlib.version>4.1.0</vertxlib.version>
     <micrometer.version>1.16.1</micrometer.version>
     <!-- vert.x is shipped with 4.2.5.Final, but we pin here to be able to experiment with SNAPSHOT versions -->
-    <netty.version>4.2.7.Final</netty.version>
+    <netty.version>4.2.9.Final</netty.version>
   </properties>
   <dependencyManagement>
     <dependencies>
@@ -142,7 +142,7 @@
       <dependency>
         <groupId>io.rest-assured</groupId>
         <artifactId>rest-assured</artifactId>
-        <version>5.5.6</version>
+        <version>6.0.0</version>
       </dependency>
       <dependency>
         <groupId>org.apache.solr</groupId>
@@ -505,7 +505,7 @@
           <dependency>
             <groupId>com.puppycrawl.tools</groupId>
             <artifactId>checkstyle</artifactId>
-            <version>12.2.0</version>
+            <version>12.3.0</version>
           </dependency>
         </dependencies>
         <configuration>
