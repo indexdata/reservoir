@@ -332,12 +332,6 @@
               <quickBuild>false</quickBuild>
               <buildArgs>
                 <buildArg>--no-fallback</buildArg>
-                <!--
-                Instead of using -H:+SharedArenaSupport flag which causes issues,
-                we use a custom class substitution to replace CleanerJava25 implementation
-                to use Arena.ofAuto() instead of Arena.ofShared().
-                See com.indexdata.reservoir.server.substitutes.NettyCleanerSubstitutes
-                -->
                 <buildArg>--enable-url-protocols=http,https</buildArg>
                 <buildArg>--enable-native-access=ALL-UNNAMED</buildArg>
                 <buildArg>--enable-native-access=org.graalvm.truffle</buildArg>
