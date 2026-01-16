@@ -42,10 +42,8 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
   private static final Logger log = LogManager.getLogger(ReservoirService.class);
 
   private final ModuleVersionReporter moduleVersionReporter;
-  private final Vertx vertx;
 
-  public ReservoirService(Vertx vertx, ModuleVersionReporter moduleVersionReporter) {
-    this.vertx = vertx;
+  public ReservoirService(ModuleVersionReporter moduleVersionReporter) {
     this.moduleVersionReporter = moduleVersionReporter;
   }
 
@@ -400,28 +398,26 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
         .CodeModuleBuilder(request)
         .hash(UUID.randomUUID().toString())
         .build();
-    ModuleCache.getInstance().purge(TenantUtil.tenant(ctx), e.getId());
     return ModuleCache.getInstance().lookup(ctx.vertx(), TenantUtil.tenant(ctx), e)
-        .compose(module -> storage.insertCodeModuleEntity(e).onSuccess(res ->
-            HttpResponse.responseJson(ctx, 201)
-                .putHeader("Location", ctx.request().absoluteURI() + "/" + e.getId())
-                .end(e.asJson().encode())
-        ));
+        .compose(module -> storage.insertCodeModuleEntity(e))
+        .compose(res -> HttpResponse.responseJson(ctx, 201)
+              .putHeader("Location", ctx.request().absoluteURI() + "/" + e.getId())
+              .end(e.asJson().encode())
+        );
   }
 
   Future<Void> getCodeModule(RoutingContext ctx) {
     String id = Util.getPathParameter(ctx, "id");
     Storage storage = new Storage(ctx);
     return storage.selectCodeModuleEntity(id)
-        .onSuccess(e -> {
+        .compose(e -> {
           if (e == null) {
             HttpResponse.responseError(ctx, 404,
                 String.format(ENTITY_ID_NOT_FOUND_PATTERN, MODULE_LABEL, id));
-            return;
+            return Future.succeededFuture();
           }
-          HttpResponse.responseJson(ctx, 200).end(e.asJson().encode());
-        })
-        .mapEmpty();
+          return HttpResponse.responseJson(ctx, 200).end(e.asJson().encode());
+        });
   }
 
   Future<Void> putCodeModule(RoutingContext ctx) {
@@ -433,16 +429,15 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
         .hash(UUID.randomUUID().toString())
         .build();
     return ModuleCache.getInstance().lookup(ctx.vertx(), TenantUtil.tenant(ctx), e)
-        .compose(module -> storage.updateCodeModuleEntity(e)
-            .onSuccess(res -> {
-              if (Boolean.FALSE.equals(res)) {
-                HttpResponse.responseError(ctx, 404,
-                    String.format(ENTITY_ID_NOT_FOUND_PATTERN, MODULE_LABEL, e.getId()));
-                return;
-              }
-              ctx.response().setStatusCode(204).end();
-            }))
-        .mapEmpty();
+        .compose(module -> storage.updateCodeModuleEntity(e))
+        .compose(res -> {
+          if (Boolean.FALSE.equals(res)) {
+            HttpResponse.responseError(ctx, 404,
+                String.format(ENTITY_ID_NOT_FOUND_PATTERN, MODULE_LABEL, e.getId()));
+            return Future.succeededFuture();
+          }
+          return ctx.response().setStatusCode(204).end();
+        });
   }
 
   Future<Void> getCodeModules(RoutingContext ctx) {
