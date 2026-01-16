@@ -200,7 +200,8 @@ public class Storage {
                 + " type VARCHAR,"
                 + " url VARCHAR, "
                 + " function VARCHAR,"
-                + " script VARCHAR)",
+                + " script VARCHAR,"
+                + " hash VARCHAR NOT NULL)",
             "ALTER TABLE " + moduleTable + " ADD COLUMN IF NOT EXISTS"
                 + " type VARCHAR",
             "ALTER TABLE " + moduleTable + " ADD COLUMN IF NOT EXISTS"
@@ -1026,8 +1027,8 @@ public class Storage {
   public Future<Void> insertCodeModuleEntity(CodeModuleEntity module) {
 
     return pool.preparedQuery(
-            "INSERT INTO " + moduleTable + " (id, type, url, function, script)"
-                + " VALUES ($1, $2, $3, $4, $5)")
+            "INSERT INTO " + moduleTable + " (id, type, url, function, script, hash)"
+                + " VALUES ($1, $2, $3, $4, $5, $6)")
         .execute(module.asTuple())
         .mapEmpty();
   }
@@ -1041,7 +1042,7 @@ public class Storage {
 
     return pool.preparedQuery(
             "UPDATE " + moduleTable
-                + " SET type = $2, url = $3, function = $4, script = $5 WHERE id = $1")
+                + " SET type = $2, url = $3, function = $4, script = $5, hash = $6 WHERE id = $1")
         .execute(module.asTuple())
         .map(res -> res.rowCount() > 0);
   }

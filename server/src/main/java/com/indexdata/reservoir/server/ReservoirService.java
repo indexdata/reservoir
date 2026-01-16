@@ -97,11 +97,20 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
                 String.format(ENTITY_ID_NOT_FOUND_PATTERN, MODULE_LABEL, id));
             return Future.succeededFuture();
           }
-          ModuleCache.getInstance().purge(TenantUtil.tenant(ctx), id);
-          return ModuleCache.getInstance().lookup(vertx, TenantUtil.tenant(ctx), res)
-                  .onSuccess(x -> ctx.response().setStatusCode(204).end());
-        })
-        .mapEmpty();
+          CodeModuleEntity codeModule = new CodeModuleEntity.CodeModuleBuilder(res.asJson())
+              .hash(UUID.randomUUID().toString())
+              .build();
+          return storage.updateCodeModuleEntity(codeModule)
+            .compose(res2 -> {
+              if (Boolean.FALSE.equals(res2)) {
+                HttpResponse.responseError(ctx, 404,
+                    String.format(ENTITY_ID_NOT_FOUND_PATTERN, MODULE_LABEL, id));
+              } else {
+                ctx.response().setStatusCode(204).end();
+              }
+              return Future.succeededFuture();
+            });
+        });
   }
 
   Future<Void> deleteCodeModule(RoutingContext ctx) {
@@ -387,8 +396,10 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     Storage storage = new Storage(ctx);
     ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
     JsonObject request = validatedRequest.getBody().getJsonObject();
-    CodeModuleEntity e = new CodeModuleEntity.CodeModuleBuilder(request).build();
-
+    CodeModuleEntity e = new CodeModuleEntity
+        .CodeModuleBuilder(request)
+        .hash(UUID.randomUUID().toString())
+        .build();
     ModuleCache.getInstance().purge(TenantUtil.tenant(ctx), e.getId());
     return ModuleCache.getInstance().lookup(ctx.vertx(), TenantUtil.tenant(ctx), e)
         .compose(module -> storage.insertCodeModuleEntity(e).onSuccess(res ->
@@ -417,7 +428,10 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     Storage storage = new Storage(ctx);
     ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
     JsonObject request = validatedRequest.getBody().getJsonObject();
-    CodeModuleEntity e = new CodeModuleEntity.CodeModuleBuilder(request).build();
+    CodeModuleEntity e = new CodeModuleEntity
+        .CodeModuleBuilder(request)
+        .hash(UUID.randomUUID().toString())
+        .build();
     return ModuleCache.getInstance().lookup(ctx.vertx(), TenantUtil.tenant(ctx), e)
         .compose(module -> storage.updateCodeModuleEntity(e)
             .onSuccess(res -> {

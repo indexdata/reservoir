@@ -10,6 +10,7 @@ public class CodeModuleEntity {
   private final String id;
   private final String type;
   private final String url;
+  private final String hash;
   @Deprecated(forRemoval = true, since = "1.0")
   private final String function;
   private final String script;
@@ -20,12 +21,14 @@ public class CodeModuleEntity {
    * @param url url to the module
    * @param function function exported by the module
    */
-  public CodeModuleEntity(String id, String type, String url, String function, String script) {
+  public CodeModuleEntity(String id, String type, String url, String function, String script,
+      String hash) {
     this.id = id;
     this.type = type;
     this.url = url;
     this.function = function;
     this.script = script;
+    this.hash = hash;
   }
 
   /**
@@ -60,13 +63,20 @@ public class CodeModuleEntity {
     return function;
   }
 
-
   /**
    * Inline code script.
    * @return the script
    */
   public String getScript() {
     return script;
+  }
+
+  /**
+   * Return the hash.
+   * @return the hash
+   */
+  public String getHash() {
+    return hash;
   }
 
   private static void put(JsonObject json, boolean omitNull, String key, Object value) {
@@ -104,7 +114,7 @@ public class CodeModuleEntity {
    * @return Tuple object
    */
   public Tuple asTuple() {
-    return Tuple.of(id, type, url, function, script);
+    return Tuple.of(id, type, url, function, script, hash);
   }
 
 
@@ -153,6 +163,8 @@ public class CodeModuleEntity {
 
     public static final String SCRIPT_FIELD = "script";
 
+    public static final String HASH_FIELD = "hash";
+
     private final JsonObject json;
 
     public CodeModuleBuilder(String id) {
@@ -188,6 +200,11 @@ public class CodeModuleEntity {
       return this;
     }
 
+    public CodeModuleBuilder hash(String hash) {
+      json.put(HASH_FIELD, hash);
+      return this;
+    }
+
     /**
      * Build the entity.
      * @return entity
@@ -198,12 +215,13 @@ public class CodeModuleEntity {
         json.getString(TYPE_FIELD),
         json.getString(URL_FIELD),
         json.getString(FUNCTION_FIELD),
-        json.getString(SCRIPT_FIELD)
+        json.getString(SCRIPT_FIELD),
+        json.getString(HASH_FIELD)
       );
     }
 
     /*
-     * A shortcut to get JSON direclty from the builder.
+     * A shortcut to get JSON directly from the builder.
      */
     public JsonObject buildJson() {
       return json;
@@ -220,7 +238,8 @@ public class CodeModuleEntity {
         .put(TYPE_FIELD, row.getString(TYPE_FIELD))
         .put(URL_FIELD, row.getString(URL_FIELD))
         .put(FUNCTION_FIELD, row.getString(FUNCTION_FIELD))
-        .put(SCRIPT_FIELD, row.getString(SCRIPT_FIELD));
+        .put(SCRIPT_FIELD, row.getString(SCRIPT_FIELD))
+        .put(HASH_FIELD, row.getString(HASH_FIELD));
     }
 
     /**
@@ -234,7 +253,8 @@ public class CodeModuleEntity {
         .put(TYPE_FIELD, source.getString(TYPE_FIELD))
         .put(URL_FIELD, source.getString(URL_FIELD))
         .put(FUNCTION_FIELD, source.getString(FUNCTION_FIELD))
-        .put(SCRIPT_FIELD, source.getString(SCRIPT_FIELD));
+        .put(SCRIPT_FIELD, source.getString(SCRIPT_FIELD))
+        .put(HASH_FIELD, source.getString(HASH_FIELD));
     }
 
 
