@@ -2157,7 +2157,7 @@ public class MainVerticleTest extends TestBase {
         .body("resultInfo.totalRecords", is(0));
 
     //POST item with bad url and nothing should be created
-    CodeModuleEntity badModule = new CodeModuleEntity("empty", "no-type", "url", "transform", "no script");
+    CodeModuleEntity badModule = new CodeModuleEntity("empty", "no-type", "url", "transform", "no script", "hashvalue");
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
@@ -2168,7 +2168,7 @@ public class MainVerticleTest extends TestBase {
     CodeModuleEntity module = new CodeModuleEntity("empty", "javascript",
             "http://localhost:" + CODE_MODULES_PORT + "/lib/empty.mjs",
             "transform",
-            "");
+            "", "hashvalue");
 
     //GET not found item
     RestAssured.given()
@@ -2848,7 +2848,7 @@ public class MainVerticleTest extends TestBase {
     //configure transformers
     for (String m : List.of("marc-transformer", "empty", "throw")) {
       CodeModuleEntity module = new CodeModuleEntity(
-          m, "javascript", "http://localhost:" + CODE_MODULES_PORT + "/lib/" + m + ".mjs", null,  "");
+          m, "javascript", "http://localhost:" + CODE_MODULES_PORT + "/lib/" + m + ".mjs", null,  "", "hashvalue");
 
       //POST module configuration
       RestAssured.given()
