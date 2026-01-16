@@ -99,24 +99,24 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
           }
           ModuleCache.getInstance().purge(TenantUtil.tenant(ctx), id);
           return ModuleCache.getInstance().lookup(vertx, TenantUtil.tenant(ctx), res)
-              .compose(x -> ctx.response().setStatusCode(204).end());
-        });
+                  .onSuccess(x -> ctx.response().setStatusCode(204).end());
+        })
+        .mapEmpty();
   }
 
   Future<Void> deleteCodeModule(RoutingContext ctx) {
     String id = Util.getPathParameter(ctx, "id");
     Storage storage = new Storage(ctx);
     return storage.deleteCodeModuleEntity(id)
-        .compose(res -> {
+        .onSuccess(res -> {
           if (Boolean.FALSE.equals(res)) {
             HttpResponse.responseError(ctx, 404,
                 String.format(ENTITY_ID_NOT_FOUND_PATTERN, MODULE_LABEL, id));
-            return Future.succeededFuture();
+            return;
           }
           ModuleCache.getInstance().purge(TenantUtil.tenant(ctx), id);
           ctx.response().setStatusCode(204).end();
-          return Future.succeededFuture();
-        });
+        }).mapEmpty();
   }
 
   static PgCqlDefinition createDefinitionBase() {
