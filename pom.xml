@@ -33,7 +33,7 @@
   </licenses>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <graalvm.version>25.0.1</graalvm.version>
+    <graalvm.version>25.0.2</graalvm.version>
     <graalvm-maven-plugin.version>0.11.3</graalvm-maven-plugin.version>
     <log4j2.version>3.0.0-beta3</log4j2.version>
     <snakeyaml.version>2.5</snakeyaml.version>
@@ -147,7 +147,7 @@
       <dependency>
         <groupId>org.apache.solr</groupId>
         <artifactId>solr-solrj</artifactId>
-        <version>9.10.0</version>
+        <version>9.10.1</version>
       </dependency>
       <dependency>
         <groupId>org.testcontainers</groupId>
