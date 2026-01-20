@@ -88,8 +88,28 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
   }
 
   Future<Void> reloadCodeModule(RoutingContext ctx) {
-    String id = Util.getPathParameter(ctx, "id");
-    Storage storage = new Storage(ctx);
+    final String id = Util.getPathParameter(ctx, "id");
+    final Storage storage = new Storage(ctx);
+    final String tenant = TenantUtil.tenant(ctx);
+    return storage.selectCodeModuleEntity(id)
+      .compose(res -> {
+        if (res == null) {
+          HttpResponse.responseError(ctx, 404,
+              String.format(ENTITY_ID_NOT_FOUND_PATTERN, MODULE_LABEL, id));
+          return Future.succeededFuture();
+        }
+        return new CodeModuleEntity.CodeModuleBuilder(res.asJson())
+            .resolve(ctx.vertx())
+            .compose(cb -> storage.updateCodeModuleEntity(cb).map(cb))
+            .compose(cb -> ModuleCache.getInstance().lookup(ctx.vertx(), tenant, cb))
+            .compose(module -> ctx.response().setStatusCode(204).end());
+      });
+  }
+
+
+  Future<Void> reloadCodeModule1(RoutingContext ctx) {
+    final String id = Util.getPathParameter(ctx, "id");
+    final Storage storage = new Storage(ctx);
     return storage.selectCodeModuleEntity(id)
         .compose(res -> {
           if (res == null) {
@@ -387,15 +407,17 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     Storage storage = new Storage(ctx);
     ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
     JsonObject request = validatedRequest.getBody().getJsonObject();
-    CodeModuleEntity e = new CodeModuleEntity.CodeModuleBuilder(request).build();
-
-    ModuleCache.getInstance().purge(TenantUtil.tenant(ctx), e.getId());
-    return ModuleCache.getInstance().lookup(ctx.vertx(), TenantUtil.tenant(ctx), e)
-        .compose(module -> storage.insertCodeModuleEntity(e).onSuccess(res ->
-            HttpResponse.responseJson(ctx, 201)
-                .putHeader("Location", ctx.request().absoluteURI() + "/" + e.getId())
-                .end(e.asJson().encode())
-        ));
+    return new CodeModuleEntity.CodeModuleBuilder(request)
+      .resolve(vertx)
+      .compose(e -> {
+        return ModuleCache.getInstance().lookup(ctx.vertx(), TenantUtil.tenant(ctx), e)
+            .compose(module -> storage.insertCodeModuleEntity(e))
+            .compose(res ->
+                HttpResponse.responseJson(ctx, 201)
+                    .putHeader("Location", ctx.request().absoluteURI() + "/" + e.getId())
+                    .end(e.asJson().encode())
+            );
+      });
   }
 
   Future<Void> getCodeModule(RoutingContext ctx) {
@@ -417,18 +439,20 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     Storage storage = new Storage(ctx);
     ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
     JsonObject request = validatedRequest.getBody().getJsonObject();
-    CodeModuleEntity e = new CodeModuleEntity.CodeModuleBuilder(request).build();
-    return ModuleCache.getInstance().lookup(ctx.vertx(), TenantUtil.tenant(ctx), e)
-        .compose(module -> storage.updateCodeModuleEntity(e)
-            .onSuccess(res -> {
-              if (Boolean.FALSE.equals(res)) {
-                HttpResponse.responseError(ctx, 404,
-                    String.format(ENTITY_ID_NOT_FOUND_PATTERN, MODULE_LABEL, e.getId()));
-                return;
-              }
-              ctx.response().setStatusCode(204).end();
-            }))
-        .mapEmpty();
+    return new CodeModuleEntity.CodeModuleBuilder(request)
+      .resolve(vertx)
+      .compose(e -> {
+        return ModuleCache.getInstance().lookup(ctx.vertx(), TenantUtil.tenant(ctx), e)
+        .compose(module -> storage.updateCodeModuleEntity(e))
+        .compose(res -> {
+          if (Boolean.FALSE.equals(res)) {
+            HttpResponse.responseError(ctx, 404,
+                String.format(ENTITY_ID_NOT_FOUND_PATTERN, MODULE_LABEL, e.getId()));
+            return Future.succeededFuture();
+          }
+          return ctx.response().setStatusCode(204).end();
+        });
+      });
   }
 
   Future<Void> getCodeModules(RoutingContext ctx) {

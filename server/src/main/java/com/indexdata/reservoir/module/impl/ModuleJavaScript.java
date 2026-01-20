@@ -5,11 +5,8 @@ import com.indexdata.reservoir.server.entity.CodeModuleEntity;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.client.WebClient;
-import java.io.IOException;
 import java.util.Collection;
 import java.util.HashSet;
-import org.folio.okapi.common.WebClientFactory;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
@@ -34,6 +31,10 @@ public class ModuleJavaScript implements Module {
     this.vertx = vertx;
     String url = entity.getUrl();
     String script = entity.getScript();
+    if (script == null || script.isEmpty()) {
+      return Future.failedFuture(
+          new IllegalArgumentException("Module config must include 'url' or 'script'"));
+    }
     if (url != null && !url.isEmpty()) {
       // url always points to an ES module
       defaultFunctionName = entity.getFunction();
@@ -46,38 +47,13 @@ public class ModuleJavaScript implements Module {
           .allowExperimentalOptions(true)
           .option("js.esm-eval-returns-exports", "true");
       context = cb.build();
-      return evalUrl(vertx, url)
-          .map(value -> module = value)
-          .mapEmpty();
-      // if script is specified, we treat it as a regular JS script that evaluates to
-      // a function
-    } else if (script != null && !script.isEmpty()) {
+      String moduleName = url.substring(url.lastIndexOf("/") + 1);
+      module = context.eval(Source.newBuilder("js", script, moduleName).buildLiteral());
+    } else {
       context = Context.create("js");
       function = context.eval("js", script);
-      return Future.succeededFuture();
-    } else {
-      return Future.failedFuture(
-          new IllegalArgumentException("Module config must include 'url' or 'script'"));
     }
-  }
-
-  private Future<Value> evalUrl(Vertx vertx, String url) {
-    WebClient webClient = WebClientFactory.getWebClient(vertx);
-    String moduleName = url.substring(url.lastIndexOf("/") + 1);
-
-    return webClient.getAbs(url)
-        .send()
-        .compose(response -> {
-          if (response.statusCode() >= 200 && response.statusCode() < 300) {
-            return Future.succeededFuture(context.eval(Source
-                .newBuilder("js", response.bodyAsString(), moduleName)
-                .buildLiteral()));
-          } else {
-            return Future.failedFuture(new IOException(
-                String.format("Config error: cannot retrieve module '%s' at %s (%d)",
-                    id, url, response.statusCode())));
-          }
-        });
+    return Future.succeededFuture();
   }
 
   private Value getFunction(String functionName) {

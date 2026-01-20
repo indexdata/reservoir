@@ -1,9 +1,14 @@
 package com.indexdata.reservoir.server.entity;
 
+import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.client.WebClient;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.Tuple;
+import java.io.IOException;
 import java.util.Objects;
+import org.folio.okapi.common.WebClientFactory;
 
 @SuppressWarnings({"squid:S5738","squid:S1123"})
 public class CodeModuleEntity {
@@ -188,6 +193,30 @@ public class CodeModuleEntity {
       return this;
     }
 
+    /** Resolve url if included.
+     * @param vertx vertx instance
+     * @return future with builded CodeModuleEntity
+     */
+    public Future<CodeModuleEntity> resolve(Vertx vertx) {
+      String id = json.getString(ID_FIELD, "none");
+      String url = json.getString(URL_FIELD);
+      if (url == null || url.isEmpty()) {
+        return Future.succeededFuture(this.build());
+      }
+      WebClient webClient = WebClientFactory.getWebClient(vertx);
+      return webClient.getAbs(url)
+        .send()
+        .compose(response -> {
+          if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            return Future.failedFuture(new IOException(
+                String.format("Config error: cannot retrieve module '%s' at %s (%d)",
+                    id, url, response.statusCode())));
+          }
+          json.put(SCRIPT_FIELD, response.bodyAsString());
+          return Future.succeededFuture(this.build());
+        });
+    }
+
     /**
      * Build the entity.
      * @return entity
@@ -203,7 +232,7 @@ public class CodeModuleEntity {
     }
 
     /*
-     * A shortcut to get JSON direclty from the builder.
+     * A shortcut to get JSON directly from the builder.
      */
     public JsonObject buildJson() {
       return json;
