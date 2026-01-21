@@ -194,7 +194,7 @@ public class CodeModuleEntity {
 
     /** Resolve url if included.
      * @param vertx vertx instance
-     * @return future with builded CodeModuleEntity
+     * @return future with built CodeModuleEntity
      */
     public Future<CodeModuleEntity> resolve(Vertx vertx) {
       String id = json.getString(ID_FIELD, "none");
