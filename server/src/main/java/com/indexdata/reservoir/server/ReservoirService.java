@@ -97,10 +97,11 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
           return Future.succeededFuture();
         }
         return new CodeModuleEntity.CodeModuleBuilder(res.asJson())
-            .resolve(ctx.vertx())
-            .compose(cb -> storage.updateCodeModuleEntity(cb).map(cb))
-            .compose(cb -> ModuleCache.getInstance().lookup(ctx.vertx(), tenant, cb))
-            .compose(module -> ctx.response().setStatusCode(204).end());
+          .resolve(ctx.vertx())
+          .compose(cm -> ModuleCache.getInstance().lookup(ctx.vertx(), tenant, cm)
+            .compose(module -> storage.updateCodeModuleEntity(cm))
+            .compose(x -> ctx.response().setStatusCode(204).end())
+          );
       });
   }
 
@@ -389,13 +390,14 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     JsonObject request = validatedRequest.getBody().getJsonObject();
     return new CodeModuleEntity.CodeModuleBuilder(request)
       .resolve(ctx.vertx())
-      .compose(e -> ModuleCache.getInstance().lookup(ctx.vertx(), TenantUtil.tenant(ctx), e)
-      .compose(module -> storage.insertCodeModuleEntity(e))
-      .compose(res ->
-        HttpResponse.responseJson(ctx, 201)
-            .putHeader("Location", ctx.request().absoluteURI() + "/" + e.getId())
-            .end(e.asJson().encode())
-      ));
+      .compose(cm -> ModuleCache.getInstance().lookup(ctx.vertx(), TenantUtil.tenant(ctx), cm)
+        .compose(module -> storage.insertCodeModuleEntity(cm))
+        .compose(res ->
+          HttpResponse.responseJson(ctx, 201)
+              .putHeader("Location", ctx.request().absoluteURI() + "/" + cm.getId())
+              .end(cm.asJson().encode())
+        )
+    );
   }
 
   Future<Void> getCodeModule(RoutingContext ctx) {
@@ -419,17 +421,18 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     JsonObject request = validatedRequest.getBody().getJsonObject();
     return new CodeModuleEntity.CodeModuleBuilder(request)
       .resolve(ctx.vertx())
-      .compose(e -> ModuleCache.getInstance().lookup(ctx.vertx(), TenantUtil.tenant(ctx), e)
-      .compose(module -> storage.updateCodeModuleEntity(e))
-      .compose(res -> {
-        if (Boolean.FALSE.equals(res)) {
-          HttpResponse.responseError(ctx, 404,
-              String.format(ENTITY_ID_NOT_FOUND_PATTERN, MODULE_LABEL, e.getId()));
-          return Future.succeededFuture();
+      .compose(cm -> ModuleCache.getInstance().lookup(ctx.vertx(), TenantUtil.tenant(ctx), cm)
+        .compose(module -> storage.updateCodeModuleEntity(cm))
+        .compose(res -> {
+          if (Boolean.FALSE.equals(res)) {
+            HttpResponse.responseError(ctx, 404,
+                String.format(ENTITY_ID_NOT_FOUND_PATTERN, MODULE_LABEL, cm.getId()));
+            return Future.succeededFuture();
+          }
+          return ctx.response().setStatusCode(204).end();
         }
-        return ctx.response().setStatusCode(204).end();
-      }
-    ));
+      )
+    );
   }
 
   Future<Void> getCodeModules(RoutingContext ctx) {
