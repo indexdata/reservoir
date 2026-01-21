@@ -8,10 +8,7 @@ import com.indexdata.reservoir.module.ModuleCache;
 import com.indexdata.reservoir.module.ModuleExecutable;
 import com.indexdata.reservoir.module.ModuleInvocation;
 import com.indexdata.reservoir.server.entity.ClusterBuilder;
-import com.indexdata.reservoir.server.entity.CodeModuleEntity;
 import com.indexdata.reservoir.server.entity.CodeModuleEntity.CodeModuleBuilder;
-
-import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
