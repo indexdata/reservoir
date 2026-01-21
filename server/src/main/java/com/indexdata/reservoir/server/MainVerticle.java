@@ -26,7 +26,7 @@ public class MainVerticle extends VerticleBase {
         Config.getSysConf("http.port", "port", "8081", config()));
     log.info("Listening on port {}", port);
 
-    ReservoirService reservoirService = new ReservoirService(vertx, m);
+    ReservoirService reservoirService = new ReservoirService(m);
 
     RouterCreator[] routerCreators = {
         reservoirService,

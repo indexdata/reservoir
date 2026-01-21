@@ -201,19 +201,19 @@ public class CodeModuleEntity {
       String id = json.getString(ID_FIELD, "none");
       String url = json.getString(URL_FIELD);
       if (url == null || url.isEmpty()) {
-        return Future.succeededFuture(this.build());
+        return Future.succeededFuture(build());
       }
       WebClient webClient = WebClientFactory.getWebClient(vertx);
       return webClient.getAbs(url)
         .send()
-        .compose(response -> {
+        .map(response -> {
           if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            return Future.failedFuture(new IOException(
+            throw new RuntimeException(
                 String.format("Config error: cannot retrieve module '%s' at %s (%d)",
-                    id, url, response.statusCode())));
+                    id, url, response.statusCode()));
           }
           json.put(SCRIPT_FIELD, response.bodyAsString());
-          return Future.succeededFuture(this.build());
+          return build();
         });
     }
 

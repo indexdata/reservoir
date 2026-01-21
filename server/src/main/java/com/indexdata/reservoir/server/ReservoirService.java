@@ -42,10 +42,8 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
   private static final Logger log = LogManager.getLogger(ReservoirService.class);
 
   private final ModuleVersionReporter moduleVersionReporter;
-  private final Vertx vertx;
 
-  public ReservoirService(Vertx vertx, ModuleVersionReporter moduleVersionReporter) {
-    this.vertx = vertx;
+  public ReservoirService(ModuleVersionReporter moduleVersionReporter) {
     this.moduleVersionReporter = moduleVersionReporter;
   }
 
@@ -118,7 +116,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
             return Future.succeededFuture();
           }
           ModuleCache.getInstance().purge(TenantUtil.tenant(ctx), id);
-          return ModuleCache.getInstance().lookup(vertx, TenantUtil.tenant(ctx), res)
+          return ModuleCache.getInstance().lookup(ctx.vertx(), TenantUtil.tenant(ctx), res)
                   .onSuccess(x -> ctx.response().setStatusCode(204).end());
         })
         .mapEmpty();
@@ -408,16 +406,14 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
     JsonObject request = validatedRequest.getBody().getJsonObject();
     return new CodeModuleEntity.CodeModuleBuilder(request)
-      .resolve(vertx)
-      .compose(e -> {
-        return ModuleCache.getInstance().lookup(ctx.vertx(), TenantUtil.tenant(ctx), e)
-            .compose(module -> storage.insertCodeModuleEntity(e))
-            .compose(res ->
-                HttpResponse.responseJson(ctx, 201)
-                    .putHeader("Location", ctx.request().absoluteURI() + "/" + e.getId())
-                    .end(e.asJson().encode())
-            );
-      });
+      .resolve(ctx.vertx())
+      .compose(e -> ModuleCache.getInstance().lookup(ctx.vertx(), TenantUtil.tenant(ctx), e)
+      .compose(module -> storage.insertCodeModuleEntity(e))
+      .compose(res ->
+        HttpResponse.responseJson(ctx, 201)
+            .putHeader("Location", ctx.request().absoluteURI() + "/" + e.getId())
+            .end(e.asJson().encode())
+      ));
   }
 
   Future<Void> getCodeModule(RoutingContext ctx) {
@@ -440,19 +436,18 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
     JsonObject request = validatedRequest.getBody().getJsonObject();
     return new CodeModuleEntity.CodeModuleBuilder(request)
-      .resolve(vertx)
-      .compose(e -> {
-        return ModuleCache.getInstance().lookup(ctx.vertx(), TenantUtil.tenant(ctx), e)
-        .compose(module -> storage.updateCodeModuleEntity(e))
-        .compose(res -> {
-          if (Boolean.FALSE.equals(res)) {
-            HttpResponse.responseError(ctx, 404,
-                String.format(ENTITY_ID_NOT_FOUND_PATTERN, MODULE_LABEL, e.getId()));
-            return Future.succeededFuture();
-          }
-          return ctx.response().setStatusCode(204).end();
-        });
-      });
+      .resolve(ctx.vertx())
+      .compose(e -> ModuleCache.getInstance().lookup(ctx.vertx(), TenantUtil.tenant(ctx), e)
+      .compose(module -> storage.updateCodeModuleEntity(e))
+      .compose(res -> {
+        if (Boolean.FALSE.equals(res)) {
+          HttpResponse.responseError(ctx, 404,
+              String.format(ENTITY_ID_NOT_FOUND_PATTERN, MODULE_LABEL, e.getId()));
+          return Future.succeededFuture();
+        }
+        return ctx.response().setStatusCode(204).end();
+      }
+    ));
   }
 
   Future<Void> getCodeModules(RoutingContext ctx) {

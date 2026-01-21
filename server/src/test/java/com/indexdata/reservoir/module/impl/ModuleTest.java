@@ -476,11 +476,10 @@ public class ModuleTest {
         .put("url", url)
         .put("function", "transform");
 
-    new CodeModuleBuilder(config1).resolve(vertx).compose(entity1 ->
-      ModuleCache.getInstance().lookup(vertx, TENANT, entity1)
+    new CodeModuleBuilder(config1).resolve(vertx)
         .onComplete(context.asyncAssertFailure(e ->
             assertThat(e.getMessage(),
-            is("Config error: cannot retrieve module 'marc-transformer' at " + url + " (404)")))));
+            is("Config error: cannot retrieve module 'marc-transformer' at " + url + " (404)"))));
   }
 
   @Test
