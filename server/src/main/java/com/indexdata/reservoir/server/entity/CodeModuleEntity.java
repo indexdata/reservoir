@@ -6,7 +6,6 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.Tuple;
-import java.io.IOException;
 import java.util.Objects;
 import org.folio.okapi.common.WebClientFactory;
 
