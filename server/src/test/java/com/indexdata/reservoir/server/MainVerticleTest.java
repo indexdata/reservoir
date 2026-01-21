@@ -2189,17 +2189,17 @@ public class MainVerticleTest extends TestBase {
 
     //POST item
     RestAssured.given()
-      .header(XOkapiHeaders.TENANT, TENANT_1)
-      .header("Content-Type", "application/json")
-      .body(module.asJson().encode())
-      .post("/reservoir/config/modules")
-      .then()
-      .statusCode(201)
-      .contentType("application/json")
-      .body("id", is(module.getId()))
-      .body("type", is(module.getType()))
-      .body("url", is(module.getUrl()))
-      .body("function", is(module.getFunction()));
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .body(module.asJson().encode())
+        .post("/reservoir/config/modules")
+        .then()
+        .statusCode(201)
+        .contentType("application/json")
+        .body("id", is(module.getId()))
+        .body("type", is(module.getType()))
+        .body("url", is(module.getUrl()))
+        .body("function", is(module.getFunction()));
 
     //POST same item again
     RestAssured.given()
