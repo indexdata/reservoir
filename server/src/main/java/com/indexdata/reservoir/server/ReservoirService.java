@@ -42,10 +42,8 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
   private static final Logger log = LogManager.getLogger(ReservoirService.class);
 
   private final ModuleVersionReporter moduleVersionReporter;
-  private final Vertx vertx;
 
-  public ReservoirService(Vertx vertx, ModuleVersionReporter moduleVersionReporter) {
-    this.vertx = vertx;
+  public ReservoirService(ModuleVersionReporter moduleVersionReporter) {
     this.moduleVersionReporter = moduleVersionReporter;
   }
 
@@ -88,20 +86,23 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
   }
 
   Future<Void> reloadCodeModule(RoutingContext ctx) {
-    String id = Util.getPathParameter(ctx, "id");
-    Storage storage = new Storage(ctx);
+    final String id = Util.getPathParameter(ctx, "id");
+    final Storage storage = new Storage(ctx);
+    final String tenant = TenantUtil.tenant(ctx);
     return storage.selectCodeModuleEntity(id)
-        .compose(res -> {
-          if (res == null) {
-            HttpResponse.responseError(ctx, 404,
-                String.format(ENTITY_ID_NOT_FOUND_PATTERN, MODULE_LABEL, id));
-            return Future.succeededFuture();
-          }
-          ModuleCache.getInstance().purge(TenantUtil.tenant(ctx), id);
-          return ModuleCache.getInstance().lookup(vertx, TenantUtil.tenant(ctx), res)
-                  .onSuccess(x -> ctx.response().setStatusCode(204).end());
-        })
-        .mapEmpty();
+      .compose(res -> {
+        if (res == null) {
+          HttpResponse.responseError(ctx, 404,
+              String.format(ENTITY_ID_NOT_FOUND_PATTERN, MODULE_LABEL, id));
+          return Future.succeededFuture();
+        }
+        return new CodeModuleEntity.CodeModuleBuilder(res.asJson())
+          .resolve(ctx.vertx())
+          .compose(cm -> ModuleCache.getInstance().lookup(ctx.vertx(), tenant, cm)
+            .compose(module -> storage.updateCodeModuleEntity(cm))
+            .compose(x -> ctx.response().setStatusCode(204).end())
+          );
+      });
   }
 
   Future<Void> deleteCodeModule(RoutingContext ctx) {
@@ -387,15 +388,16 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     Storage storage = new Storage(ctx);
     ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
     JsonObject request = validatedRequest.getBody().getJsonObject();
-    CodeModuleEntity e = new CodeModuleEntity.CodeModuleBuilder(request).build();
-
-    ModuleCache.getInstance().purge(TenantUtil.tenant(ctx), e.getId());
-    return ModuleCache.getInstance().lookup(ctx.vertx(), TenantUtil.tenant(ctx), e)
-        .compose(module -> storage.insertCodeModuleEntity(e).onSuccess(res ->
-            HttpResponse.responseJson(ctx, 201)
-                .putHeader("Location", ctx.request().absoluteURI() + "/" + e.getId())
-                .end(e.asJson().encode())
-        ));
+    return new CodeModuleEntity.CodeModuleBuilder(request)
+      .resolve(ctx.vertx())
+      .compose(cm -> ModuleCache.getInstance().lookup(ctx.vertx(), TenantUtil.tenant(ctx), cm)
+        .compose(module -> storage.insertCodeModuleEntity(cm))
+        .compose(res ->
+          HttpResponse.responseJson(ctx, 201)
+              .putHeader("Location", ctx.request().absoluteURI() + "/" + cm.getId())
+              .end(cm.asJson().encode())
+        )
+    );
   }
 
   Future<Void> getCodeModule(RoutingContext ctx) {
@@ -417,18 +419,20 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     Storage storage = new Storage(ctx);
     ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
     JsonObject request = validatedRequest.getBody().getJsonObject();
-    CodeModuleEntity e = new CodeModuleEntity.CodeModuleBuilder(request).build();
-    return ModuleCache.getInstance().lookup(ctx.vertx(), TenantUtil.tenant(ctx), e)
-        .compose(module -> storage.updateCodeModuleEntity(e)
-            .onSuccess(res -> {
-              if (Boolean.FALSE.equals(res)) {
-                HttpResponse.responseError(ctx, 404,
-                    String.format(ENTITY_ID_NOT_FOUND_PATTERN, MODULE_LABEL, e.getId()));
-                return;
-              }
-              ctx.response().setStatusCode(204).end();
-            }))
-        .mapEmpty();
+    return new CodeModuleEntity.CodeModuleBuilder(request)
+      .resolve(ctx.vertx())
+      .compose(cm -> ModuleCache.getInstance().lookup(ctx.vertx(), TenantUtil.tenant(ctx), cm)
+        .compose(module -> storage.updateCodeModuleEntity(cm))
+        .compose(res -> {
+          if (Boolean.FALSE.equals(res)) {
+            HttpResponse.responseError(ctx, 404,
+                String.format(ENTITY_ID_NOT_FOUND_PATTERN, MODULE_LABEL, cm.getId()));
+            return Future.succeededFuture();
+          }
+          return ctx.response().setStatusCode(204).end();
+        }
+      )
+    );
   }
 
   Future<Void> getCodeModules(RoutingContext ctx) {

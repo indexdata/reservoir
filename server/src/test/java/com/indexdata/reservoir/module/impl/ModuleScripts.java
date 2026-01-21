@@ -61,7 +61,7 @@ public class ModuleScripts {
     }
     """;
 
-  final static String TEST_SCRIPT_EMPTY = """
+  public final static String TEST_SCRIPT_EMPTY = """
     export function transform(clusterStr) {
       return '{}';
     }
@@ -88,6 +88,7 @@ public class ModuleScripts {
   public static Future<HttpServer> serveModules(Vertx vertx, int port)  {
     Router router = Router.router(vertx);
     router.get("/lib/marc-transformer.mjs").handler(ctx -> respondPlain(ctx, TEST_SCRIPT_1));
+    router.get("/lib/marc-transformer.js").handler(ctx -> respondPlain(ctx, TEST_SCRIPT_1));
     router.get("/lib/returns-int.mjs").handler(ctx -> respondPlain(ctx, TEST_SCRIPT_RETURNS_INT));
     router.get("/lib/throw.mjs").handler(ctx -> respondPlain(ctx, TEST_SCRIPT_THROW));
     router.get("/lib/bad-json.mjs").handler(ctx -> respondPlain(ctx, TEST_SCRIPT_BAD_JSON));
