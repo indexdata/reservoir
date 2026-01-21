@@ -104,24 +104,6 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
       });
   }
 
-
-  Future<Void> reloadCodeModule1(RoutingContext ctx) {
-    final String id = Util.getPathParameter(ctx, "id");
-    final Storage storage = new Storage(ctx);
-    return storage.selectCodeModuleEntity(id)
-        .compose(res -> {
-          if (res == null) {
-            HttpResponse.responseError(ctx, 404,
-                String.format(ENTITY_ID_NOT_FOUND_PATTERN, MODULE_LABEL, id));
-            return Future.succeededFuture();
-          }
-          ModuleCache.getInstance().purge(TenantUtil.tenant(ctx), id);
-          return ModuleCache.getInstance().lookup(ctx.vertx(), TenantUtil.tenant(ctx), res)
-                  .onSuccess(x -> ctx.response().setStatusCode(204).end());
-        })
-        .mapEmpty();
-  }
-
   Future<Void> deleteCodeModule(RoutingContext ctx) {
     String id = Util.getPathParameter(ctx, "id");
     Storage storage = new Storage(ctx);
