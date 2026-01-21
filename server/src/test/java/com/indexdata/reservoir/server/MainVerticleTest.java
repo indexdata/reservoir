@@ -13,6 +13,7 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.startsWith;
 import static org.hamcrest.MatcherAssert.assertThat;
 
+import com.indexdata.reservoir.module.impl.ModuleScripts;
 import com.indexdata.reservoir.server.entity.CodeModuleEntity;
 import io.restassured.RestAssured;
 import io.vertx.core.Future;
@@ -2199,7 +2200,8 @@ public class MainVerticleTest extends TestBase {
         .body("id", is(module.getId()))
         .body("type", is(module.getType()))
         .body("url", is(module.getUrl()))
-        .body("function", is(module.getFunction()));
+        .body("function", is(module.getFunction()))
+        .body("script", is(ModuleScripts.TEST_SCRIPT_EMPTY));
 
     //POST same item again
     RestAssured.given()
@@ -2221,7 +2223,9 @@ public class MainVerticleTest extends TestBase {
         .body("id", is(module.getId()))
         .body("type", is(module.getType()))
         .body("url", is(module.getUrl()))
-        .body("function", is(module.getFunction()));
+        .body("function", is(module.getFunction()))
+        .body("script", is(ModuleScripts.TEST_SCRIPT_EMPTY));
+
     // reload existing module
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
@@ -2248,7 +2252,8 @@ public class MainVerticleTest extends TestBase {
         .body("modules", hasSize(1))
         .body("modules[0].id", is(module.getId()))
         .body("modules[0].url", is(module.getUrl()))
-        .body("modules[0].function", is(module.getFunction()));
+        .body("modules[0].function", is(module.getFunction()))
+        .body("modules[0].script", is(ModuleScripts.TEST_SCRIPT_EMPTY));
 
     //DELETE item
     RestAssured.given()
@@ -2291,7 +2296,8 @@ public class MainVerticleTest extends TestBase {
         .body("id", is(module.getId()))
         .body("type", is(module.getType()))
         .body("url", is(module.getUrl()))
-        .body("function", is(module.getFunction()));
+        .body("function", is(module.getFunction()))
+        .body("script", is(ModuleScripts.TEST_SCRIPT_EMPTY));
 
     //PUT item to existing
     RestAssured.given()
