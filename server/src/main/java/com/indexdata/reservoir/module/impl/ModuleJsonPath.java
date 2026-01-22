@@ -23,7 +23,7 @@ public class ModuleJsonPath implements Module {
       return Future.failedFuture("module config must include 'script'");
     }
     jsonPath = JsonPath.compile(script);
-    return Future.succeededFuture();
+    return Future.succeededFuture(entity);
   }
 
   public ModuleJsonPath() {
