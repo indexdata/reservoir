@@ -71,6 +71,7 @@ public class Storage {
   final String moduleTable;
   final String oaiConfigTable;
   final String oaiPmhClientTable;
+  final Vertx vertx;
   private final String tenant;
   static int sqlStreamFetchSize = 50;
 
@@ -84,6 +85,7 @@ public class Storage {
     final String key = getPoolKey(method);
     this.pool = TenantPgPool.pool(vertx, tenant, key);
     this.tenant = tenant;
+    this.vertx = vertx;
     this.globalRecordTable = pool.getSchema() + "." + GLOBAL_RECORDS_TABLE;
     this.matchKeyConfigTable = pool.getSchema() + "." + MATCH_KEY_CONFIG_TABLE;
     this.clusterRecordTable = pool.getSchema() + "." + CLUSTER_RECORDS_TABLE;
@@ -212,7 +214,9 @@ public class Storage {
                 + "(id VARCHAR NOT NULL PRIMARY KEY,"
                 + " config JSONB, job JSONB, stop BOOLEAN, owner UUID)"
         )
-    ).mapEmpty();
+      )
+      .mapEmpty()
+      .compose(x -> resolveCodeModuleTable(vertx));
   }
 
   private Future<Boolean> upsertGlobalRecord(String localIdentifier, SourceId sourceId,
@@ -1090,6 +1094,32 @@ public class Storage {
                 "DELETE FROM " + moduleTable + " WHERE id = $1")
             .execute(Tuple.of(id))
             .map(res -> res.rowCount() > 0));
+  }
+
+  Future<Void> resolveCodeModuleTable(Vertx vertx) {
+    return pool.query("SELECT * FROM " + moduleTable)
+      .execute()
+      .compose(rowSet -> {
+        Future<Void> result = Future.succeededFuture();
+        for (Row row : rowSet) {
+          var cm = new CodeModuleEntity.CodeModuleBuilder(row).build();
+          if (cm.getScript() != null && !cm.getScript().isEmpty()) {
+            continue;
+          }
+          if (cm.getUrl() == null || cm.getUrl().isEmpty()) {
+            log.warn("Code module '{}' has no URL to resolve", cm.getId());
+            continue;
+          }
+          result = result
+            .compose(x -> new CodeModuleEntity.CodeModuleBuilder(row).resolve(vertx)
+            .compose(module -> updateCodeModuleEntity(module).mapEmpty()), e -> {
+              log.warn("Failed to resolve code module '{}': {}",
+                  cm.getId(), e.getMessage());
+              return Future.succeededFuture();
+            });
+        }
+        return result;
+      });
   }
 
   /**
