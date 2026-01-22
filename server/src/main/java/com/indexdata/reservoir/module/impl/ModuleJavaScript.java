@@ -24,7 +24,7 @@ public class ModuleJavaScript implements Module {
   private Vertx vertx;
 
   @Override
-  public Future<CodeModuleEntity> initialize(Vertx vertx, String tenant, CodeModuleEntity entity) {
+  public Future<CodeModuleEntity> initialize(Vertx vertx, CodeModuleEntity entity) {
     id = entity.getId();
     if (id == null || id.isEmpty()) {
       return Future.failedFuture(
@@ -44,8 +44,6 @@ public class ModuleJavaScript implements Module {
       if (!hasScript) {
         return new CodeModuleEntity.CodeModuleBuilder(entity.asJson())
           .resolve(vertx)
-          .compose(newEntity -> new Storage(vertx, tenant, HttpMethod.POST)
-            .updateCodeModuleEntity(newEntity).map(newEntity))
           .compose(this::initAsEsModule);
       }
       return this.initAsEsModule(entity);

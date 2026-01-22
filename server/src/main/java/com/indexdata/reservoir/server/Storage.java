@@ -392,7 +392,7 @@ public class Storage {
                   "Module '" + invocation.getModuleName()
                       + "' does not exist for '" + invocation + "'");
             }
-            return ModuleCache.getInstance().lookup(vertx, tenant, entity)
+            return ModuleCache.getInstance().lookup(vertx, this, entity)
               .compose(module -> {
                 ingestMatcher.moduleExecutable = new ModuleExecutable(module, invocation);
                 return Future.succeededFuture(ingestMatcher);
@@ -1327,7 +1327,7 @@ public class Storage {
                   return Future.failedFuture("Transformer module '"
                     + invocation.getModuleName() + "' not found");
                 }
-                return ModuleCache.getInstance().lookup(ctx.vertx(), TenantUtil.tenant(ctx), entity)
+                return ModuleCache.getInstance().lookup(ctx.vertx(), this, entity)
                           .map(mod -> new ModuleExecutable(mod, invocation));
               });
         });

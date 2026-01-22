@@ -17,7 +17,7 @@ public class ModuleJsonPath implements Module {
   JsonPath jsonPath;
 
   @Override
-  public Future<CodeModuleEntity> initialize(Vertx vertx, String tenant, CodeModuleEntity entity) {
+  public Future<CodeModuleEntity> initialize(Vertx vertx, CodeModuleEntity entity) {
     String script = entity.getScript();
     if (script == null) {
       return Future.failedFuture("module config must include 'script'");
