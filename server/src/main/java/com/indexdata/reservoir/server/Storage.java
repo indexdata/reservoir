@@ -441,7 +441,6 @@ public class Storage {
 
   Future<Set<UUID>> updateClusterValues(SqlConnection conn, UUID newClusterId,
       MatcherResult matcherResult) {
-    Set<UUID> clustersFound = new HashSet<>();
     StringBuilder q = new StringBuilder("SELECT cluster_id, match_value FROM " + clusterValueTable
         + " WHERE match_key_config_id = $1 AND (");
     List<Object> tupleList = new ArrayList<>();
@@ -456,6 +455,7 @@ public class Storage {
     }
     q.append(")");
     Set<String> foundKeys = new HashSet<>();
+    Set<UUID> clustersFound = new HashSet<>();
     return conn.preparedQuery(q.toString())
         .execute(Tuple.from(tupleList))
         .map(rowSet -> {
@@ -503,12 +503,10 @@ public class Storage {
         + " AND cluster_records.record_id = $3";
     return pool.preparedQuery(q).execute(Tuple.of(
         LocalDateTime.now(ZoneOffset.UTC), matcherResult.matchKeyId, globalId))
-        .compose(x -> {
-          return conn.preparedQuery("DELETE FROM " + clusterRecordTable
-              + " WHERE record_id = $1 AND match_key_config_id = $2")
-              .execute(Tuple.of(globalId, matcherResult.matchKeyId))
-              .mapEmpty();
-        });
+        .compose(x -> conn.preparedQuery("DELETE FROM " + clusterRecordTable
+            + " WHERE record_id = $1 AND match_key_config_id = $2")
+            .execute(Tuple.of(globalId, matcherResult.matchKeyId))
+            .mapEmpty());
   }
 
   Future<Void> updateClusterForRecord(SqlConnection conn, UUID globalId,
