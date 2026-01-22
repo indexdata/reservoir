@@ -1591,7 +1591,8 @@ public class MainVerticleTest extends TestBase {
         .add(new JsonObject()
             .put("localId", "S101")
             .put("payload", new JsonObject()
-                .put("marc", new JsonObject().put("leader", "00914naa  2200337   450 "))
+                .put("marc", new JsonObject()
+                    .put("leader", "00914naa  2200337   450 "))
                 .put("inventory", new JsonObject()
                     .put("isbn", new JsonArray().add("1"))
                     .put("issn", new JsonArray().add("01"))
@@ -1601,7 +1602,8 @@ public class MainVerticleTest extends TestBase {
         .add(new JsonObject()
             .put("localId", "S102")
             .put("payload", new JsonObject()
-                .put("marc", new JsonObject().put("leader", "00914naa  2200337   450 "))
+                .put("marc", new JsonObject()
+                    .put("leader", "00914naa  2200337   450 "))
                 .put("inventory", new JsonObject()
                     .put("isbn", new JsonArray().add("2").add("3"))
                     .put("issn", new JsonArray().add("01"))
@@ -1673,8 +1675,10 @@ public class MainVerticleTest extends TestBase {
         .add(new JsonObject()
             .put("localId", "S101")
             .put("payload", new JsonObject()
-                .put("marc", new JsonObject().put("leader", "00914naa  2200337   450 "))
-                .put("inventory", new JsonObject().put("isbn", new JsonArray().add("4")))
+                .put("marc", new JsonObject()
+                    .put("leader", "00914naa  2200337   450 "))
+                .put("inventory", new JsonObject()
+                    .put("isbn", new JsonArray().add("4")))
             )
         );
     ingestRecords(records1, SOURCE_ID_1);
@@ -1689,7 +1693,7 @@ public class MainVerticleTest extends TestBase {
         .body("items", hasSize(1))
         .body("items[0].records", hasSize(1))
         .extract().body().asString();
-    verifyClusterResponse(s, List.of(List.of("S101"), List.of("S102")));
+    verifyClusterResponse(s, List.of(List.of("S102")));
 
     s = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
@@ -1699,6 +1703,8 @@ public class MainVerticleTest extends TestBase {
         .then().statusCode(200)
         .contentType("application/json")
         .body("items", hasSize(2))
+        .body("items[0].records", hasSize(1))
+        .body("items[1].records", hasSize(1))
         .extract().body().asString();
     verifyClusterResponse(s, List.of(List.of("S101"), List.of("S102")));
 
@@ -1707,8 +1713,10 @@ public class MainVerticleTest extends TestBase {
         .add(new JsonObject()
             .put("localId", "S101")
             .put("payload", new JsonObject()
-                .put("marc", new JsonObject().put("leader", "00914naa  2200337   450 "))
-                .put("inventory", new JsonObject().put("isbn", new JsonArray().add("3")))
+                .put("marc", new JsonObject()
+                    .put("leader", "00914naa  2200337   450 "))
+                .put("inventory", new JsonObject()
+                    .put("isbn", new JsonArray().add("3")))
             )
         );
     ingestRecords(records1, SOURCE_ID_1);
@@ -1755,15 +1763,19 @@ public class MainVerticleTest extends TestBase {
         .add(new JsonObject()
             .put("localId", "S101")
             .put("payload", new JsonObject()
-                .put("marc", new JsonObject().put("leader", "00914naa  0101   450 "))
-                .put("inventory", new JsonObject().put("isbn", new JsonArray().add("1")))
+                    .put("marc", new JsonObject()
+                        .put("leader", "00914naa  0101   450 "))
+                    .put("inventory", new JsonObject()
+                        .put("isbn", new JsonArray().add("1")))
             )
         )
         .add(new JsonObject()
             .put("localId", "S102")
             .put("payload", new JsonObject()
-                .put("marc", new JsonObject().put("leader", "00914naa  0102   450 "))
-                .put("inventory", new JsonObject().put("isbn", new JsonArray().add("2")))
+                .put("marc", new JsonObject()
+                    .put("leader", "00914naa  0102   450 "))
+                .put("inventory", new JsonObject()
+                    .put("isbn", new JsonArray().add("2")))
             )
         );
     ingestRecords(records1, SOURCE_ID_1);
@@ -1784,6 +1796,8 @@ public class MainVerticleTest extends TestBase {
         .then().statusCode(200)
         .contentType("application/json")
         .body("items", hasSize(2))
+        .body("items[0].records", hasSize(1))
+        .body("items[1].records", hasSize(1))
         .extract().body().asString();
     verifyClusterResponse(s, List.of(List.of("S101"), List.of("S102")));
 
@@ -1810,6 +1824,7 @@ public class MainVerticleTest extends TestBase {
         .then().statusCode(200)
         .contentType("application/json")
         .body("items", hasSize(1))
+        .body("items[0].records", hasSize(1))
         .extract().body().asString();
     verifyClusterResponse(s, List.of(List.of("S101")));
 
