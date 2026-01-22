@@ -150,6 +150,12 @@ See [values.yaml](chart/values.yaml) for details.
 ## Server metrics
 
 Reservoir can produce Prometheus and JMX metrics. Prometheus metrics are exposed on the path `/metrics` and port `PORT` if the `-Dmetrics.prometheus.port=PORT` option is specified.
+
+In addition to the standard [vert.x metrics](https://vertx.io/docs/vertx-micrometer-metrics/java/#_vert_x_core_metrics), Reservoir exposes:
+
+* counter `reservoir_records_ingested_total` with labels `source_id` and `result` (`ignored`, `inserted`, `deleted`, `updated`)
+* timer `reservoir_ingestion_duration_seconds` with labels `source_id` and `phase` (`matcher`, `storing`, `parsing`)
+
 JMX metrics are exposed for domain `reservoir` if `-Dmetrics.jmx=true` option is specified.
 
 ## Ingest record files
