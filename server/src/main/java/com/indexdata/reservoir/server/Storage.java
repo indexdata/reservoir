@@ -501,7 +501,7 @@ public class Storage {
         + " WHERE cluster_meta.cluster_id = cluster_records.cluster_id"
         + " AND cluster_records.match_key_config_id = $2"
         + " AND cluster_records.record_id = $3";
-    return pool.preparedQuery(q).execute(Tuple.of(
+    return conn.preparedQuery(q).execute(Tuple.of(
         LocalDateTime.now(ZoneOffset.UTC), matcherResult.matchKeyId, globalId))
         .compose(x -> conn.preparedQuery("DELETE FROM " + clusterRecordTable
             + " WHERE record_id = $1 AND match_key_config_id = $2")
