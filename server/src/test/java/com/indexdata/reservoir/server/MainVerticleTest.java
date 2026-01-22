@@ -1486,6 +1486,100 @@ public class MainVerticleTest extends TestBase {
   }
 
   @Test
+  public void testClustersNoKey() {
+    createIsbnMatchKey();
+
+    JsonArray records1 = new JsonArray()
+        .add(new JsonObject()
+            .put("localId", "S101")
+            .put("payload", new JsonObject()
+                .put("marc", new JsonObject().put("leader", "00914naa  2200337   450 "))
+                .put("inventory", new JsonObject()
+                    .put("isbn", new JsonArray().add("1"))
+                )
+            )
+        )
+        .add(new JsonObject()
+            .put("localId", "S102")
+            .put("payload", new JsonObject()
+                .put("marc", new JsonObject().put("leader", "00914naa  2200337   450 "))
+                .put("inventory", new JsonObject()
+                    .put("isbn", new JsonArray().add("1"))
+                )
+            )
+        );
+    // phase 1: insert two separate local records with same isbn
+    ingestRecords(records1, SOURCE_ID_1);
+
+    String s = RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .param("matchkeyid", "isbn")
+        .get("/reservoir/clusters")
+        .then().statusCode(200)
+        .contentType("application/json")
+        .body("items", hasSize(1))
+        .body("items[0].records", hasSize(2))
+        .extract().body().asString();
+    verifyClusterResponse(s, List.of(List.of("S101", "S102")));
+
+    // phase 2: remove match key for first record
+    JsonArray records2 = new JsonArray()
+        .add(new JsonObject()
+            .put("localId", "S101")
+            .put("payload", new JsonObject()
+                .put("marc", new JsonObject().put("leader", "00914naa  2200337   450 "))
+                .put("inventory", new JsonObject()
+                    .put("isbn", new JsonArray())
+                )
+            )
+        );
+    ingestRecords(records2, SOURCE_ID_1);
+
+    s = RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .param("matchkeyid", "isbn")
+        .get("/reservoir/clusters")
+        .then().statusCode(200)
+        .contentType("application/json")
+        .body("items", hasSize(2))
+        .body("items[0].records", hasSize(1))
+        .body("items[1].records", hasSize(1))
+        .extract().body().asString();
+
+    verifyClusterResponse(s, List.of(List.of("S101"), List.of("S102")));
+
+    // phase 3: make another record with no match key
+    JsonArray records3 = new JsonArray()
+        .add(new JsonObject()
+            .put("localId", "S103")
+            .put("payload", new JsonObject()
+                .put("marc", new JsonObject().put("leader", "00914naa  2200337   450 "))
+                .put("inventory", new JsonObject()
+                    .put("isbn", new JsonArray())
+                )
+            )
+        );
+    ingestRecords(records3, SOURCE_ID_1);
+
+    s = RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .param("matchkeyid", "isbn")
+        .get("/reservoir/clusters")
+        .then().statusCode(200)
+        .contentType("application/json")
+        .body("items", hasSize(3))
+        .body("items[0].records", hasSize(1))
+        .body("items[1].records", hasSize(1))
+        .body("items[2].records", hasSize(1))
+        .extract().body().asString();
+    // the empty records end up in their own clusters
+    verifyClusterResponse(s, List.of(List.of("S101"), List.of("S102"), List.of("S103")));
+  }
+
+  @Test
   public void testClustersMove() {
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
@@ -1640,12 +1734,6 @@ public class MainVerticleTest extends TestBase {
         .param("query", "cql.allRecords=true")
         .delete("/reservoir/records")
         .then().statusCode(204);
-
-    RestAssured.given()
-        .header(XOkapiHeaders.TENANT, TENANT_1)
-        .delete("/reservoir/config/matchkeys/isbn")
-        .then().statusCode(204);
-
   }
 
   @Test
