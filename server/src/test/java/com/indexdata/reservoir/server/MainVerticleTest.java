@@ -1486,6 +1486,97 @@ public class MainVerticleTest extends TestBase {
   }
 
   @Test
+  public void testClustersNoKey() {
+    createIsbnMatchKey();
+
+    JsonArray records1 = new JsonArray()
+        .add(new JsonObject()
+            .put("localId", "S101")
+            .put("payload", new JsonObject()
+                .put("marc", new JsonObject().put("leader", "00914naa  2200337   450 "))
+                .put("inventory", new JsonObject()
+                    .put("isbn", new JsonArray().add("1"))
+                )
+            )
+        )
+        .add(new JsonObject()
+            .put("localId", "S102")
+            .put("payload", new JsonObject()
+                .put("marc", new JsonObject().put("leader", "00914naa  2200337   450 "))
+                .put("inventory", new JsonObject()
+                    .put("isbn", new JsonArray().add("1"))
+                )
+            )
+        );
+    // phase 1: insert two separate local records with same isbn
+    ingestRecords(records1, SOURCE_ID_1);
+
+    String s = RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .param("matchkeyid", "isbn")
+        .get("/reservoir/clusters")
+        .then().statusCode(200)
+        .contentType("application/json")
+        .body("items", hasSize(1))
+        .body("items[0].records", hasSize(2))
+        .extract().body().asString();
+    verifyClusterResponse(s, List.of(List.of("S101", "S102")));
+
+    // phase 2: remove match key for first record
+    JsonArray records2 = new JsonArray()
+        .add(new JsonObject()
+            .put("localId", "S101")
+            .put("payload", new JsonObject()
+                .put("marc", new JsonObject().put("leader", "00914naa  2200337   450 "))
+                .put("inventory", new JsonObject()
+                    .put("isbn", new JsonArray())
+                )
+            )
+        );
+    ingestRecords(records2, SOURCE_ID_1);
+
+    s = RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .param("matchkeyid", "isbn")
+        .get("/reservoir/clusters")
+        .then().statusCode(200)
+        .contentType("application/json")
+        .body("items", hasSize(1))
+        .body("items[0].records", hasSize(1))
+        .extract().body().asString();
+
+    verifyClusterResponse(s, List.of(List.of("S102")));
+
+    // phase 3: make it appear again
+    JsonArray records3 = new JsonArray()
+        .add(new JsonObject()
+            .put("localId", "S101")
+            .put("payload", new JsonObject()
+                .put("marc", new JsonObject().put("leader", "00914naa  2200337   450 "))
+                .put("inventory", new JsonObject()
+                    .put("isbn", new JsonArray().add("1"))
+                )
+            )
+        );
+    ingestRecords(records3, SOURCE_ID_1);
+
+    s = RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .param("matchkeyid", "isbn")
+        .get("/reservoir/clusters")
+        .then().statusCode(200)
+        .contentType("application/json")
+        .body("items", hasSize(1))
+        .body("items[0].records", hasSize(2))
+        .extract().body().asString();
+    // the empty records end up in their own clusters
+    verifyClusterResponse(s, List.of(List.of("S101", "S102")));
+  }
+
+  @Test
   public void testClustersMove() {
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
@@ -1595,9 +1686,8 @@ public class MainVerticleTest extends TestBase {
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .contentType("application/json")
-        .body("items", hasSize(2))
+        .body("items", hasSize(1))
         .body("items[0].records", hasSize(1))
-        .body("items[1].records", hasSize(1))
         .extract().body().asString();
     verifyClusterResponse(s, List.of(List.of("S101"), List.of("S102")));
 
@@ -1640,12 +1730,6 @@ public class MainVerticleTest extends TestBase {
         .param("query", "cql.allRecords=true")
         .delete("/reservoir/records")
         .then().statusCode(204);
-
-    RestAssured.given()
-        .header(XOkapiHeaders.TENANT, TENANT_1)
-        .delete("/reservoir/config/matchkeys/isbn")
-        .then().statusCode(204);
-
   }
 
   @Test
@@ -1802,9 +1886,9 @@ public class MainVerticleTest extends TestBase {
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .contentType("application/json")
-        .body("items", hasSize(3))
+        .body("items", hasSize(1))
         .extract().body().asString();
-    verifyClusterResponse(s, List.of(List.of("S101"), List.of("S102"), List.of("S103")));
+    verifyClusterResponse(s, List.of(List.of("S101")));
 
     records1 = new JsonArray()
         .add(new JsonObject()
@@ -1822,9 +1906,9 @@ public class MainVerticleTest extends TestBase {
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .contentType("application/json")
-        .body("items", hasSize(2))
+        .body("items", hasSize(1))
         .extract().body().asString();
-    verifyClusterResponse(s, List.of(List.of("S101", "S103"), List.of("S102")));
+    verifyClusterResponse(s, List.of(List.of("S101", "S103")));
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
@@ -3749,14 +3833,14 @@ public class MainVerticleTest extends TestBase {
         .get("/reservoir/config/matchkeys/isbn/stats")
         .then().statusCode(200)
         .contentType("application/json")
-        .body("recordsTotal", is(6))
-        .body("clustersTotal", is(5))
-        .body("matchValuesPerCluster.0", is(2))
+        .body("recordsTotal", is(4))
+        .body("clustersTotal", is(3))
+        .body("matchValuesPerCluster.0", is(nullValue()))
         .body("matchValuesPerCluster.1", is(2))
         .body("matchValuesPerCluster.3", is(1))
-        .body("recordsPerCluster.1", is(4))
+        .body("recordsPerCluster.1", is(2))
         .body("recordsPerCluster.2", is(1))
-        .body("recordsPerClusterSample.1", hasSize(3))
+        .body("recordsPerClusterSample.1", hasSize(2))
         .body("recordsPerClusterSample.2", hasSize(1))
     ;
 
@@ -3778,12 +3862,12 @@ public class MainVerticleTest extends TestBase {
         .get("/reservoir/config/matchkeys/isbn/stats")
         .then().statusCode(200)
         .contentType("application/json")
-        .body("recordsTotal", is(7))
-        .body("clustersTotal", is(6))
-        .body("matchValuesPerCluster.0", is(2))
+        .body("recordsTotal", is(5))
+        .body("clustersTotal", is(4))
+        .body("matchValuesPerCluster.0", is(nullValue()))
         .body("matchValuesPerCluster.1", is(3))
         .body("matchValuesPerCluster.3", is(1))
-        .body("recordsPerCluster.1", is(5))
+        .body("recordsPerCluster.1", is(3))
         .body("recordsPerCluster.2", is(1))
         .body("recordsPerClusterSample.1", hasSize(3))
         .body("recordsPerClusterSample.2", hasSize(1))
@@ -3801,12 +3885,12 @@ public class MainVerticleTest extends TestBase {
         .get("/reservoir/config/matchkeys/isbn/stats")
         .then().statusCode(200)
         .contentType("application/json")
-        .body("recordsTotal", is(6))
-        .body("clustersTotal", is(5))
-        .body("matchValuesPerCluster.0", is(2))
+        .body("recordsTotal", is(4))
+        .body("clustersTotal", is(3))
+        .body("matchValuesPerCluster.0", is(nullValue()))
         .body("matchValuesPerCluster.1", is(2))
         .body("matchValuesPerCluster.3", is(1))
-        .body("recordsPerCluster.1", is(4))
+        .body("recordsPerCluster.1", is(2))
         .body("recordsPerCluster.2", is(1))
     ;
 
