@@ -1,9 +1,11 @@
 package com.indexdata.reservoir.module.impl;
 
 import com.indexdata.reservoir.module.Module;
+import com.indexdata.reservoir.server.Storage;
 import com.indexdata.reservoir.server.entity.CodeModuleEntity;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
 import java.util.Collection;
 import java.util.HashSet;
@@ -22,7 +24,7 @@ public class ModuleJavaScript implements Module {
   private Vertx vertx;
 
   @Override
-  public Future<Void> initialize(Vertx vertx, CodeModuleEntity entity) {
+  public Future<CodeModuleEntity> initialize(Vertx vertx, String tenant, CodeModuleEntity entity) {
     id = entity.getId();
     if (id == null || id.isEmpty()) {
       return Future.failedFuture(
@@ -31,29 +33,43 @@ public class ModuleJavaScript implements Module {
     this.vertx = vertx;
     String url = entity.getUrl();
     String script = entity.getScript();
-    if (script == null || script.isEmpty()) {
+    var hasUrl = url != null && !url.isEmpty();
+    var hasScript = script != null && !script.isEmpty();
+    if (!hasUrl && !hasScript) {
       return Future.failedFuture(
           new IllegalArgumentException("Module config must include 'url' or 'script'"));
     }
-    if (url != null && !url.isEmpty()) {
-      // url always points to an ES module
-      defaultFunctionName = entity.getFunction();
-      final boolean isModule = url.endsWith("mjs");
-      if (!isModule) {
-        return Future.failedFuture(new IllegalArgumentException(
-            "url must end with .mjs to designate ES module"));
+    if (hasUrl) {
+      //module was never resolved (migration)
+      if (!hasScript) {
+        return new CodeModuleEntity.CodeModuleBuilder(entity.asJson())
+          .resolve(vertx)
+          .compose(newEntity -> new Storage(vertx, tenant, HttpMethod.POST)
+            .updateCodeModuleEntity(newEntity).map(newEntity))
+          .compose(this::initAsEsModule);
       }
-      Context.Builder cb = Context.newBuilder("js")
-          .allowExperimentalOptions(true)
-          .option("js.esm-eval-returns-exports", "true");
-      context = cb.build();
-      String moduleName = url.substring(url.lastIndexOf("/") + 1);
-      module = context.eval(Source.newBuilder("js", script, moduleName).buildLiteral());
+      return this.initAsEsModule(entity);
     } else {
       context = Context.create("js");
       function = context.eval("js", script);
+      return Future.succeededFuture(entity);
     }
-    return Future.succeededFuture();
+  }
+
+  private Future<CodeModuleEntity> initAsEsModule(CodeModuleEntity entity) {
+    defaultFunctionName = entity.getFunction();
+    final boolean isModule = entity.getUrl().endsWith("mjs");
+    if (!isModule) {
+      return Future.failedFuture(new IllegalArgumentException(
+          "url must end with .mjs to designate ES module"));
+    }
+    Context.Builder cb = Context.newBuilder("js")
+        .allowExperimentalOptions(true)
+        .option("js.esm-eval-returns-exports", "true");
+    context = cb.build();
+    String moduleName = entity.getUrl().substring(entity.getUrl().lastIndexOf("/") + 1);
+    module = context.eval(Source.newBuilder("js", entity.getScript(), moduleName).buildLiteral());
+    return Future.succeededFuture(entity);
   }
 
   private Value getFunction(String functionName) {

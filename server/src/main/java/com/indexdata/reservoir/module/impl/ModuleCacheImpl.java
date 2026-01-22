@@ -61,8 +61,8 @@ public class ModuleCacheImpl implements ModuleCache {
       entries.remove(cacheKey);
     }
     Module module = createInstance(entity.getType());
-    return module.initialize(vertx, entity).map(x -> {
-      CacheEntry e = new CacheEntry(module, entity);
+    return module.initialize(vertx, tenantId, entity).map(newEntity -> {
+      CacheEntry e = new CacheEntry(module, newEntity);
       entries.put(cacheKey, e);
       return module;
     });

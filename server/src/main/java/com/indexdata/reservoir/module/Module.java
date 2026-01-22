@@ -8,7 +8,7 @@ import java.util.Collection;
 
 public interface Module {
 
-  Future<Void> initialize(Vertx vertx, CodeModuleEntity entity);
+  Future<CodeModuleEntity> initialize(Vertx vertx, String tenant, CodeModuleEntity entity);
 
   Future<JsonObject> execute(String symbol, JsonObject input);
 
