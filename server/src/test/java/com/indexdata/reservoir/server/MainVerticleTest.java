@@ -1572,7 +1572,7 @@ public class MainVerticleTest extends TestBase {
         .body("items", hasSize(1))
         .body("items[0].records", hasSize(2))
         .extract().body().asString();
-    // the empty records end up in their own clusters
+    // after restoring the ISBN, S101 rejoins the existing cluster with S102
     verifyClusterResponse(s, List.of(List.of("S101", "S102")));
   }
 
