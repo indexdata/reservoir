@@ -1,6 +1,6 @@
 # Reservoir
 
-Copyright (C) 2025 Index Data ApS
+Copyright (C) 2025-2026 Index Data ApS
 
 This software is distributed under the terms of the
 GNU Affero General Public License version 3.0
@@ -29,7 +29,7 @@ This project has three subprojects:
 
 Requirements:
 
-* Java 25.0.1, preferably GraalVM
+* Java 25.0.2, preferably GraalVM
 * Maven 3.9.11 (earlier might work)
 * Docker (unless `-DskipTests` is used)
 
@@ -37,7 +37,7 @@ It is easiest to use [sdkman](https://sdkman.io):
 
     curl -s "https://get.sdkman.io" | bash
     . $HOME/.sdkman/bin/sdkman-init.sh
-    sdk install java 25.0.1-graal
+    sdk install java 25.0.2-graal
     sdk install maven
 
 Otherwise, you'll need to install everything manually and set `JAVA_HOME`:
