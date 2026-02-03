@@ -73,18 +73,13 @@ public class MainVerticleTest extends TestBase {
 
   @After
   public void after() {
-    deleteIssnMatchKey();
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .delete("/reservoir/config/oai")
         .then()
         .statusCode(204);
-    RestAssured.given()
-        .header(XOkapiHeaders.TENANT, TENANT_1)
-        .delete("/reservoir/config/matchkeys/issn");
-    RestAssured.given()
-        .header(XOkapiHeaders.TENANT, TENANT_1)
-        .delete("/reservoir/config/matchkeys/isbn");
+    deleteIssnMatchKey();
+    deleteIsbnMatchKey();
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
@@ -102,7 +97,6 @@ public class MainVerticleTest extends TestBase {
         .header(XOkapiHeaders.TENANT, TENANT_2)
         .delete("/reservoir/pmh-clients/" + PMH_CLIENT_ID);
   }
-
 
   public class SruVerify {
 
@@ -303,213 +297,61 @@ public class MainVerticleTest extends TestBase {
   }
 
   @Test
-  public void matchKeysNonExistingMethod() {
-    JsonObject matchKey = new JsonObject()
-        .put("id", "xx")
-        .put("method", "other")
-        .put("params", new JsonObject());
+  public void matchKeysNonExistingMatcherModule() {
+      JsonObject matchKey = new JsonObject()
+          .put("id", "xx")
+          .put("matcher", "not-exists");
 
-    RestAssured.given()
-        .header(XOkapiHeaders.TENANT, TENANT_1)
-        .header("Content-Type", "application/json")
-        .body(matchKey.encode())
-        .post("/reservoir/config/matchkeys")
-        .then().statusCode(400)
-        .contentType("text/plain")
-        .body(Matchers.is("Non-existing method 'other'"));
+      RestAssured.given()
+          .header(XOkapiHeaders.TENANT, TENANT_1)
+          .header("Content-Type", "application/json")
+          .body(matchKey.encode())
+          .post("/reservoir/config/matchkeys")
+          .then().statusCode(400)
+          .contentType("text/plain")
+          .body(Matchers.is("Matcher module 'not-exists' does not exist"));
   }
 
-    @Test
-    public void matchKeysNonExistingMatcherModule() {
-        JsonObject matchKey = new JsonObject()
-            .put("id", "xx")
-            .put("matcher", "not-exists");
-
-        RestAssured.given()
-            .header(XOkapiHeaders.TENANT, TENANT_1)
-            .header("Content-Type", "application/json")
-            .body(matchKey.encode())
-            .post("/reservoir/config/matchkeys")
-            .then().statusCode(400)
-            .contentType("text/plain")
-            .body(Matchers.is("Matcher module 'not-exists' does not exist"));
-    }
-
-    @Test
-    public void testMatchKeysExistingMatcherModuleWithInvocation() {
-        JsonObject module = new JsonObject()
-            .put("id", "exists")
-            .put("type", "jsonpath")
-            .put("script", "$.marc");
-
-        RestAssured.given()
-            .header(XOkapiHeaders.TENANT, TENANT_1)
-            .header("Content-Type", "application/json")
-            .body(module.encode())
-            .post("/reservoir/config/modules")
-            .then()
-            .statusCode(201)
-            .contentType("application/json");
-
-        JsonObject matchKey = new JsonObject()
-            .put("id", "works")
-            .put("matcher", "exists::function");
-
-        RestAssured.given()
-            .header(XOkapiHeaders.TENANT, TENANT_1)
-            .header("Content-Type", "application/json")
-            .body(matchKey.encode())
-            .post("/reservoir/config/matchkeys")
-            .then()
-            .statusCode(201)
-            .contentType("application/json");
-
-        RestAssured.given()
-            .header(XOkapiHeaders.TENANT, TENANT_1)
-            .header("Content-Type", "application/json")
-            .delete("/reservoir/config/matchkeys/" + matchKey.getString("id"))
-            .then().statusCode(204);
-
-        RestAssured.given()
-            .header(XOkapiHeaders.TENANT, TENANT_1)
-            .header("Content-Type", "application/json")
-            .delete("/reservoir/config/modules/" + module.getString("id"))
-            .then().statusCode(204);
-    }
-
   @Test
-  public void testMatchkeysCrudWithMethod() {
-    RestAssured.given()
-        .header(XOkapiHeaders.TENANT, TENANT_1)
-        .param("count", "none")
-        .get("/reservoir/config/matchkeys")
-        .then().statusCode(200)
-        .contentType("application/json")
-        .body("matchKeys", is(empty()))
-        .body("resultInfo.totalRecords", is(nullValue()));
+  public void testMatchKeysExistingMatcherModuleWithInvocation() {
+      JsonObject module = new JsonObject()
+          .put("id", "exists")
+          .put("type", "jsonpath")
+          .put("script", "$.marc");
 
-    RestAssured.given()
-        .header(XOkapiHeaders.TENANT, TENANT_1)
-        .param("count", "foo")
-        .get("/reservoir/config/matchkeys")
-        .then().statusCode(400)
-        .contentType("text/plain")
-        .body(containsString("Instance does not match any of [\"exact\",\"none\"]"));
+      RestAssured.given()
+          .header(XOkapiHeaders.TENANT, TENANT_1)
+          .header("Content-Type", "application/json")
+          .body(module.encode())
+          .post("/reservoir/config/modules")
+          .then()
+          .statusCode(201)
+          .contentType("application/json");
 
-    RestAssured.given()
-        .header(XOkapiHeaders.TENANT, TENANT_1)
-        .param("count", "exact")
-        .get("/reservoir/config/matchkeys")
-        .then().statusCode(200)
-        .contentType("application/json")
-        .body("matchKeys", is(empty()))
-        .body("resultInfo.totalRecords", is(0));
+      JsonObject matchKey = new JsonObject()
+          .put("id", "works")
+          .put("matcher", "exists::function");
 
-    JsonObject matchKey = new JsonObject()
-        .put("id", "10a")
-        .put("method", "jsonpath")
-        .put("params", new JsonObject().put("marc", "$.fields.010.subfields[*].a"))
-        .put("update", "ingest");
+      RestAssured.given()
+          .header(XOkapiHeaders.TENANT, TENANT_1)
+          .header("Content-Type", "application/json")
+          .body(matchKey.encode())
+          .post("/reservoir/config/matchkeys")
+          .then()
+          .statusCode(201)
+          .contentType("application/json");
 
-    JsonObject matchKeyOut = new JsonObject()
-        .put("id", "10a")
-        .put("matcher", null)
-        .put("method", "jsonpath")
-        .put("params", new JsonObject().put("marc", "$.fields.010.subfields[*].a"))
-        .put("update", "ingest");
+      RestAssured.given()
+          .header(XOkapiHeaders.TENANT, TENANT_1)
+          .header("Content-Type", "application/json")
+          .delete("/reservoir/config/matchkeys/" + matchKey.getString("id"))
+          .then().statusCode(204);
 
-    RestAssured.given()
-        .header(XOkapiHeaders.TENANT, TENANT_1)
-        .header("Content-Type", "application/json")
-        .get("/reservoir/config/matchkeys/" + matchKey.getString("id"))
-        .then().statusCode(404)
-        .contentType("text/plain")
-        .body(Matchers.is("MatchKey " + matchKeyOut.getString("id") + " not found"));
-
-    RestAssured.given()
-        .header(XOkapiHeaders.TENANT, TENANT_1)
-        .header("Content-Type", "application/json")
-        .body(matchKey.encode())
-        .post("/reservoir/config/matchkeys")
-        .then().statusCode(201)
-        .contentType("application/json")
-        .body(Matchers.is(matchKey.encode()));
-
-    RestAssured.given()
-        .header(XOkapiHeaders.TENANT, TENANT_1)
-        .header("Content-Type", "application/json")
-        .body(matchKey.encode())
-        .post("/reservoir/config/matchkeys")
-        .then().statusCode(400)
-        .contentType("text/plain")
-        .body(containsString("duplicate key value violates unique constraint"));
-
-    RestAssured.given()
-        .header(XOkapiHeaders.TENANT, TENANT_1)
-        .header("Content-Type", "application/json")
-        .get("/reservoir/config/matchkeys/" + matchKey.getString("id"))
-        .then().statusCode(200)
-        .contentType("application/json")
-        .body(Matchers.is(matchKeyOut.encode()));
-
-    RestAssured.given()
-        .header(XOkapiHeaders.TENANT, TENANT_1)
-        .get("/reservoir/config/matchkeys")
-        .then().statusCode(200)
-        .contentType("application/json")
-        .body("matchKeys", hasSize(1))
-        .body("matchKeys[0].id", is(matchKeyOut.getString("id")))
-        .body("matchKeys[0].method", is(matchKeyOut.getString("method")))
-        .body("matchKeys[0].update", is(matchKeyOut.getString("update")))
-        .body("matchKeys[0].matcher", is(matchKeyOut.getString("matcher")));
-        // should really check that params are same
-
-    RestAssured.given()
-        .header(XOkapiHeaders.TENANT, TENANT_1)
-        .get("/reservoir/config/matchkeys?query=method=" + matchKeyOut.getString("method"))
-        .then().statusCode(200)
-        .contentType("application/json")
-        .body("matchKeys", hasSize(1))
-        .body("matchKeys[0].id", is(matchKeyOut.getString("id")))
-        .body("matchKeys[0].method", is(matchKeyOut.getString("method")))
-        .body("matchKeys[0].update", is(matchKeyOut.getString("update")));
-
-    matchKey.put("update", "manual");
-    matchKeyOut.put("update", "manual");
-
-    RestAssured.given()
-        .header(XOkapiHeaders.TENANT, TENANT_1)
-        .header("Content-Type", "application/json")
-        .body(matchKey.encode())
-        .put("/reservoir/config/matchkeys/" + matchKey.getString("id"))
-        .then().statusCode(204);
-
-    RestAssured.given()
-        .header(XOkapiHeaders.TENANT, TENANT_1)
-        .header("Content-Type", "application/json")
-        .get("/reservoir/config/matchkeys/" + matchKey.getString("id"))
-        .then().statusCode(200)
-        .contentType("application/json")
-        .body(Matchers.is(matchKeyOut.encode()));
-
-    RestAssured.given()
-        .header(XOkapiHeaders.TENANT, TENANT_1)
-        .header("Content-Type", "application/json")
-        .delete("/reservoir/config/matchkeys/" + matchKey.getString("id"))
-        .then().statusCode(204);
-
-    RestAssured.given()
-        .header(XOkapiHeaders.TENANT, TENANT_1)
-        .header("Content-Type", "application/json")
-        .get("/reservoir/config/matchkeys/" + matchKey.getString("id"))
-        .then().statusCode(404);
-
-    RestAssured.given()
-        .header(XOkapiHeaders.TENANT, TENANT_1)
-        .header("Content-Type", "application/json")
-        .body(matchKey.encode())
-        .put("/reservoir/config/matchkeys/" + matchKey.getString("id"))
-        .then().statusCode(404);
+      RestAssured.given()
+          .header(XOkapiHeaders.TENANT, TENANT_1)
+          .header("Content-Type", "application/json")
+          .delete("/reservoir/config/modules/" + module.getString("id"))
+          .then().statusCode(204);
   }
 
   @Test
@@ -565,13 +407,6 @@ public class MainVerticleTest extends TestBase {
         .put("type", "jsonpath")
         .put("script", "$.marc.fields.010.subfields[*].a");
 
-    JsonObject module10aOut = new JsonObject()
-        .put("id", "matcher-10a")
-        .put("type", "jsonpath")
-        .put("url", null)
-        .put("function", null)
-        .put("script", "$.marc.fields.010.subfields[*].a");
-
     //post module first
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
@@ -581,7 +416,7 @@ public class MainVerticleTest extends TestBase {
         .then()
         .statusCode(201)
         .contentType("application/json")
-        .body(Matchers.is(module10aOut.encode()));
+        .body(Matchers.is(module10a.encode()));
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
@@ -817,8 +652,6 @@ public class MainVerticleTest extends TestBase {
         .param("query", "cql.allRecords=true")
         .delete("/reservoir/records")
         .then().statusCode(204);
-
-
   }
 
   static String verifyOaiResponseRuntime(String s, String verb, List<String> identifiers, int length, JsonArray expRecords) {
@@ -1332,12 +1165,6 @@ public class MainVerticleTest extends TestBase {
         .put("type", "jsonpath")
         .put("script", "$.inventory.issn[*]");
 
-    JsonObject issnMatcherOut = new JsonObject()
-        .put("id", "issn-matcher")
-        .put("type", "jsonpath")
-        .put("url", null)
-        .put("function", null)
-        .put("script", "$.inventory.issn[*]");
 
     //post module first
     RestAssured.given()
@@ -1346,9 +1173,9 @@ public class MainVerticleTest extends TestBase {
         .body(issnMatcher.encode())
         .post("/reservoir/config/modules")
         .then()
-        //.statusCode(201)
-        //.contentType("application/json")
-        .body(Matchers.is(issnMatcherOut.encode()));
+        .statusCode(201)
+        .contentType("application/json")
+        .body(Matchers.is(issnMatcher.encode()));
 
     JsonObject matchKey = new JsonObject()
         .put("id", "issn")
@@ -1379,15 +1206,41 @@ public class MainVerticleTest extends TestBase {
       .then().statusCode(anyOf(is(204), is(404)));
   }
 
+  void deleteIsbnMatchKey() {
+    RestAssured.given()
+      .header(XOkapiHeaders.TENANT, TENANT_1)
+      .delete("/reservoir/config/modules/isbn-matcher")
+      .then().statusCode(anyOf(is(204), is(404)));
+
+    RestAssured.given()
+      .header(XOkapiHeaders.TENANT, TENANT_1)
+      .delete("/reservoir/config/matchkeys/isbn")
+      .then().statusCode(anyOf(is(204), is(404)));
+  }
+
+
   JsonObject createIsbnMatchKey() {
     return createIsbnMatchKey(null);
   }
 
   JsonObject createIsbnMatchKey(String updateValue) {
+    JsonObject matchModule = new JsonObject()
+        .put("id", "isbn-matcher")
+        .put("type", "jsonpath")
+        .put("script", "$.inventory.isbn[*]");
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .body(matchModule.encode())
+        .post("/reservoir/config/modules")
+        .then().statusCode(201)
+        .contentType("application/json")
+        .body(Matchers.is(matchModule.encode()));
+
     JsonObject matchKey = new JsonObject()
         .put("id", "isbn")
-        .put("method", "jsonpath")
-        .put("params", new JsonObject().put("expr", "$.inventory.isbn[*]"));
+        .put("matcher", "isbn-matcher");
 
     if (updateValue != null) {
       matchKey.put("update", updateValue);
@@ -1486,6 +1339,97 @@ public class MainVerticleTest extends TestBase {
   }
 
   @Test
+  public void testClustersNoKey() {
+    createIsbnMatchKey();
+
+    JsonArray records1 = new JsonArray()
+        .add(new JsonObject()
+            .put("localId", "S101")
+            .put("payload", new JsonObject()
+                .put("marc", new JsonObject().put("leader", "00914naa  2200337   450 "))
+                .put("inventory", new JsonObject()
+                    .put("isbn", new JsonArray().add("1"))
+                )
+            )
+        )
+        .add(new JsonObject()
+            .put("localId", "S102")
+            .put("payload", new JsonObject()
+                .put("marc", new JsonObject().put("leader", "00914naa  2200337   450 "))
+                .put("inventory", new JsonObject()
+                    .put("isbn", new JsonArray().add("1"))
+                )
+            )
+        );
+    // phase 1: insert two separate local records with same isbn
+    ingestRecords(records1, SOURCE_ID_1);
+
+    String s = RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .param("matchkeyid", "isbn")
+        .get("/reservoir/clusters")
+        .then().statusCode(200)
+        .contentType("application/json")
+        .body("items", hasSize(1))
+        .body("items[0].records", hasSize(2))
+        .extract().body().asString();
+    verifyClusterResponse(s, List.of(List.of("S101", "S102")));
+
+    // phase 2: remove match key for first record
+    JsonArray records2 = new JsonArray()
+        .add(new JsonObject()
+            .put("localId", "S101")
+            .put("payload", new JsonObject()
+                .put("marc", new JsonObject().put("leader", "00914naa  2200337   450 "))
+                .put("inventory", new JsonObject()
+                    .put("isbn", new JsonArray())
+                )
+            )
+        );
+    ingestRecords(records2, SOURCE_ID_1);
+
+    s = RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .param("matchkeyid", "isbn")
+        .get("/reservoir/clusters")
+        .then().statusCode(200)
+        .contentType("application/json")
+        .body("items", hasSize(1))
+        .body("items[0].records", hasSize(1))
+        .extract().body().asString();
+
+    verifyClusterResponse(s, List.of(List.of("S102")));
+
+    // phase 3: make it appear again
+    JsonArray records3 = new JsonArray()
+        .add(new JsonObject()
+            .put("localId", "S101")
+            .put("payload", new JsonObject()
+                .put("marc", new JsonObject().put("leader", "00914naa  2200337   450 "))
+                .put("inventory", new JsonObject()
+                    .put("isbn", new JsonArray().add("1"))
+                )
+            )
+        );
+    ingestRecords(records3, SOURCE_ID_1);
+
+    s = RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .param("matchkeyid", "isbn")
+        .get("/reservoir/clusters")
+        .then().statusCode(200)
+        .contentType("application/json")
+        .body("items", hasSize(1))
+        .body("items[0].records", hasSize(2))
+        .extract().body().asString();
+    // after restoring the ISBN, S101 rejoins the existing cluster with S102
+    verifyClusterResponse(s, List.of(List.of("S101", "S102")));
+  }
+
+  @Test
   public void testClustersMove() {
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
@@ -1500,7 +1444,8 @@ public class MainVerticleTest extends TestBase {
         .add(new JsonObject()
             .put("localId", "S101")
             .put("payload", new JsonObject()
-                .put("marc", new JsonObject().put("leader", "00914naa  2200337   450 "))
+                .put("marc", new JsonObject()
+                    .put("leader", "00914naa  2200337   450 "))
                 .put("inventory", new JsonObject()
                     .put("isbn", new JsonArray().add("1"))
                     .put("issn", new JsonArray().add("01"))
@@ -1510,7 +1455,8 @@ public class MainVerticleTest extends TestBase {
         .add(new JsonObject()
             .put("localId", "S102")
             .put("payload", new JsonObject()
-                .put("marc", new JsonObject().put("leader", "00914naa  2200337   450 "))
+                .put("marc", new JsonObject()
+                    .put("leader", "00914naa  2200337   450 "))
                 .put("inventory", new JsonObject()
                     .put("isbn", new JsonArray().add("2").add("3"))
                     .put("issn", new JsonArray().add("01"))
@@ -1582,8 +1528,10 @@ public class MainVerticleTest extends TestBase {
         .add(new JsonObject()
             .put("localId", "S101")
             .put("payload", new JsonObject()
-                .put("marc", new JsonObject().put("leader", "00914naa  2200337   450 "))
-                .put("inventory", new JsonObject().put("isbn", new JsonArray().add("4")))
+                .put("marc", new JsonObject()
+                    .put("leader", "00914naa  2200337   450 "))
+                .put("inventory", new JsonObject()
+                    .put("isbn", new JsonArray().add("4")))
             )
         );
     ingestRecords(records1, SOURCE_ID_1);
@@ -1595,11 +1543,10 @@ public class MainVerticleTest extends TestBase {
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .contentType("application/json")
-        .body("items", hasSize(2))
+        .body("items", hasSize(1))
         .body("items[0].records", hasSize(1))
-        .body("items[1].records", hasSize(1))
         .extract().body().asString();
-    verifyClusterResponse(s, List.of(List.of("S101"), List.of("S102")));
+    verifyClusterResponse(s, List.of(List.of("S102")));
 
     s = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
@@ -1609,6 +1556,8 @@ public class MainVerticleTest extends TestBase {
         .then().statusCode(200)
         .contentType("application/json")
         .body("items", hasSize(2))
+        .body("items[0].records", hasSize(1))
+        .body("items[1].records", hasSize(1))
         .extract().body().asString();
     verifyClusterResponse(s, List.of(List.of("S101"), List.of("S102")));
 
@@ -1617,8 +1566,10 @@ public class MainVerticleTest extends TestBase {
         .add(new JsonObject()
             .put("localId", "S101")
             .put("payload", new JsonObject()
-                .put("marc", new JsonObject().put("leader", "00914naa  2200337   450 "))
-                .put("inventory", new JsonObject().put("isbn", new JsonArray().add("3")))
+                .put("marc", new JsonObject()
+                    .put("leader", "00914naa  2200337   450 "))
+                .put("inventory", new JsonObject()
+                    .put("isbn", new JsonArray().add("3")))
             )
         );
     ingestRecords(records1, SOURCE_ID_1);
@@ -1640,12 +1591,6 @@ public class MainVerticleTest extends TestBase {
         .param("query", "cql.allRecords=true")
         .delete("/reservoir/records")
         .then().statusCode(204);
-
-    RestAssured.given()
-        .header(XOkapiHeaders.TENANT, TENANT_1)
-        .delete("/reservoir/config/matchkeys/isbn")
-        .then().statusCode(204);
-
   }
 
   @Test
@@ -1671,15 +1616,19 @@ public class MainVerticleTest extends TestBase {
         .add(new JsonObject()
             .put("localId", "S101")
             .put("payload", new JsonObject()
-                .put("marc", new JsonObject().put("leader", "00914naa  0101   450 "))
-                .put("inventory", new JsonObject().put("isbn", new JsonArray().add("1")))
+                    .put("marc", new JsonObject()
+                        .put("leader", "00914naa  0101   450 "))
+                    .put("inventory", new JsonObject()
+                        .put("isbn", new JsonArray().add("1")))
             )
         )
         .add(new JsonObject()
             .put("localId", "S102")
             .put("payload", new JsonObject()
-                .put("marc", new JsonObject().put("leader", "00914naa  0102   450 "))
-                .put("inventory", new JsonObject().put("isbn", new JsonArray().add("2")))
+                .put("marc", new JsonObject()
+                    .put("leader", "00914naa  0102   450 "))
+                .put("inventory", new JsonObject()
+                    .put("isbn", new JsonArray().add("2")))
             )
         );
     ingestRecords(records1, SOURCE_ID_1);
@@ -1700,6 +1649,8 @@ public class MainVerticleTest extends TestBase {
         .then().statusCode(200)
         .contentType("application/json")
         .body("items", hasSize(2))
+        .body("items[0].records", hasSize(1))
+        .body("items[1].records", hasSize(1))
         .extract().body().asString();
     verifyClusterResponse(s, List.of(List.of("S101"), List.of("S102")));
 
@@ -1726,6 +1677,7 @@ public class MainVerticleTest extends TestBase {
         .then().statusCode(200)
         .contentType("application/json")
         .body("items", hasSize(1))
+        .body("items[0].records", hasSize(1))
         .extract().body().asString();
     verifyClusterResponse(s, List.of(List.of("S101")));
 
@@ -1802,9 +1754,9 @@ public class MainVerticleTest extends TestBase {
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .contentType("application/json")
-        .body("items", hasSize(3))
+        .body("items", hasSize(1))
         .extract().body().asString();
-    verifyClusterResponse(s, List.of(List.of("S101"), List.of("S102"), List.of("S103")));
+    verifyClusterResponse(s, List.of(List.of("S101")));
 
     records1 = new JsonArray()
         .add(new JsonObject()
@@ -1822,9 +1774,9 @@ public class MainVerticleTest extends TestBase {
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .contentType("application/json")
-        .body("items", hasSize(2))
+        .body("items", hasSize(1))
         .extract().body().asString();
-    verifyClusterResponse(s, List.of(List.of("S101", "S103"), List.of("S102")));
+    verifyClusterResponse(s, List.of(List.of("S101", "S103")));
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
@@ -3749,14 +3701,14 @@ public class MainVerticleTest extends TestBase {
         .get("/reservoir/config/matchkeys/isbn/stats")
         .then().statusCode(200)
         .contentType("application/json")
-        .body("recordsTotal", is(6))
-        .body("clustersTotal", is(5))
-        .body("matchValuesPerCluster.0", is(2))
+        .body("recordsTotal", is(4))
+        .body("clustersTotal", is(3))
+        .body("matchValuesPerCluster.0", is(nullValue()))
         .body("matchValuesPerCluster.1", is(2))
         .body("matchValuesPerCluster.3", is(1))
-        .body("recordsPerCluster.1", is(4))
+        .body("recordsPerCluster.1", is(2))
         .body("recordsPerCluster.2", is(1))
-        .body("recordsPerClusterSample.1", hasSize(3))
+        .body("recordsPerClusterSample.1", hasSize(2))
         .body("recordsPerClusterSample.2", hasSize(1))
     ;
 
@@ -3778,12 +3730,12 @@ public class MainVerticleTest extends TestBase {
         .get("/reservoir/config/matchkeys/isbn/stats")
         .then().statusCode(200)
         .contentType("application/json")
-        .body("recordsTotal", is(7))
-        .body("clustersTotal", is(6))
-        .body("matchValuesPerCluster.0", is(2))
+        .body("recordsTotal", is(5))
+        .body("clustersTotal", is(4))
+        .body("matchValuesPerCluster.0", is(nullValue()))
         .body("matchValuesPerCluster.1", is(3))
         .body("matchValuesPerCluster.3", is(1))
-        .body("recordsPerCluster.1", is(5))
+        .body("recordsPerCluster.1", is(3))
         .body("recordsPerCluster.2", is(1))
         .body("recordsPerClusterSample.1", hasSize(3))
         .body("recordsPerClusterSample.2", hasSize(1))
@@ -3801,12 +3753,12 @@ public class MainVerticleTest extends TestBase {
         .get("/reservoir/config/matchkeys/isbn/stats")
         .then().statusCode(200)
         .contentType("application/json")
-        .body("recordsTotal", is(6))
-        .body("clustersTotal", is(5))
-        .body("matchValuesPerCluster.0", is(2))
+        .body("recordsTotal", is(4))
+        .body("clustersTotal", is(3))
+        .body("matchValuesPerCluster.0", is(nullValue()))
         .body("matchValuesPerCluster.1", is(2))
         .body("matchValuesPerCluster.3", is(1))
-        .body("recordsPerCluster.1", is(4))
+        .body("recordsPerCluster.1", is(2))
         .body("recordsPerCluster.2", is(1))
     ;
 
