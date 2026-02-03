@@ -1,6 +1,5 @@
 package com.indexdata.reservoir.server;
 
-import com.indexdata.reservoir.matchkey.MatchKeyMethodFactory;
 import com.indexdata.reservoir.module.ModuleCache;
 import com.indexdata.reservoir.module.ModuleInvocation;
 import com.indexdata.reservoir.server.entity.CodeModuleEntity;
@@ -250,9 +249,6 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
 
   static String getMethod(JsonObject config) {
     String method = config.getString("method");
-    if (method != null && MatchKeyMethodFactory.get(method) == null) {
-      throw new IllegalArgumentException("Non-existing method '" + method + "'");
-    }
     return method;
   }
 
@@ -395,7 +391,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
         .compose(res ->
           HttpResponse.responseJson(ctx, 201)
               .putHeader("Location", ctx.request().absoluteURI() + "/" + cm.getId())
-              .end(cm.asJson().encode())
+              .end(cm.asJson(true).encode())
         )
     );
   }
@@ -410,7 +406,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
                 String.format(ENTITY_ID_NOT_FOUND_PATTERN, MODULE_LABEL, id));
             return;
           }
-          HttpResponse.responseJson(ctx, 200).end(e.asJson().encode());
+          HttpResponse.responseJson(ctx, 200).end(e.asJson(true).encode());
         })
         .mapEmpty();
   }

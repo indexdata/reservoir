@@ -1,6 +1,5 @@
 package com.indexdata.reservoir.server;
 
-import com.indexdata.reservoir.matchkey.MatchKeyMethod;
 import com.indexdata.reservoir.module.ModuleCache;
 import com.indexdata.reservoir.module.ModuleExecutable;
 import com.indexdata.reservoir.module.ModuleInvocation;
@@ -362,14 +361,6 @@ public class Storage {
             return result;
           });
     }
-    if (ingestMatcher.matchKeyMethod != null) {
-      HashSet<String> values = new HashSet<>();
-      ingestMatcher.matchKeyMethod.getKeys(payload, values);
-      values.forEach(k -> result.keys.add(k.length() > MATCHVALUE_MAX_LENGTH
-          ? k.substring(0, MATCHVALUE_MAX_LENGTH) : k));
-
-      ingestMetrics.recordMatcher(System.nanoTime() - startTime, TimeUnit.NANOSECONDS);
-    }
     return Future.succeededFuture(result);
   }
 
@@ -403,16 +394,7 @@ public class Storage {
               });
           });
     }
-    String methodName = matchKeyConfig.getString("method");
-    if (methodName != null) {
-      JsonObject params = matchKeyConfig.getJsonObject("params");
-      return MatchKeyMethod.get(vertx, tenant, ingestMatcher.matchKeyId, methodName, params)
-          .compose(matchKeyMethod -> {
-            ingestMatcher.matchKeyMethod = matchKeyMethod;
-            return Future.succeededFuture(ingestMatcher);
-          });
-    }
-    return Future.failedFuture("match key config must include 'method' or 'matcher'");
+    return Future.failedFuture("match key config must include 'matcher'");
   }
 
   Future<List<IngestMatcher>> createIngestMatchers(JsonArray matchKeyConfigs, Vertx vertx) {
