@@ -12,13 +12,11 @@ ARG MAVEN_MOUNT_SOURCE=""
 WORKDIR /app
 
 COPY pom.xml .
-COPY client/pom.xml client/pom.xml
 COPY server/pom.xml server/pom.xml
 COPY util/pom.xml util/pom.xml
 
 RUN --mount=type=${MAVEN_MOUNT_TYPE},source=${MAVEN_MOUNT_SOURCE},target=/root/.m2/repository mvn -B dependency:go-offline
 
-COPY client/ client/
 COPY server/ server
 COPY util/ util
 COPY descriptors/ descriptors

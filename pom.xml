@@ -21,7 +21,6 @@
   </scm>
   <modules>
     <module>util</module>
-    <module>client</module>
     <module>server</module>
   </modules>
   <licenses>

@@ -23,7 +23,6 @@ This project has three subprojects:
 
 * `util` -- A library with utilities to convert and normalize XML, JSON and MARC.
 * `server` -- The reservoir storage server. This is the FOLIO module: mod-reservoir
-* `client` -- A client for sending ISO2709/MARCXML records to the server.
 
 ## Compilation
 
@@ -59,10 +58,9 @@ For this to work, GraalVM *must* be used. Build with `native` profile:
 
     mvn -Pnative package
 
-Two binaries are created when using the native profile:
+One binary is created when using the native profile:
 
     server/target/reservoir-native
-    client/target/client-native
 
 ## Server
 
@@ -256,66 +254,6 @@ When running behind Okapi you need to use the `invoke` URL:
 ```
 
 in order to pass the tenant identifier (trailing slash is important).
-
-## Command-line client (legacy)
-
-Note: the CLI is no longer developed and the file upload functionality is now available from
-curl (see below) so please use this instead.
-
-The client is a command-line tool for sending records to the reservoir server.
-
-Run the client with:
-
-```
-java -jar client/target/reservoir-client-fat.jar [options] [files...]
-```
-
-To see list options use `--help`. The client uses environment variables
-`OKAPI_URL`, `OKAPI_TENANT`, `OKAPI_TOKEN` for Okapi URL, tenant and
-token respectively.
-
-Before records can be pushed, the database needs to be prepared for the tenant.
-If Okapi is used, then the usual `install` command will do it, but if the reservoir module is being run on its own, then that must be done manually.
-
-For example, to prepare the database for tenant `diku` on server running on localhost:8081, use:
-
-```
-export OKAPI_TENANT=diku
-export OKAPI_URL=http://localhost:8081
-java -jar client/target/reservoir-client-fat.jar --init
-```
-
-**Note**: The above-mentioned commands are for the server running on localhost.
-For a secured server, the `-HX-Okapi-Token:$OKAPI_TOKEN` is required rather
-than `X-Okapi-Tenant`.
-
-To purge the data, use:
-
-```
-export OKAPI_TENANT=diku
-export OKAPI_URL=http://localhost:8081
-java -jar client/target/reservoir-client-fat.jar --purge
-```
-
-To send MARCXML to the same server with defined `sourceId`, use:
-
-```
-export OKAPI_TENANT=diku
-export OKAPI_URL=http://localhost:8081
-export sourceid=lib1
-java -jar client/target/reservoir-client-fat.jar \
-  --source $sourceid \
-  --xsl xsl/localid.xsl \
-  client/src/test/resources/record10.xml
-```
-
-The option `--xsl` may be repeated for a sequence of transformations.
-
-Once records are loaded, they can be retrieved with:
-
-```
-curl -HX-Okapi-Tenant:$OKAPI_TENANT $OKAPI_URL/reservoir/records
-```
 
 ## Configuring matchers
 
