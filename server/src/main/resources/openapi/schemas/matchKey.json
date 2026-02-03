@@ -10,16 +10,6 @@
       "type": "string",
       "description": "matcher module invocation: 'moduleId<::function>' where <::function> is optional"
     },
-    "method": {
-      "type": "string",
-      "description": "DEPRECATED: use 'matcher' instead",
-      "deprecated": true
-    },
-    "params": {
-      "type": "object",
-      "description": "DEPRECATED: use 'matcher' instead",
-      "deprecated": true
-    },
     "update": {
       "type": "string",
       "enum": ["ingest", "manual"],

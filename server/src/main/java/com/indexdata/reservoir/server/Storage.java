@@ -1,6 +1,5 @@
 package com.indexdata.reservoir.server;
 
-import com.indexdata.reservoir.matchkey.MatchKeyMethod;
 import com.indexdata.reservoir.module.ModuleCache;
 import com.indexdata.reservoir.module.ModuleExecutable;
 import com.indexdata.reservoir.module.ModuleInvocation;
@@ -362,14 +361,6 @@ public class Storage {
             return result;
           });
     }
-    if (ingestMatcher.matchKeyMethod != null) {
-      HashSet<String> values = new HashSet<>();
-      ingestMatcher.matchKeyMethod.getKeys(payload, values);
-      values.forEach(k -> result.keys.add(k.length() > MATCHVALUE_MAX_LENGTH
-          ? k.substring(0, MATCHVALUE_MAX_LENGTH) : k));
-
-      ingestMetrics.recordMatcher(System.nanoTime() - startTime, TimeUnit.NANOSECONDS);
-    }
     return Future.succeededFuture(result);
   }
 
@@ -403,16 +394,7 @@ public class Storage {
               });
           });
     }
-    String methodName = matchKeyConfig.getString("method");
-    if (methodName != null) {
-      JsonObject params = matchKeyConfig.getJsonObject("params");
-      return MatchKeyMethod.get(vertx, tenant, ingestMatcher.matchKeyId, methodName, params)
-          .compose(matchKeyMethod -> {
-            ingestMatcher.matchKeyMethod = matchKeyMethod;
-            return Future.succeededFuture(ingestMatcher);
-          });
-    }
-    return Future.failedFuture("match key config must include 'method' or 'matcher'");
+    return Future.failedFuture("match key config must include 'matcher'");
   }
 
   Future<List<IngestMatcher>> createIngestMatchers(JsonArray matchKeyConfigs, Vertx vertx) {
@@ -441,10 +423,6 @@ public class Storage {
 
   Future<Set<UUID>> updateClusterValues(SqlConnection conn, UUID newClusterId,
       MatcherResult matcherResult) {
-    Set<UUID> clustersFound = new HashSet<>();
-    if (matcherResult.keys.isEmpty()) {
-      return Future.succeededFuture(clustersFound);
-    }
     StringBuilder q = new StringBuilder("SELECT cluster_id, match_value FROM " + clusterValueTable
         + " WHERE match_key_config_id = $1 AND (");
     List<Object> tupleList = new ArrayList<>();
@@ -459,6 +437,7 @@ public class Storage {
     }
     q.append(")");
     Set<String> foundKeys = new HashSet<>();
+    Set<UUID> clustersFound = new HashSet<>();
     return conn.preparedQuery(q.toString())
         .execute(Tuple.from(tupleList))
         .map(rowSet -> {
@@ -497,8 +476,26 @@ public class Storage {
         .map(RowSet<Row>::rowCount);
   }
 
+  Future<Void> removeClusterRecord(SqlConnection conn, UUID globalId, MatcherResult matcherResult) {
+    String q = "UPDATE " + clusterMetaTable
+        + " SET datestamp = $1"
+        + " FROM " + clusterRecordTable
+        + " WHERE cluster_meta.cluster_id = cluster_records.cluster_id"
+        + " AND cluster_records.match_key_config_id = $2"
+        + " AND cluster_records.record_id = $3";
+    return conn.preparedQuery(q).execute(Tuple.of(
+        LocalDateTime.now(ZoneOffset.UTC), matcherResult.matchKeyId, globalId))
+        .compose(x -> conn.preparedQuery("DELETE FROM " + clusterRecordTable
+            + " WHERE record_id = $1 AND match_key_config_id = $2")
+            .execute(Tuple.of(globalId, matcherResult.matchKeyId))
+            .mapEmpty());
+  }
+
   Future<Void> updateClusterForRecord(SqlConnection conn, UUID globalId,
       MatcherResult matcherResult) {
+    if (matcherResult.keys.isEmpty()) {
+      return removeClusterRecord(conn, globalId, matcherResult);
+    }
     UUID newClusterId = UUID.randomUUID();
     return updateClusterValues(conn, newClusterId, matcherResult)
         .compose(clustersFound -> {
