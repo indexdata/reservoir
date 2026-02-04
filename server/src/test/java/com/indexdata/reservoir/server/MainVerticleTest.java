@@ -2090,7 +2090,7 @@ public class MainVerticleTest extends TestBase {
 
   @Test
   public void testCodeModuleVary() {
-    CodeModuleEntity module = new CodeModuleEntity("empty", "javascript",
+    CodeModuleEntity module = new CodeModuleEntity("vary", "javascript",
             "http://localhost:" + CODE_MODULES_PORT + "/lib/vary.mjs",
             "transform",
             "");
