@@ -2089,6 +2089,70 @@ public class MainVerticleTest extends TestBase {
   }
 
   @Test
+  public void testCodeModuleVary() {
+    CodeModuleEntity module = new CodeModuleEntity("vary", "javascript",
+            "http://localhost:" + CODE_MODULES_PORT + "/lib/vary.mjs",
+            "transform",
+            "");
+
+    //POST item
+    String ver1 = RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .body(module.asJson().encode())
+        .post("/reservoir/config/modules")
+        .then()
+        .statusCode(201)
+        .contentType("application/json")
+        .body("id", is(module.getId()))
+        .body("type", is(module.getType()))
+        .body("url", is(module.getUrl()))
+        .body("function", is(module.getFunction()))
+        .extract().body().asString();
+
+    String get = RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .get("/reservoir/config/modules/" + module.getId())
+        .then().statusCode(200)
+        .contentType("application/json")
+        .body("id", is(module.getId()))
+        .body("type", is(module.getType()))
+        .body("url", is(module.getUrl()))
+        .body("function", is(module.getFunction()))
+        .extract().body().asString();
+
+    Assert.assertEquals(ver1, get);
+
+    // Reload existing module to get different script version
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .put("/reservoir/config/modules/" + module.getId() + "/reload")
+        .then().statusCode(204);
+
+    String ver2 = RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .get("/reservoir/config/modules/" + module.getId())
+        .then().statusCode(200)
+        .contentType("application/json")
+        .body("id", is(module.getId()))
+        .body("type", is(module.getType()))
+        .body("url", is(module.getUrl()))
+        .body("function", is(module.getFunction()))
+        .extract().body().asString();
+
+    Assert.assertNotEquals(ver1, ver2);
+
+    // DELETE item
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .delete("/reservoir/config/modules/" + module.getId())
+        .then().statusCode(204);
+  }
+
+  @Test
   public void testCodeModulesCRUD() {
     //GET empty list no count
     RestAssured.given()
@@ -2110,13 +2174,15 @@ public class MainVerticleTest extends TestBase {
         .body("resultInfo.totalRecords", is(0));
 
     //POST item with bad url and nothing should be created
-    CodeModuleEntity badModule = new CodeModuleEntity("empty", "no-type", "url", "transform", "no script");
+    CodeModuleEntity badModule = new CodeModuleEntity("empty", "javascript", "url", "transform", "no script");
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
         .body(badModule.asJson().encode())
         .post("/reservoir/config/modules")
-        .then().statusCode(400);
+        .then().statusCode(400)
+        .contentType("text/plain")
+        .body(Matchers.containsString("no protocol: url"));
 
     CodeModuleEntity module = new CodeModuleEntity("empty", "javascript",
             "http://localhost:" + CODE_MODULES_PORT + "/lib/empty.mjs",

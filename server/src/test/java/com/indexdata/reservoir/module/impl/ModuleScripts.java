@@ -7,6 +7,7 @@ import io.vertx.core.http.HttpServerResponse;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.reactivex.core.http.HttpHeaders;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class ModuleScripts {
 
@@ -85,7 +86,8 @@ public class ModuleScripts {
     response.end(script);
   }
 
-  public static Future<HttpServer> serveModules(Vertx vertx, int port)  {
+  public static Future<HttpServer> serveModules(Vertx vertx, int port) {
+    AtomicInteger version = new AtomicInteger(0);
     Router router = Router.router(vertx);
     router.get("/lib/marc-transformer.mjs").handler(ctx -> respondPlain(ctx, TEST_SCRIPT_1));
     router.get("/lib/marc-transformer.js").handler(ctx -> respondPlain(ctx, TEST_SCRIPT_1));
@@ -93,6 +95,8 @@ public class ModuleScripts {
     router.get("/lib/throw.mjs").handler(ctx -> respondPlain(ctx, TEST_SCRIPT_THROW));
     router.get("/lib/bad-json.mjs").handler(ctx -> respondPlain(ctx, TEST_SCRIPT_BAD_JSON));
     router.get("/lib/empty.mjs").handler(ctx -> respondPlain(ctx, TEST_SCRIPT_EMPTY));
+    router.get("/lib/vary.mjs")
+        .handler(ctx -> respondPlain(ctx, "/* " + version.getAndIncrement() + " */" + TEST_SCRIPT_EMPTY));
     router.get("/lib/matchkey-isbn.mjs").handler(ctx -> respondPlain(ctx, TEST_SCRIPT_MK_ISBN));
     HttpServer httpServer = vertx.createHttpServer();
     return httpServer.requestHandler(router).listen(port);
