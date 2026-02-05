@@ -43,7 +43,7 @@
     <vertxlib.version>4.1.1</vertxlib.version>
     <micrometer.version>1.16.2</micrometer.version>
     <!-- vert.x is shipped with 4.2.5.Final, but we pin here to be able to experiment with SNAPSHOT versions -->
-    <netty.version>4.2.9.Final</netty.version>
+    <netty.version>4.2.10.Final</netty.version>
   </properties>
   <dependencyManagement>
     <dependencies>
