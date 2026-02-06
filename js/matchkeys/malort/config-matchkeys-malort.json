@@ -1,0 +1,5 @@
+{
+  "id": "malort-matcher",
+  "type": "javascript",
+  "url": "https://raw.githubusercontent.com/indexdata/reservoir/master/js/matchkeys/malort/malort.mjs"
+}
