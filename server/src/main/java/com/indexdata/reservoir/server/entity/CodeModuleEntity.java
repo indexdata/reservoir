@@ -192,18 +192,46 @@ public class CodeModuleEntity {
       return this;
     }
 
+    // we want to see if the URL is of the form https://raw.githubusercontent.com/...
+    // and if so, transform it to the corresponding api.github.com URL to avoid caching issues
+    String transformToApiFetchCase(String url, String rawPrefix, String apiPrefix) {
+      if (url.startsWith(rawPrefix)) {
+        String[] parts = url.substring(rawPrefix.length()).split("/", 4);
+        if (parts.length == 4) {
+          String user = parts[0];
+          String repo = parts[1];
+          String ref = parts[2];
+          String path = parts[3];
+          return String.format("%srepos/%s/%s/contents/%s?ref=%s",
+              apiPrefix, user, repo, path, ref);
+        }
+      }
+      return url;
+    }
+
     /** Resolve url if included.
      * @param vertx vertx instance
      * @return future with built CodeModuleEntity
      */
     public Future<CodeModuleEntity> resolve(Vertx vertx) {
+      return resolve(vertx, "https://raw.githubusercontent.com/", "https://api.github.com/");
+    }
+
+    /** Resolve url if included.
+     * @param vertx vertx instance
+     * @param rawPrefix if url starts with this, it will be transformed to api fetch case
+     * @param apiPrefix prefix to use for api fetch case
+     * @return future with built CodeModuleEntity
+     */
+    Future<CodeModuleEntity> resolve(Vertx vertx, String rawPrefix, String apiPrefix) {
       String id = json.getString(ID_FIELD, "none");
       String url = json.getString(URL_FIELD);
       if (url == null || url.isEmpty()) {
         return Future.succeededFuture(build());
       }
       WebClient webClient = WebClientFactory.getWebClient(vertx);
-      return webClient.getAbs(url)
+      final String url2 = transformToApiFetchCase(url, rawPrefix, apiPrefix);
+      return webClient.getAbs(url2)
         .send()
         .map(response -> {
           if (response.statusCode() < 200 || response.statusCode() >= 300) {
@@ -211,7 +239,20 @@ public class CodeModuleEntity {
                 String.format("Config error: cannot retrieve module '%s' at %s (%d)",
                     id, url, response.statusCode()));
           }
-          json.put(SCRIPT_FIELD, response.bodyAsString());
+          if (url2.startsWith(apiPrefix)) {
+            String content = response.bodyAsJsonObject().getString("content");
+            if (content == null) {
+              throw new RuntimeException(
+                  String.format("Config error: cannot retrieve module '%s' at %s: "
+                    + "no content field in API response", id, url2));
+            }
+            // content is base64 encoded, we need to decode it
+            byte[] decodedBytes = java.util.Base64.getDecoder().decode(content);
+            String decodedContent = new String(decodedBytes);
+            json.put(SCRIPT_FIELD, decodedContent);
+          } else {
+            json.put(SCRIPT_FIELD, response.bodyAsString());
+          }
           return build();
         });
     }
