@@ -194,7 +194,7 @@ public class CodeModuleEntity {
 
     // we want to see if the URL is of the form https://raw.githubusercontent.com/...
     // and if so, transform it to the corresponding api.github.com URL to avoid caching issues
-    String transformToApiFetchCase(String url, String rawPrefix, String apiPrefix) {
+    static String transformToApiFetch(String url, String rawPrefix, String apiPrefix) {
       if (url.startsWith(rawPrefix)) {
         String[] parts = url.substring(rawPrefix.length()).split("/", 4);
         if (parts.length == 4) {
@@ -230,7 +230,7 @@ public class CodeModuleEntity {
         return Future.succeededFuture(build());
       }
       WebClient webClient = WebClientFactory.getWebClient(vertx);
-      final String url2 = transformToApiFetchCase(url, rawPrefix, apiPrefix);
+      final String url2 = transformToApiFetch(url, rawPrefix, apiPrefix);
       return webClient.getAbs(url2)
         .send()
         .map(response -> {
