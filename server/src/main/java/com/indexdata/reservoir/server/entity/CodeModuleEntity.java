@@ -7,10 +7,13 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.Tuple;
 import java.util.Objects;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.WebClientFactory;
 
 @SuppressWarnings({"squid:S5738","squid:S1123"})
 public class CodeModuleEntity {
+  private static final Logger log = LogManager.getLogger(CodeModuleEntity.class);
   private final String id;
   private final String type;
   private final String url;
@@ -231,6 +234,7 @@ public class CodeModuleEntity {
       }
       WebClient webClient = WebClientFactory.getWebClient(vertx);
       final String url2 = transformToApiFetch(url, rawPrefix, apiPrefix);
+      log.info("Fetching module '{}' from URL {}", id, url2);
       return webClient.getAbs(url2)
         .send()
         .map(response -> {
@@ -240,14 +244,22 @@ public class CodeModuleEntity {
                     id, url, response.statusCode()));
           }
           if (url2.startsWith(apiPrefix)) {
-            String content = response.bodyAsJsonObject().getString("content");
+            JsonObject bodyObject = response.bodyAsJsonObject();
+            String sha = bodyObject.getString("sha");
+            if (sha == null) {
+              throw new RuntimeException(
+                  String.format("Config error: cannot retrieve module '%s' at %s: "
+                  + "no sha field in API response", id, url2));
+            }
+            log.info("Module {} SHA {}", id, sha);
+            String content = bodyObject.getString("content");
             if (content == null) {
               throw new RuntimeException(
                   String.format("Config error: cannot retrieve module '%s' at %s: "
                     + "no content field in API response", id, url2));
             }
             // content is base64 encoded, we need to decode it
-            byte[] decodedBytes = java.util.Base64.getDecoder().decode(content);
+            byte[] decodedBytes = java.util.Base64.getMimeDecoder().decode(content);
             String decodedContent = new String(decodedBytes);
             json.put(SCRIPT_FIELD, decodedContent);
           } else {
@@ -308,7 +320,5 @@ public class CodeModuleEntity {
 
 
   }
-
-
 
 }
