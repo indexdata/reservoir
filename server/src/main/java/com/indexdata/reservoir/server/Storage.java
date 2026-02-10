@@ -356,7 +356,7 @@ public class Storage {
     var startTime = System.nanoTime();
     if (ingestMatcher.moduleExecutable != null) {
       if (ingestMatcher.onlyPayload) {
-        globalRecord = globalRecord.getJsonObject("payload");
+        globalRecord = globalRecord.getJsonObject(ClusterBuilder.PAYLOAD_LABEL);
       }
       return ingestMatcher.moduleExecutable.executeAsCollection(globalRecord)
           .map(values -> {
