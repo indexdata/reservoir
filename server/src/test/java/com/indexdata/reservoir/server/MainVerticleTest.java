@@ -355,6 +355,37 @@ public class MainVerticleTest extends TestBase {
   }
 
   @Test
+  public void testMatchkeyBadArgs() {
+    JsonObject matchKey = new JsonObject()
+        .put("id", "10a")
+        .put("matcher", "matcher-10a")
+        .put("update", "ingest")
+        .put("args", "bad-args");
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .body(matchKey.encode())
+        .post("/reservoir/config/matchkeys")
+        .then()
+        .statusCode(400)
+        .contentType("text/plain")
+        .body(containsString("Property \"args\" does not match"));
+
+    matchKey.put("args", "");
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .body(matchKey.encode())
+        .post("/reservoir/config/matchkeys")
+        .then()
+        .statusCode(400)
+        .contentType("text/plain")
+        .body(containsString("Property \"args\" does not match"));
+  }
+
+  @Test
   public void testMatchkeyCrudWithMatcher() {
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
@@ -392,7 +423,8 @@ public class MainVerticleTest extends TestBase {
         .put("matcher", "matcher-10a")
         .put("method", null)
         .put("params", null)
-        .put("update", "ingest");
+        .put("update", "ingest")
+        .put("args", null);
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)

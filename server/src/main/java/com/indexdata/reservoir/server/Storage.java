@@ -167,6 +167,8 @@ public class Storage {
                 + " params JSONB)",
             "ALTER TABLE " + matchKeyConfigTable + " ADD COLUMN IF NOT EXISTS"
                 + " matcher VARCHAR",
+            "ALTER TABLE " + matchKeyConfigTable + " ADD COLUMN IF NOT EXISTS"
+                + " args VARCHAR",
             CREATE_IF_NO_EXISTS + clusterMetaTable
                 + "(cluster_id uuid NOT NULL PRIMARY KEY,"
                 + " match_key_config_id VARCHAR NOT NULL,"
@@ -303,7 +305,7 @@ public class Storage {
       SourceId sourceId, int sourceVersion, JsonObject globalRecord,
       List<IngestMatcher> ingestMatchers, IngestMetrics ingestMetrics) {
 
-    final String localIdentifier = globalRecord.getString("localId");
+    final String localIdentifier = globalRecord.getString(ClusterBuilder.LOCAL_ID_LABEL);
     if (localIdentifier == null) {
       ingestMetrics.incrementRecordsIgnored();
       return Future.failedFuture("localId required");
@@ -315,7 +317,7 @@ public class Storage {
           return null;
         });
     }
-    final JsonObject payload = globalRecord.getJsonObject("payload");
+    final JsonObject payload = globalRecord.getJsonObject(ClusterBuilder.PAYLOAD_LABEL);
     if (payload == null) {
       ingestMetrics.incrementRecordsIgnored();
       return Future.failedFuture("payload required");
@@ -326,7 +328,7 @@ public class Storage {
     }
     List<Future<MatcherResult>> futures = new ArrayList<>();
     for (IngestMatcher ingestMatcher : ingestMatchers) {
-      futures.add(runMatcher(ingestMatcher, ingestMetrics, payload));
+      futures.add(runMatcher(ingestMatcher, ingestMetrics, globalRecord));
     }
     return Future.all(futures).compose(cf -> {
       List<MatcherResult> results = new ArrayList<>(cf.size());
@@ -347,13 +349,16 @@ public class Storage {
   }
 
   Future<MatcherResult> runMatcher(IngestMatcher ingestMatcher, IngestMetrics ingestMetrics,
-      JsonObject payload) {
+      JsonObject globalRecord) {
     MatcherResult result = new MatcherResult();
     result.matchKeyId = ingestMatcher.matchKeyId;
     result.keys = new HashSet<>();
     var startTime = System.nanoTime();
     if (ingestMatcher.moduleExecutable != null) {
-      return ingestMatcher.moduleExecutable.executeAsCollection(payload)
+      if (ingestMatcher.onlyPayload) {
+        globalRecord = globalRecord.getJsonObject("payload");
+      }
+      return ingestMatcher.moduleExecutable.executeAsCollection(globalRecord)
           .map(values -> {
             values.forEach(k -> result.keys.add(k.length() > MATCHVALUE_MAX_LENGTH
                 ? k.substring(0, MATCHVALUE_MAX_LENGTH) : k));
@@ -375,6 +380,9 @@ public class Storage {
 
   Future<IngestMatcher> createIngestMatcher(JsonObject matchKeyConfig, Vertx vertx) {
     IngestMatcher ingestMatcher = new IngestMatcher();
+
+    String argsType = matchKeyConfig.getString("args");
+    ingestMatcher.onlyPayload = argsType == null || "payload".equals(argsType);
 
     ingestMatcher.matchKeyId = matchKeyConfig.getString("id");
     String matcherProp = matchKeyConfig.getString("matcher");
@@ -632,6 +640,7 @@ public class Storage {
                   .put("method", row.getString("method"))
                   .put("params", row.getJsonObject("params"))
                   .put("update", row.getString("update"))
+                  .put("args", row.getString("args"))
               ));
           return matchConfigs;
         });
@@ -776,15 +785,16 @@ public class Storage {
    * @param method match key method
    * @param params configuration
    * @param update strategy
+   * @param argsType type of arguments to pass to matcher module
    * @return async result
    */
   public Future<Void> insertMatchKeyConfig(String id, String matcher, String method,
-      JsonObject params, String update) {
+      JsonObject params, String update, String argsType) {
 
     return pool.preparedQuery(
-        "INSERT INTO " + matchKeyConfigTable + " (id, matcher, method, params, update)"
-            + " VALUES ($1, $2, $3, $4, $5)")
-        .execute(Tuple.of(id, matcher, method, params, update))
+        "INSERT INTO " + matchKeyConfigTable + " (id, matcher, method, params, update, args)"
+            + " VALUES ($1, $2, $3, $4, $5, $6)")
+        .execute(Tuple.of(id, matcher, method, params, update, argsType))
         .mapEmpty();
   }
 
@@ -794,15 +804,17 @@ public class Storage {
    * @param method match key method
    * @param params configuration
    * @param update strategy
-   * @return async result with TRUE if updated; FALSE if not found
+   * @param argsType type of arguments to pass to matcher module
+   * @return async result
    */
   public Future<Boolean> updateMatchKeyConfig(String id, String matcher, String method,
-      JsonObject params, String update) {
+      JsonObject params, String update, String argsType) {
 
     return pool.preparedQuery(
             "UPDATE " + matchKeyConfigTable
-                + " SET matcher = $2, method = $3, params = $4, update = $5 WHERE id = $1")
-        .execute(Tuple.of(id, matcher, method, params, update))
+                + " SET matcher = $2, method = $3, params = $4, update = $5, args = $6"
+                + " WHERE id = $1")
+        .execute(Tuple.of(id, matcher, method, params, update, argsType))
         .map(res -> res.rowCount() > 0);
   }
 
@@ -831,7 +843,8 @@ public class Storage {
               .put("matcher", row.getString("matcher"))
               .put("method", row.getString("method"))
               .put("params", row.getJsonObject("params"))
-              .put("update", row.getString("update"));
+              .put("update", row.getString("update"))
+              .put("args", row.getString("args"));
         });
   }
 
@@ -867,6 +880,7 @@ public class Storage {
             .put("method", row.getString("method"))
             .put("params", row.getJsonObject("params"))
             .put("update", row.getString("update"))
+            .put("args", row.getString("args"))
         ));
   }
 
@@ -883,8 +897,8 @@ public class Storage {
             stream.pause();
             totalRecords.incrementAndGet();
             UUID globalId = row.getUUID("id");
-            JsonObject payload = row.getJsonObject("payload");
-            runMatcher(ingestMatcher, ingestMetrics, payload)
+            JsonObject globalRecord = ClusterBuilder.encodeRecord(row);
+            runMatcher(ingestMatcher, ingestMetrics, globalRecord)
                 .compose(matcherResult ->
                     updateClusterForRecord(connection, globalId, matcherResult))
                 .onFailure(e -> log.error(e.getMessage(), e))
@@ -927,6 +941,7 @@ public class Storage {
               matchKeyConfig.put("matcher", matcherProp);
               matchKeyConfig.put("method", row.getString("method"));
               matchKeyConfig.put("params", row.getJsonObject("params"));
+              matchKeyConfig.put("args", row.getString("args"));
               return createIngestMatcher(matchKeyConfig, vertx)
                 .compose(matcher -> recalculateMatchKeyValueTable(connection, matcher));
             })

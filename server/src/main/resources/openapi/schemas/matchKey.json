@@ -8,7 +8,12 @@
     },
     "matcher": {
       "type": "string",
-      "description": "matcher module invocation: 'moduleId<::function>' where <::function> is optional"
+      "description": "matcher module invocation: 'moduleId<::function>>"
+    },
+    "args": {
+      "type": "string",
+      "enum": ["full", "payload"],
+      "description": "how arguments are passed to matcher, full: full record, payload: only record payload"
     },
     "update": {
       "type": "string",

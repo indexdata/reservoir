@@ -515,11 +515,13 @@ public class OaiPmhClientService {
       IngestMetrics ingestMetrics) {
     try {
       JsonObject globalRecord = new JsonObject();
-      globalRecord.put("localId", oaiRecord.getIdentifier());
+      globalRecord.put(ClusterBuilder.LOCAL_ID_LABEL, oaiRecord.getIdentifier());
+      globalRecord.put(ClusterBuilder.SOURCE_ID_LABEL, sourceId.toString());
       if (oaiRecord.isDeleted()) {
         globalRecord.put("delete", true);
       } else {
-        globalRecord.put("payload", new JsonObject().put("marc", oaiRecord.getMetadata()));
+        JsonObject payload = new JsonObject().put("marc", oaiRecord.getMetadata());
+        globalRecord.put(ClusterBuilder.PAYLOAD_LABEL, payload);
       }
       return storage.ingestGlobalRecord(vertx, sourceId, sourceVersion,
           globalRecord, ingestMatches, ingestMetrics);

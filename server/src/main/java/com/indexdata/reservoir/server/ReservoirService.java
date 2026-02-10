@@ -276,11 +276,12 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     String id = request.getString("id");
     String method = getMethod(request);
     String update = request.getString("update", "ingest");
+    String argsType = request.getString("args");
     JsonObject params = request.getJsonObject("params");
     return checkMatcher(storage, request)
         .compose(matcher ->
-            storage.insertMatchKeyConfig(id, matcher, method, params, update))
-        .onSuccess(res ->
+            storage.insertMatchKeyConfig(id, matcher, method, params, update, argsType))
+        .compose(res ->
           HttpResponse.responseJson(ctx, 201)
             .putHeader("Location", ctx.request().absoluteURI() + "/" + id)
             .end(request.encode())
@@ -292,14 +293,13 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     String id = validatedRequest.getPathParameters().get("id").getString();
     Storage storage = new Storage(ctx);
     return storage.selectMatchKeyConfig(id)
-        .onSuccess(res -> {
+        .compose(res -> {
           if (res == null) {
             matchKeyNotFound(ctx, id);
-            return;
+            return Future.succeededFuture();
           }
-          HttpResponse.responseJson(ctx, 200).end(res.encode());
-        })
-        .mapEmpty();
+          return HttpResponse.responseJson(ctx, 200).end(res.encode());
+        });
   }
 
   Future<Void> putConfigMatchKey(RoutingContext ctx) {
@@ -309,17 +309,18 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     String id = request.getString("id");
     String method = getMethod(request);
     String update = request.getString("update", "ingest");
+    String argsType = request.getString("args");
     JsonObject params = request.getJsonObject("params");
     return checkMatcher(storage, request)
-       .compose(matcher -> storage.updateMatchKeyConfig(id, matcher, method, params, update))
-        .onSuccess(res -> {
+        .compose(matcher -> storage.updateMatchKeyConfig(id, matcher, method, params, update,
+            argsType))
+        .compose(res -> {
           if (Boolean.FALSE.equals(res)) {
             matchKeyNotFound(ctx, id);
-            return;
+            return Future.succeededFuture();
           }
-          ctx.response().setStatusCode(204).end();
-        })
-        .mapEmpty();
+          return ctx.response().setStatusCode(204).end();
+        });
   }
 
   Future<Void> deleteConfigMatchKey(RoutingContext ctx) {
