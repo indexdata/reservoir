@@ -805,7 +805,7 @@ public class Storage {
    * @param params configuration
    * @param update strategy
    * @param argsType type of arguments to pass to matcher module
-   * @return async result
+   * @return async result: TRUE if updated, FALSE if not found
    */
   public Future<Boolean> updateMatchKeyConfig(String id, String matcher, String method,
       JsonObject params, String update, String argsType) {
