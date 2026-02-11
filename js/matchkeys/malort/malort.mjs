@@ -1,5 +1,3 @@
-// Generates a malort (singleton) match key.
-
 /**
  * Generates malort match key.
  *
@@ -8,5 +6,5 @@
  * @return {string} The matchkey.
  */
 export function matchkey() {
-  return crypto.randomUUID().toLowerCase();
+  return '';
 }

@@ -34,7 +34,7 @@ for (let n = 0; n < testFiles.length; n += 1) {
     key = e.message;
   }
   const assertion = assertionsMalort[testFile];
-  if (!assert(key.match(assertion), assertion)) {
+  if (!assert(key === assertion, assertion)) {
     testsFailedNum += 1;
   }
 }
