@@ -1371,6 +1371,95 @@ public class MainVerticleTest extends TestBase {
   }
 
   @Test
+  public void testClustersEmptyKey() {
+    createIsbnMatchKey();
+
+    JsonArray records1 = new JsonArray()
+        .add(new JsonObject()
+            .put("localId", "S101")
+            .put("payload", new JsonObject()
+                .put("marc", new JsonObject().put("leader", "00914naa  2200337   450 "))
+                .put("inventory", new JsonObject()
+                    .put("isbn", new JsonArray().add("1"))
+                )
+            )
+        )
+        .add(new JsonObject()
+            .put("localId", "S102")
+            .put("payload", new JsonObject()
+                .put("marc", new JsonObject().put("leader", "00914naa  2200337   450 "))
+                .put("inventory", new JsonObject()
+                    .put("isbn", new JsonArray().add("1"))
+                )
+            )
+        );
+    // phase 1: insert two separate local records with same isbn
+    ingestRecords(records1, SOURCE_ID_1);
+
+    String s = RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .param("matchkeyid", "isbn")
+        .get("/reservoir/clusters")
+        .then().statusCode(200)
+        .contentType("application/json")
+        .body("items", hasSize(1))
+        .body("items[0].records", hasSize(2))
+        .extract().body().asString();
+    verifyClusterResponse(s, List.of(List.of("S101", "S102")));
+
+    // phase 2: empty match key for first record
+    JsonArray records2 = new JsonArray()
+        .add(new JsonObject()
+            .put("localId", "S101")
+            .put("payload", new JsonObject()
+                .put("marc", new JsonObject().put("leader", "00914naa  2200337   450 "))
+                .put("inventory", new JsonObject()
+                    .put("isbn", new JsonArray().add(""))
+                )
+            )
+        );
+    ingestRecords(records2, SOURCE_ID_1);
+    s = RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .param("matchkeyid", "isbn")
+        .get("/reservoir/clusters")
+        .then().statusCode(200)
+        .contentType("application/json")
+        .body("items", hasSize(2))
+        .extract().body().asString();
+
+    verifyClusterResponse(s, List.of(List.of("S101"), List.of("S102")));
+
+    // phase 3: merge them again
+    JsonArray records3 = new JsonArray()
+        .add(new JsonObject()
+            .put("localId", "S101")
+            .put("payload", new JsonObject()
+                .put("marc", new JsonObject().put("leader", "00914naa  2200337   450 "))
+                .put("inventory", new JsonObject()
+                    .put("isbn", new JsonArray().add("1"))
+                )
+            )
+        );
+    ingestRecords(records3, SOURCE_ID_1);
+
+    s = RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .param("matchkeyid", "isbn")
+        .get("/reservoir/clusters")
+        .then().statusCode(200)
+        .contentType("application/json")
+        .body("items", hasSize(1))
+        .body("items[0].records", hasSize(2))
+        .extract().body().asString();
+    // after restoring the ISBN, S101 rejoins the existing cluster with S102
+    verifyClusterResponse(s, List.of(List.of("S101", "S102")));
+  }
+
+  @Test
   public void testClustersNoKey() {
     createIsbnMatchKey();
 
