@@ -9,7 +9,8 @@
     "prettier": "prettier . --write",
     "test-deepdish": "node test/deepdish.mjs",
     "test-goldrush2024": "node test/goldrush2024.mjs",
-    "test-goldrush2021": "node test/goldrush2021.mjs"
+    "test-goldrush2021": "node test/goldrush2021.mjs",
+    "test-malort": "node test/malort.mjs"
   },
   "devDependencies": {
     "eslint": "^9.39.1",
@@ -17,6 +18,7 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import": "^2.32.0",
     "globals": "^16.5.0",
-    "prettier": "^3.7.4"
+    "prettier": "^3.7.4",
+    "h3": ">=1.15.5"
   }
 }

@@ -427,8 +427,12 @@ public class Storage {
         + " WHERE match_key_config_id = $1 AND (");
     List<Object> tupleList = new ArrayList<>();
     tupleList.add(matcherResult.matchKeyId);
+    Set<UUID> clustersFound = new HashSet<>();
     int no = 2;
     for (String key : matcherResult.keys) {
+      if (key.isEmpty()) {
+        return Future.succeededFuture(clustersFound);
+      }
       if (no > 2) {
         q.append(" OR ");
       }
@@ -437,7 +441,6 @@ public class Storage {
     }
     q.append(")");
     Set<String> foundKeys = new HashSet<>();
-    Set<UUID> clustersFound = new HashSet<>();
     return conn.preparedQuery(q.toString())
         .execute(Tuple.from(tupleList))
         .map(rowSet -> {
