@@ -1,4 +1,3 @@
-
 /**
  * Generates malort match key.
  *
