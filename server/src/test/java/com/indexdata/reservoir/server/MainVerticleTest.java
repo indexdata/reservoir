@@ -1273,7 +1273,7 @@ public class MainVerticleTest extends TestBase {
     JsonObject issnMatcher = new JsonObject()
         .put("id", "issn-matcher")
         .put("type", "jsonpath")
-        .put("script", "$.inventory.issn[*]");
+        .put("script", "$.payload.inventory.issn[*]");
 
 
     //post module first
@@ -1290,6 +1290,7 @@ public class MainVerticleTest extends TestBase {
     JsonObject matchKey = new JsonObject()
         .put("id", "issn")
         .put("matcher", "issn-matcher")
+        .put("args", "full")
         .put("update", update);
 
     RestAssured.given()
