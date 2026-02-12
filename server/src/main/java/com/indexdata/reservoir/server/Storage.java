@@ -621,6 +621,8 @@ public class Storage {
             SourceId sourceId = new SourceId(topRecord.getString(ClusterBuilder.SOURCE_ID_LABEL));
             IngestMetrics ingestMetrics = IngestMetrics.create().withSource(sourceId);
             Integer sourceVersion = topRecord.getInteger(ClusterBuilder.SOURCE_VERSION_LABEL, 1);
+            r.put(ClusterBuilder.SOURCE_ID_LABEL, sourceId.toString());
+            r.put(ClusterBuilder.SOURCE_VERSION_LABEL, sourceVersion);
             return ingestGlobalRecord(vertx, sourceId,
               sourceVersion, r, ingestMatchers, ingestMetrics)
           .mapEmpty();

@@ -4,6 +4,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 
+import com.hazelcast.internal.json.Json;
 import com.indexdata.reservoir.module.ModuleCache;
 import com.indexdata.reservoir.module.ModuleExecutable;
 import com.indexdata.reservoir.module.ModuleInvocation;
@@ -649,4 +650,37 @@ public class ModuleTest {
             .executeAsCollection(payload)))
       .onComplete(context.asyncAssertSuccess(result -> context.assertEquals(expected, result)));
   }
+
+  @Test
+  public void testJsMatchkeyArgsFull(TestContext context) {
+    Collection<String> expected = new HashSet<>();
+    expected.add("73209629");
+    expected.add("73209630");
+
+    JsonObject payload = new JsonObject()
+            .put("payload", new JsonObject()
+                .put("inventory", new JsonObject()
+                .put("issn", new JsonArray()
+                    .add("73209629")
+                    .add("73209630")
+                )
+            )
+        )
+        .put("localId", "1")
+        .put("sourceId", "2")
+        .put("sourceVersion", 3);
+
+    JsonObject config = new JsonObject()
+      .put("id", "matchkey-full")
+      .put("type", "javascript")
+      .put("url", HOSTPORT + "/lib/matchkey-inventory-issn.mjs");
+
+    new CodeModuleBuilder(config).resolve(vertx)
+      .compose(entity -> ModuleCache.getInstance().lookup(vertx, TENANT, entity)
+        .compose(m -> new ModuleExecutable(m,
+          new ModuleInvocation("matchkey-full::matchkey"))
+            .executeAsCollection(payload)))
+      .onComplete(context.asyncAssertSuccess(result -> context.assertEquals(expected, result)));
+  }
+
 }
