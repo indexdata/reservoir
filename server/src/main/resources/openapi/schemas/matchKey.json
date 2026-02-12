@@ -13,12 +13,12 @@
     "args": {
       "type": "string",
       "enum": ["full", "payload"],
-      "description": "how arguments are passed to matcher, full: full record, payload: only record payload"
+      "description": "how arguments are passed to matcher, \"full\": full record, \"payload\": only record payload; if omitted or null, payload is used"
     },
     "update": {
       "type": "string",
       "enum": ["ingest", "manual"],
-      "description": "ingest: update when records are ingested, manual: update only when initialize is called"
+      "description": "\"ingest\": update when records are ingested, \"manual\": update only when initialize is called"
     }
   },
   "additionalProperties": false,
