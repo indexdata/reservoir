@@ -355,10 +355,26 @@ public class MainVerticleTest extends TestBase {
   }
 
   @Test
-  public void testMatchkeyBadArgs() {
+  public void testMatchkeyArgs() {
+    JsonObject module = new JsonObject()
+        .put("id", UUID.randomUUID().toString())
+        .put("type", "jsonpath")
+        .put("script", "$.marc.fields.010.subfields[*].a");
+
+    //post module first
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .body(module.encode())
+        .post("/reservoir/config/modules")
+        .then()
+        .statusCode(201)
+        .contentType("application/json")
+        .body(Matchers.is(module.encode()));
+
     JsonObject matchKey = new JsonObject()
-        .put("id", "10a")
-        .put("matcher", "matcher-10a")
+        .put("id", UUID.randomUUID().toString())
+        .put("matcher", module.getValue("id"))
         .put("update", "ingest")
         .put("args", "bad-args");
 
@@ -383,6 +399,67 @@ public class MainVerticleTest extends TestBase {
         .statusCode(400)
         .contentType("text/plain")
         .body(containsString("Property \"args\" does not match"));
+
+    matchKey.put("args", "payload");
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .body(matchKey.encode())
+        .post("/reservoir/config/matchkeys")
+        .then()
+        .statusCode(201)
+        .contentType("application/json")
+        .body(Matchers.is(matchKey.encode()));
+
+    JsonObject matchKeyOut = new JsonObject()
+        .put("id", matchKey.getString("id"))
+        .put("matcher", matchKey.getString("matcher"))
+        .put("method", null)
+        .put("params", null)
+        .put("update", "ingest")
+        .put("args", "payload");
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .get("/reservoir/config/matchkeys/" + matchKey.getString("id"))
+        .then().statusCode(200)
+        .contentType("application/json")
+        .body(Matchers.is(matchKeyOut.encode()));
+
+    matchKey.put("args", "full");
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .body(matchKey.encode())
+        .put("/reservoir/config/matchkeys/" + matchKey.getString("id"))
+        .then()
+        .statusCode(204);
+
+    matchKeyOut.put("args", "full");
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .get("/reservoir/config/matchkeys/" + matchKey.getString("id"))
+        .then().statusCode(200)
+        .contentType("application/json")
+        .body(Matchers.is(matchKeyOut.encode()));
+
+    // delete the matchkey
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .delete("/reservoir/config/matchkeys/" + matchKey.getString("id"))
+        .then().statusCode(204);
+
+    //delete the module
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .delete("/reservoir/config/modules/" + module.getString("id"))
+        .then().statusCode(204);
   }
 
   @Test
@@ -413,29 +490,8 @@ public class MainVerticleTest extends TestBase {
         .body("matchKeys", is(empty()))
         .body("resultInfo.totalRecords", is(0));
 
-    JsonObject matchKey = new JsonObject()
-        .put("id", "10a")
-        .put("matcher", "matcher-10a")
-        .put("update", "ingest");
-
-    JsonObject matchKeyOut = new JsonObject()
-        .put("id", "10a")
-        .put("matcher", "matcher-10a")
-        .put("method", null)
-        .put("params", null)
-        .put("update", "ingest")
-        .put("args", null);
-
-    RestAssured.given()
-        .header(XOkapiHeaders.TENANT, TENANT_1)
-        .header("Content-Type", "application/json")
-        .get("/reservoir/config/matchkeys/" + matchKey.getString("id"))
-        .then().statusCode(404)
-        .contentType("text/plain")
-        .body(Matchers.is("MatchKey " + matchKeyOut.getString("id") + " not found"));
-
     JsonObject module10a = new JsonObject()
-        .put("id", "matcher-10a")
+        .put("id", UUID.randomUUID().toString())
         .put("type", "jsonpath")
         .put("script", "$.marc.fields.010.subfields[*].a");
 
@@ -449,6 +505,27 @@ public class MainVerticleTest extends TestBase {
         .statusCode(201)
         .contentType("application/json")
         .body(Matchers.is(module10a.encode()));
+
+    JsonObject matchKey = new JsonObject()
+        .put("id", UUID.randomUUID().toString())
+        .put("matcher", module10a.getString("id"))
+        .put("update", "ingest");
+
+    JsonObject matchKeyOut = new JsonObject()
+        .put("id", matchKey.getString("id"))
+        .put("matcher", matchKey.getString("matcher"))
+        .put("method", null)
+        .put("params", null)
+        .put("update", "ingest")
+        .put("args", null);
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .get("/reservoir/config/matchkeys/" + matchKey.getString("id"))
+        .then().statusCode(404)
+        .contentType("text/plain")
+        .body(Matchers.is("MatchKey " + matchKeyOut.getString("id") + " not found"));
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
@@ -516,6 +593,7 @@ public class MainVerticleTest extends TestBase {
         .contentType("application/json")
         .body(Matchers.is(matchKeyOut.encode()));
 
+    // delete the matchkey
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
