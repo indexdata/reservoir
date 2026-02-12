@@ -617,9 +617,10 @@ public class Storage {
       .compose(ingestMatchers -> {
         return new ReadStreamConsumer<JsonObject, Void>()
           .consume(request, r -> {
-            SourceId sourceId = new SourceId(request.topLevelObject().getString("sourceId"));
+            JsonObject topRecord = request.topLevelObject();
+            SourceId sourceId = new SourceId(topRecord.getString(ClusterBuilder.SOURCE_ID_LABEL));
             IngestMetrics ingestMetrics = IngestMetrics.create().withSource(sourceId);
-            Integer sourceVersion = request.topLevelObject().getInteger("sourceVersion", 1);
+            Integer sourceVersion = topRecord.getInteger(ClusterBuilder.SOURCE_VERSION_LABEL, 1);
             return ingestGlobalRecord(vertx, sourceId,
               sourceVersion, r, ingestMatchers, ingestMetrics)
           .mapEmpty();

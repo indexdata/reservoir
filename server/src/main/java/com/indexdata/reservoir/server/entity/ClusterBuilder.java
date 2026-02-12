@@ -129,6 +129,6 @@ public class ClusterBuilder {
       .put(LOCAL_ID_LABEL, row.getString("local_id"))
       .put(SOURCE_ID_LABEL, row.getString("source_id"))
       .put(SOURCE_VERSION_LABEL, row.getInteger("source_version"))
-      .put(PAYLOAD_LABEL, row.getJsonObject(PAYLOAD_LABEL));
+      .put(PAYLOAD_LABEL, row.getJsonObject("payload"));
   }
 }

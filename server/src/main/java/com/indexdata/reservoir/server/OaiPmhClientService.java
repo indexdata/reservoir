@@ -517,6 +517,7 @@ public class OaiPmhClientService {
       JsonObject globalRecord = new JsonObject();
       globalRecord.put(ClusterBuilder.LOCAL_ID_LABEL, oaiRecord.getIdentifier());
       globalRecord.put(ClusterBuilder.SOURCE_ID_LABEL, sourceId.toString());
+      globalRecord.put(ClusterBuilder.SOURCE_VERSION_LABEL, sourceVersion);
       if (oaiRecord.isDeleted()) {
         globalRecord.put("delete", true);
       } else {
