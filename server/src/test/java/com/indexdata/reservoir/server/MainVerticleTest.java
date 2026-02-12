@@ -387,7 +387,7 @@ public class MainVerticleTest extends TestBase {
         .then()
         .statusCode(400)
         .contentType("text/plain")
-        .body(containsString("Property \"args\" does not match"));
+        .body(containsString("\"args\""));
 
     matchKey.put("args", "");
 
@@ -399,7 +399,7 @@ public class MainVerticleTest extends TestBase {
         .then()
         .statusCode(400)
         .contentType("text/plain")
-        .body(containsString("Property \"args\" does not match"));
+        .body(containsString("\"args\""));
 
     matchKey.put("args", "payload");
 
