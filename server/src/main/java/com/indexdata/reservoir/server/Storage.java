@@ -5,6 +5,7 @@ import com.indexdata.reservoir.module.ModuleExecutable;
 import com.indexdata.reservoir.module.ModuleInvocation;
 import com.indexdata.reservoir.server.entity.ClusterBuilder;
 import com.indexdata.reservoir.server.entity.CodeModuleEntity;
+import com.indexdata.reservoir.server.entity.MatchKeyConfig;
 import com.indexdata.reservoir.server.metrics.IngestMetrics;
 import com.indexdata.reservoir.server.metrics.IngestMetricsNop;
 import com.indexdata.reservoir.util.ReadStreamConsumer;
@@ -787,41 +788,53 @@ public class Storage {
 
   /**
    * Insert match key config into storage.
-   * @param id match key id (user specified)
-   * @param method match key method
-   * @param params configuration
-   * @param update strategy
-   * @param argsType type of arguments to pass to matcher module
+   * @param matchKey match key config
    * @return async result
    */
-  public Future<Void> insertMatchKeyConfig(String id, String matcher, String method,
-      JsonObject params, String update, String argsType) {
-
+  public Future<Void> insertMatchKeyConfig(MatchKeyConfig matchKey) {
     return pool.preparedQuery(
         "INSERT INTO " + matchKeyConfigTable + " (id, matcher, method, params, update, args)"
             + " VALUES ($1, $2, $3, $4, $5, $6)")
-        .execute(Tuple.of(id, matcher, method, params, update, argsType))
+        .execute(Tuple.of(
+          matchKey.getId(),
+          matchKey.getMatcher(),
+          matchKey.getMethod(),
+          matchKey.getParams(),
+          matchKey.getUpdate(),
+          matchKey.getArgs()))
         .mapEmpty();
   }
 
   /**
    * Update match key config into storage.
-   * @param id match key id (user specified)
-   * @param method match key method
-   * @param params configuration
-   * @param update strategy
-   * @param argsType type of arguments to pass to matcher module
+   * @param matchKey match key config
    * @return async result: TRUE if updated, FALSE if not found
    */
-  public Future<Boolean> updateMatchKeyConfig(String id, String matcher, String method,
-      JsonObject params, String update, String argsType) {
+  public Future<Boolean> updateMatchKeyConfig(MatchKeyConfig matchKey) {
 
     return pool.preparedQuery(
             "UPDATE " + matchKeyConfigTable
                 + " SET matcher = $2, method = $3, params = $4, update = $5, args = $6"
                 + " WHERE id = $1")
-        .execute(Tuple.of(id, matcher, method, params, update, argsType))
+        .execute(Tuple.of(
+          matchKey.getId(),
+          matchKey.getMatcher(),
+          matchKey.getMethod(),
+          matchKey.getParams(),
+          matchKey.getUpdate(),
+          matchKey.getArgs()))
         .map(res -> res.rowCount() > 0);
+  }
+
+  static MatchKeyConfig matchKeyConfigFromRow(Row row) {
+    return new MatchKeyConfig(
+      row.getString("id"),
+      row.getString("args"),
+      row.getString("matcher"),
+      row.getString("method"),
+      row.getJsonObject("params"),
+      row.getString("update")
+    );
   }
 
   /**
@@ -844,13 +857,7 @@ public class Storage {
             return null;
           }
           Row row = iterator.next();
-          return new JsonObject()
-              .put("id", row.getString("id"))
-              .put("matcher", row.getString("matcher"))
-              .put("method", row.getString("method"))
-              .put("params", row.getJsonObject("params"))
-              .put("update", row.getString("update"))
-              .put("args", row.getString("args"));
+          return matchKeyConfigFromRow(row).toJson();
         });
   }
 
@@ -880,14 +887,7 @@ public class Storage {
       from = from + " WHERE " + sqlWhere;
     }
     return streamResult(ctx, null, from, sqlOrderBy, "matchKeys",
-        row -> Future.succeededFuture(new JsonObject()
-            .put("id", row.getString("id"))
-            .put("matcher", row.getString("matcher"))
-            .put("method", row.getString("method"))
-            .put("params", row.getJsonObject("params"))
-            .put("update", row.getString("update"))
-            .put("args", row.getString("args"))
-        ));
+        row -> Future.succeededFuture(matchKeyConfigFromRow(row).toJson()));
   }
 
   Future<JsonObject> recalculateMatchKeyValueTable(SqlConnection connection,

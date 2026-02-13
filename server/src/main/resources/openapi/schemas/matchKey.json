@@ -13,7 +13,7 @@
     "args": {
       "type": "string",
       "enum": ["full", "payload"],
-      "description": "how arguments are passed to matcher, \"full\": full record, \"payload\": only record payload; if omitted or null, payload is used"
+      "description": "how arguments are passed to matcher, \"full\": full record, \"payload\": only record payload; if omitted , \"payload\" is used"
     },
     "update": {
       "type": "string",

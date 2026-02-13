@@ -3,6 +3,7 @@ package com.indexdata.reservoir.server;
 import com.indexdata.reservoir.module.ModuleCache;
 import com.indexdata.reservoir.module.ModuleInvocation;
 import com.indexdata.reservoir.server.entity.CodeModuleEntity;
+import com.indexdata.reservoir.server.entity.MatchKeyConfig;
 import com.indexdata.reservoir.util.readstream.LargeJsonReadStream;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -270,17 +271,13 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     Storage storage = new Storage(ctx);
     ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
     JsonObject request = validatedRequest.getBody().getJsonObject();
-    String id = request.getString("id");
-    String method = getMethod(request);
-    String update = request.getString("update", "ingest");
-    String argsType = request.getString("args");
-    JsonObject params = request.getJsonObject("params");
+
+    MatchKeyConfig matchKey = new MatchKeyConfig(request);
     return checkMatcher(storage, request)
-        .compose(matcher ->
-            storage.insertMatchKeyConfig(id, matcher, method, params, update, argsType))
+        .compose(matcher -> storage.insertMatchKeyConfig(matchKey))
         .compose(res ->
           HttpResponse.responseJson(ctx, 201)
-            .putHeader("Location", ctx.request().absoluteURI() + "/" + id)
+            .putHeader("Location", ctx.request().absoluteURI() + "/" + matchKey.getId())
             .end(request.encode())
         );
   }
@@ -302,17 +299,12 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     Storage storage = new Storage(ctx);
     ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
     JsonObject request = validatedRequest.getBody().getJsonObject();
-    String id = request.getString("id");
-    String method = getMethod(request);
-    String update = request.getString("update", "ingest");
-    String argsType = request.getString("args");
-    JsonObject params = request.getJsonObject("params");
+    MatchKeyConfig matchKey = new MatchKeyConfig(request);
     return checkMatcher(storage, request)
-        .compose(matcher -> storage.updateMatchKeyConfig(id, matcher, method, params, update,
-            argsType))
+        .compose(matcher -> storage.updateMatchKeyConfig(matchKey))
         .compose(res -> {
           if (Boolean.FALSE.equals(res)) {
-            return matchKeyNotFound(ctx, id);
+            return matchKeyNotFound(ctx, matchKey.getId());
           }
           return ctx.response().setStatusCode(204).end();
         });
