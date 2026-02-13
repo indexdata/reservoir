@@ -4,7 +4,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 
-import com.hazelcast.internal.json.Json;
 import com.indexdata.reservoir.module.ModuleCache;
 import com.indexdata.reservoir.module.ModuleExecutable;
 import com.indexdata.reservoir.module.ModuleInvocation;
