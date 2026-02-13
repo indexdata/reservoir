@@ -82,10 +82,10 @@ public class ModuleScripts {
   final static String TEST_SCRIPT_INVENTORY_ISSN = """
     export function matchkey(x) {
       let o = JSON.parse(x);
-      // return empty array if payload does not exist
-      if (!o.payload || !o.localId || !o.sourceId || !o.sourceVersion)
-        return [];
-      return o.payload.inventory.issn;
+      // return empty array if any of the expected fields is missing
+      if (('payload' in o) && ('localId' in o) && ('sourceId' in o) && ('sourceVersion' in o))
+        return o.payload.inventory.issn;
+      return [];
     }
     """;
 
