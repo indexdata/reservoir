@@ -379,14 +379,14 @@ public class Storage {
     return Future.all(futures).mapEmpty();
   }
 
-  Future<IngestMatcher> createIngestMatcher(JsonObject matchKeyConfig, Vertx vertx) {
+  Future<IngestMatcher> createIngestMatcher(MatchKeyConfig matchKeyConfig, Vertx vertx) {
     IngestMatcher ingestMatcher = new IngestMatcher();
 
-    String argsType = matchKeyConfig.getString("args");
+    String argsType = matchKeyConfig.getArgs();
     ingestMatcher.onlyPayload = argsType == null || "payload".equals(argsType);
 
-    ingestMatcher.matchKeyId = matchKeyConfig.getString("id");
-    String matcherProp = matchKeyConfig.getString("matcher");
+    ingestMatcher.matchKeyId = matchKeyConfig.getId();
+    String matcherProp = matchKeyConfig.getMatcher();
     if (matcherProp != null) {
       ModuleInvocation invocation = new ModuleInvocation(matcherProp);
       return selectCodeModuleEntity(invocation.getModuleName())
@@ -406,11 +406,12 @@ public class Storage {
     return Future.failedFuture("match key config must include 'matcher'");
   }
 
-  Future<List<IngestMatcher>> createIngestMatchers(JsonArray matchKeyConfigs, Vertx vertx) {
+  Future<List<IngestMatcher>> createIngestMatchers(List<MatchKeyConfig> matchKeyConfigs,
+      Vertx vertx) {
     List<Future<IngestMatcher>> futures = new ArrayList<>();
     for (int i = 0; i < matchKeyConfigs.size(); i++) {
-      JsonObject matchKeyConfig = matchKeyConfigs.getJsonObject(i);
-      String update = matchKeyConfig.getString("update");
+      MatchKeyConfig matchKeyConfig = matchKeyConfigs.get(i);
+      String update = matchKeyConfig.getUpdate();
       if ("manual".equals(update)) {
         continue;
       }
@@ -635,21 +636,13 @@ public class Storage {
    * Get available match key configurations.
    * @return async result with array of configurations
    */
-  public Future<JsonArray> getAvailableMatchConfigs() {
+  public Future<List<MatchKeyConfig>> getAvailableMatchConfigs() {
     return pool.query("SELECT * FROM " + matchKeyConfigTable)
         .execute()
         .map(res -> {
-          JsonArray matchConfigs = new JsonArray();
-          res.forEach(row ->
-              matchConfigs.add(new JsonObject()
-                  .put("id", row.getString("id"))
-                  .put("matcher", row.getString("matcher"))
-                  .put("method", row.getString("method"))
-                  .put("params", row.getJsonObject("params"))
-                  .put("update", row.getString("update"))
-                  .put("args", row.getString("args"))
-              ));
-          return matchConfigs;
+          List<MatchKeyConfig> matchKeyConfigs = new ArrayList<>();
+          res.forEach(row -> matchKeyConfigs.add(matchKeyConfigFromRow(row)));
+          return matchKeyConfigs;
         });
   }
 
@@ -941,13 +934,7 @@ public class Storage {
                 return Future.succeededFuture();
               }
               Row row = iterator.next();
-              String matcherProp = row.getString("matcher");
-              JsonObject matchKeyConfig = new JsonObject();
-              matchKeyConfig.put("id", id);
-              matchKeyConfig.put("matcher", matcherProp);
-              matchKeyConfig.put("method", row.getString("method"));
-              matchKeyConfig.put("params", row.getJsonObject("params"));
-              matchKeyConfig.put("args", row.getString("args"));
+              MatchKeyConfig matchKeyConfig = matchKeyConfigFromRow(row);
               return createIngestMatcher(matchKeyConfig, vertx)
                 .compose(matcher -> recalculateMatchKeyValueTable(connection, matcher));
             })
