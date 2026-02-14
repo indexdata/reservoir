@@ -3,6 +3,7 @@ package com.indexdata.reservoir.server;
 import com.indexdata.reservoir.module.ModuleCache;
 import com.indexdata.reservoir.module.ModuleInvocation;
 import com.indexdata.reservoir.server.entity.CodeModuleEntity;
+import com.indexdata.reservoir.server.entity.MatchKeyConfig;
 import com.indexdata.reservoir.util.readstream.LargeJsonReadStream;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -74,10 +75,10 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
       HttpServerRequest request = ctx.request();
       request.pause();
       return storage.updateGlobalRecords(ctx.vertx(), new LargeJsonReadStream(request))
-          .onSuccess(res -> {
+          .compose(res -> {
             JsonArray ar = new JsonArray();
             // global ids and match keys here ...
-            HttpResponse.responseJson(ctx, 200).end(ar.encode());
+            return HttpResponse.responseJson(ctx, 200).end(ar.encode());
           });
     } catch (Exception e) {
       return Future.failedFuture(e);
@@ -108,15 +109,15 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     String id = Util.getPathParameter(ctx, "id");
     Storage storage = new Storage(ctx);
     return storage.deleteCodeModuleEntity(id)
-        .onSuccess(res -> {
+        .compose(res -> {
           if (Boolean.FALSE.equals(res)) {
             HttpResponse.responseError(ctx, 404,
                 String.format(ENTITY_ID_NOT_FOUND_PATTERN, MODULE_LABEL, id));
-            return;
+            return Future.succeededFuture();
           }
           ModuleCache.getInstance().purge(TenantUtil.tenant(ctx), id);
-          ctx.response().setStatusCode(204).end();
-        }).mapEmpty();
+          return ctx.response().setStatusCode(204).end();
+        });
   }
 
   static PgCqlDefinition createDefinitionBase() {
@@ -150,7 +151,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     PgCqlQuery pgCqlQuery = definition.parse(query);
     Storage storage = new Storage(ctx);
     return storage.deleteGlobalRecords(pgCqlQuery.getWhereClause())
-        .onSuccess(x -> ctx.response().setStatusCode(204).end());
+        .compose(x -> ctx.response().setStatusCode(204).end());
   }
 
   Future<Void> getGlobalRecords(RoutingContext ctx) {
@@ -165,18 +166,18 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     String id = Util.getPathParameter(ctx, "globalId");
     Storage storage = new Storage(ctx);
     return storage.getGlobalRecord(id)
-        .onSuccess(res -> {
+        .compose(res -> {
           if (res == null) {
             HttpResponse.responseError(ctx, 404, id);
-            return;
+            return Future.succeededFuture();
           }
-          HttpResponse.responseJson(ctx, 200).end(res.encode());
-        })
-        .mapEmpty();
+          return HttpResponse.responseJson(ctx, 200).end(res.encode());
+        });
   }
 
-  void matchKeyNotFound(RoutingContext ctx, String id) {
+  Future<Void> matchKeyNotFound(RoutingContext ctx, String id) {
     HttpResponse.responseError(ctx, 404, "MatchKey " + id + " not found");
+    return Future.succeededFuture();
   }
 
   Future<Void> getClusters(RoutingContext ctx) {
@@ -203,8 +204,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     Storage storage = new Storage(ctx);
     return storage.selectMatchKeyConfig(matchKeyId).compose(conf -> {
       if (conf == null) {
-        matchKeyNotFound(ctx, matchKeyId);
-        return Future.succeededFuture();
+        return matchKeyNotFound(ctx, matchKeyId);
       }
       return storage.getClusters(ctx, matchKeyId,
           pgCqlQuery.getWhereClause(), pgCqlQuery.getOrderByClause());
@@ -226,11 +226,10 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     Storage storage = new Storage(ctx);
     return storage.touchClusters(pgCqlQuery)
         .map(count -> new JsonObject().put("count", count))
-        .onSuccess(res -> {
+        .compose(res -> {
           ctx.response().putHeader("Content-Type", "application/json");
-          ctx.response().end(res.encode());
-        })
-        .mapEmpty();
+          return ctx.response().end(res.encode());
+        });
   }
 
   Future<Void> getCluster(RoutingContext ctx) {
@@ -239,14 +238,13 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     String clusterId = requestParameter.getString();
     Storage storage = new Storage(ctx);
     return storage.getClusterById(UUID.fromString(clusterId))
-        .onSuccess(res -> {
+        .compose(res -> {
           if (res.getJsonArray("records").isEmpty()) {
             HttpResponse.responseError(ctx, 404, clusterId);
-            return;
+            return Future.succeededFuture();
           }
-          HttpResponse.responseJson(ctx, 200).end(res.encode());
-        })
-        .mapEmpty();
+          return HttpResponse.responseJson(ctx, 200).end(res.encode());
+        });
   }
 
   static String getMethod(JsonObject config) {
@@ -275,16 +273,13 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     Storage storage = new Storage(ctx);
     ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
     JsonObject request = validatedRequest.getBody().getJsonObject();
-    String id = request.getString("id");
-    String method = getMethod(request);
-    String update = request.getString("update", "ingest");
-    JsonObject params = request.getJsonObject("params");
+
+    MatchKeyConfig matchKey = new MatchKeyConfig(request);
     return checkMatcher(storage, request)
-        .compose(matcher ->
-            storage.insertMatchKeyConfig(id, matcher, method, params, update))
-        .onSuccess(res ->
+        .compose(matcher -> storage.insertMatchKeyConfig(matchKey))
+        .compose(res ->
           HttpResponse.responseJson(ctx, 201)
-            .putHeader("Location", ctx.request().absoluteURI() + "/" + id)
+            .putHeader("Location", ctx.request().absoluteURI() + "/" + matchKey.getId())
             .end(request.encode())
         );
   }
@@ -294,48 +289,39 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     String id = validatedRequest.getPathParameters().get("id").getString();
     Storage storage = new Storage(ctx);
     return storage.selectMatchKeyConfig(id)
-        .onSuccess(res -> {
+        .compose(res -> {
           if (res == null) {
-            matchKeyNotFound(ctx, id);
-            return;
+            return matchKeyNotFound(ctx, id);
           }
-          HttpResponse.responseJson(ctx, 200).end(res.encode());
-        })
-        .mapEmpty();
+          return HttpResponse.responseJson(ctx, 200).end(res.encode());
+        });
   }
 
   Future<Void> putConfigMatchKey(RoutingContext ctx) {
     Storage storage = new Storage(ctx);
     ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
     JsonObject request = validatedRequest.getBody().getJsonObject();
-    String id = request.getString("id");
-    String method = getMethod(request);
-    String update = request.getString("update", "ingest");
-    JsonObject params = request.getJsonObject("params");
+    MatchKeyConfig matchKey = new MatchKeyConfig(request);
     return checkMatcher(storage, request)
-       .compose(matcher -> storage.updateMatchKeyConfig(id, matcher, method, params, update))
-        .onSuccess(res -> {
+        .compose(matcher -> storage.updateMatchKeyConfig(matchKey))
+        .compose(res -> {
           if (Boolean.FALSE.equals(res)) {
-            matchKeyNotFound(ctx, id);
-            return;
+            return matchKeyNotFound(ctx, matchKey.getId());
           }
-          ctx.response().setStatusCode(204).end();
-        })
-        .mapEmpty();
+          return ctx.response().setStatusCode(204).end();
+        });
   }
 
   Future<Void> deleteConfigMatchKey(RoutingContext ctx) {
     String id = Util.getPathParameter(ctx, "id");
     Storage storage = new Storage(ctx);
     return storage.deleteMatchKeyConfig(id)
-        .onSuccess(res -> {
+        .compose(res -> {
           if (Boolean.FALSE.equals(res)) {
-            matchKeyNotFound(ctx, id);
-            return;
+            return matchKeyNotFound(ctx, id);
           }
-          ctx.response().setStatusCode(204).end();
-        })
-        .mapEmpty();
+          return ctx.response().setStatusCode(204).end();
+        });
   }
 
   Future<Void> getConfigMatchKeys(RoutingContext ctx) {
@@ -355,14 +341,12 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     String id = Util.getPathParameter(ctx, "id");
     Storage storage = new Storage(ctx);
     return storage.initializeMatchKey(ctx.vertx(), id)
-        .onSuccess(res -> {
+        .compose(res -> {
           if (res == null) {
-            matchKeyNotFound(ctx, id);
-            return;
+            return matchKeyNotFound(ctx, id);
           }
-          HttpResponse.responseJson(ctx, 200).end(res.encode());
-        })
-        .mapEmpty();
+          return HttpResponse.responseJson(ctx, 200).end(res.encode());
+        });
   }
 
   Future<Void> statsMatchKey(RoutingContext ctx) {
@@ -371,12 +355,10 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     return storage.selectMatchKeyConfig(id)
         .compose(conf -> {
           if (conf == null) {
-            matchKeyNotFound(ctx, id);
-            return Future.succeededFuture();
+            return matchKeyNotFound(ctx, id);
           }
           return storage.statsMatchKey(id)
-              .onSuccess(res -> HttpResponse.responseJson(ctx, 200).end(res.encode()))
-              .mapEmpty();
+              .compose(res -> HttpResponse.responseJson(ctx, 200).end(res.encode()));
         });
   }
 
@@ -402,15 +384,14 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     String id = Util.getPathParameter(ctx, "id");
     Storage storage = new Storage(ctx);
     return storage.selectCodeModuleEntity(id)
-        .onSuccess(e -> {
+        .compose(e -> {
           if (e == null) {
             HttpResponse.responseError(ctx, 404,
                 String.format(ENTITY_ID_NOT_FOUND_PATTERN, MODULE_LABEL, id));
-            return;
+            return Future.succeededFuture();
           }
-          HttpResponse.responseJson(ctx, 200).end(e.asJson(true).encode());
-        })
-        .mapEmpty();
+          return HttpResponse.responseJson(ctx, 200).end(e.asJson(true).encode());
+        });
   }
 
   Future<Void> putCodeModule(RoutingContext ctx) {
@@ -453,14 +434,13 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
   Future<Void> getOaiConfig(RoutingContext ctx) {
     Storage storage = new Storage(ctx);
     return storage.selectOaiConfig()
-        .onSuccess(res -> {
+        .compose(res -> {
           if (res == null) {
             HttpResponse.responseError(ctx, 404, "OAI config not found");
-            return;
+            return Future.succeededFuture();
           }
-          HttpResponse.responseJson(ctx, 200).end(res.encode());
-        })
-        .mapEmpty();
+          return HttpResponse.responseJson(ctx, 200).end(res.encode());
+        });
   }
 
   Future<Void> putOaiConfig(RoutingContext ctx) {
@@ -468,20 +448,19 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
     JsonObject request = validatedRequest.getBody().getJsonObject();
     return storage.updateOaiConfig(request)
-        .onSuccess(res -> {
+        .compose(res -> {
           if (Boolean.FALSE.equals(res)) {
             HttpResponse.responseError(ctx, 400, "OAI config not updated");
-            return;
+            return Future.succeededFuture();
           }
-          ctx.response().setStatusCode(204).end();
-        })
-        .mapEmpty();
+          return ctx.response().setStatusCode(204).end();
+        });
   }
 
   Future<Void> deleteOaiConfig(RoutingContext ctx) {
     Storage storage = new Storage(ctx);
     return storage.deleteOaiConfig()
-        .onSuccess(res -> ctx.response().setStatusCode(204).end());
+        .compose(res -> ctx.response().setStatusCode(204).end());
   }
 
   //end oai config

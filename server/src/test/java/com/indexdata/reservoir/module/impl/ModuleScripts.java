@@ -79,6 +79,16 @@ public class ModuleScripts {
     }
     """;
 
+  final static String TEST_SCRIPT_INVENTORY_ISSN = """
+    export function matchkey(x) {
+      let o = JSON.parse(x);
+      // return empty array if any of the expected fields is missing
+      if (('payload' in o) && ('localId' in o) && ('sourceId' in o) && ('sourceVersion' in o))
+        return o.payload.inventory.issn;
+      return [];
+    }
+    """;
+
   static void respondPlain(RoutingContext ctx, String script) {
     HttpServerResponse response = ctx.response();
     response.setStatusCode(200);
@@ -98,6 +108,7 @@ public class ModuleScripts {
     router.get("/lib/vary.mjs")
         .handler(ctx -> respondPlain(ctx, "/* " + version.getAndIncrement() + " */" + TEST_SCRIPT_EMPTY));
     router.get("/lib/matchkey-isbn.mjs").handler(ctx -> respondPlain(ctx, TEST_SCRIPT_MK_ISBN));
+    router.get("/lib/matchkey-inventory-issn.mjs").handler(ctx -> respondPlain(ctx, TEST_SCRIPT_INVENTORY_ISSN));
     HttpServer httpServer = vertx.createHttpServer();
     return httpServer.requestHandler(router).listen(port);
   }

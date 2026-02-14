@@ -8,12 +8,17 @@
     },
     "matcher": {
       "type": "string",
-      "description": "matcher module invocation: 'moduleId<::function>' where <::function> is optional"
+      "description": "matcher module invocation: moduleId<::function> (the ::function suffix is optional)"
+    },
+    "args": {
+      "type": "string",
+      "enum": ["full", "payload"],
+      "description": "how arguments are passed to matcher, \"full\": full record, \"payload\": only record payload; if omitted , \"payload\" is used"
     },
     "update": {
       "type": "string",
       "enum": ["ingest", "manual"],
-      "description": "ingest: update when records are ingested, manual: update only when initialize is called"
+      "description": "\"ingest\": update when records are ingested, \"manual\": update only when initialize is called"
     }
   },
   "additionalProperties": false,

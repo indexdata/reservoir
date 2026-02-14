@@ -1,6 +1,7 @@
 package com.indexdata.reservoir.server;
 
 import com.indexdata.reservoir.module.impl.ModuleJsonPath;
+import com.indexdata.reservoir.server.entity.ClusterBuilder;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -31,7 +32,6 @@ public class IngestWriteStream implements WriteStream<JsonObject> {
   boolean ingest;
   Throwable failure;
   private static final Logger log = LogManager.getLogger(IngestWriteStream.class);
-  private static final String LOCAL_ID = "localId";
 
   IngestWriteStream(Vertx vertx, Storage storage, IngestParams params,
       String fileName, String contentType) {
@@ -58,8 +58,10 @@ public class IngestWriteStream implements WriteStream<JsonObject> {
         .compose(rec -> {
           log(rec);
           Future<Void> future = Future.succeededFuture();
-          String localId = rec.getString(LOCAL_ID);
+          String localId = rec.getString(ClusterBuilder.LOCAL_ID_LABEL);
           if (ingest && localId != null) {
+            rec.put(ClusterBuilder.SOURCE_ID_LABEL, params.sourceId.toString());
+            rec.put(ClusterBuilder.SOURCE_VERSION_LABEL, params.sourceVersion);
             if (ingestMatchers == null) {
               future = storage.availableIngestMatchers(vertx)
                 .map(x -> {
@@ -155,16 +157,16 @@ public class IngestWriteStream implements WriteStream<JsonObject> {
       .map(strings -> {
         Iterator<String> iterator = strings.iterator();
         if (iterator.hasNext()) {
-          rec.put(LOCAL_ID, iterator.next().trim());
+          rec.put(ClusterBuilder.LOCAL_ID_LABEL, iterator.next().trim());
         } else {
-          rec.remove(LOCAL_ID);
+          rec.remove(ClusterBuilder.LOCAL_ID_LABEL);
         }
         return rec;
       });
   }
 
   private void log(JsonObject rec) {
-    String localId = rec.getString(LOCAL_ID);
+    String localId = rec.getString(ClusterBuilder.LOCAL_ID_LABEL);
     if (stats.incrementProcessed() < 10) {
       if (localId != null) {
         log.info("{} found ID {} at {}", params.getSummary(fileName), localId, stats.processed());
