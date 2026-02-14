@@ -165,7 +165,8 @@ public class Storage {
                 + " matcher VARCHAR, "
                 + " method VARCHAR, "
                 + " update VARCHAR, "
-                + " params JSONB)",
+                + " params JSONB, "
+                + " args VARCHAR)",
             "ALTER TABLE " + matchKeyConfigTable + " ADD COLUMN IF NOT EXISTS"
                 + " matcher VARCHAR",
             "ALTER TABLE " + matchKeyConfigTable + " ADD COLUMN IF NOT EXISTS"
