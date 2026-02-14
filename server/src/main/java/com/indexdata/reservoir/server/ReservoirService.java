@@ -195,9 +195,11 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
         new PgCqlFieldNumber().withColumn(CqlFields.SOURCE_VERSION.getQualifiedSqlName()));
 
     PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameterQuery(ctx));
-    ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
-    RequestParameter requestParameter = validatedRequest.getQuery().get("matchkeyid");
-    String matchKeyId = requestParameter.getString();
+    String matchKeyId = Util.getQueryParameter(ctx, "matchkeyid");
+    if (matchKeyId == null) {
+      failHandler(400, ctx, "Missing required query parameter: matchkeyid");
+      return Future.succeededFuture();
+    }
     Storage storage = new Storage(ctx);
     return storage.selectMatchKeyConfig(matchKeyId).compose(conf -> {
       if (conf == null) {
@@ -522,14 +524,18 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
 
   private void add(RouterBuilder routerBuilder, String operationId,
       Function<RoutingContext, Future<Void>> function) {
+    add(routerBuilder, operationId, function, true);
+  }
+
+  private void add(RouterBuilder routerBuilder, String operationId,
+      Function<RoutingContext, Future<Void>> function, boolean doValidation) {
 
     if (routerBuilder.getRoute(operationId) == null) {
       throw new IllegalArgumentException("Unknown operationId: " + operationId);
     }
-
-
     routerBuilder
         .getRoute(operationId)
+        .setDoValidation(doValidation)
         .addHandler(ctx -> {
           try {
             function.apply(ctx)
@@ -551,8 +557,8 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
           // routerBuilder.rootHandler(BodyHandler.create().setBodyLimit(65536)
           //     .setHandleFileUploads(false));
           add(routerBuilder, "getServiceInfo", this::getServiceInfo);
-          add(routerBuilder, "getGlobalRecords", this::getGlobalRecords);
-          add(routerBuilder, "deleteGlobalRecords", this::deleteGlobalRecords);
+          add(routerBuilder, "getGlobalRecords", this::getGlobalRecords, false);
+          add(routerBuilder, "deleteGlobalRecords", this::deleteGlobalRecords, false);
           add(routerBuilder, "getGlobalRecord", this::getGlobalRecord);
           add(routerBuilder, "postConfigMatchKey", this::postConfigMatchKey);
           add(routerBuilder, "getConfigMatchKey", this::getConfigMatchKey);
@@ -561,8 +567,8 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
           add(routerBuilder, "getConfigMatchKeys", this::getConfigMatchKeys);
           add(routerBuilder, "initializeMatchKey", this::initializeMatchKey);
           add(routerBuilder, "statsMatchKey", this::statsMatchKey);
-          add(routerBuilder, "getClusters", this::getClusters);
-          add(routerBuilder, "touchClusters", this::touchClusters);
+          add(routerBuilder, "getClusters", this::getClusters, false);
+          add(routerBuilder, "touchClusters", this::touchClusters, false);
           add(routerBuilder, "getCluster", this::getCluster);
           add(routerBuilder, "postCodeModule", this::postCodeModule);
           add(routerBuilder, "getCodeModule", this::getCodeModule);

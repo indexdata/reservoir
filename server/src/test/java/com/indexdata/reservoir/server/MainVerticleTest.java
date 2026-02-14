@@ -247,6 +247,15 @@ public class MainVerticleTest extends TestBase {
   }
 
   @Test
+  public void testQuotedQueryParameter() {
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .param("query", "cql.allRecords=\"true\"")
+        .get("/reservoir/records")
+        .then().statusCode(200);
+  }
+
+  @Test
   public void testBadTenantName() {
     String tenant = "1234"; // bad tenant name!
 
@@ -458,7 +467,8 @@ public class MainVerticleTest extends TestBase {
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
-        .get("/reservoir/config/matchkeys?query=matcher=" + matchKeyOut.getString("matcher"))
+        .queryParam("query", "matcher=" + matchKeyOut.getString("matcher"))
+        .get("/reservoir/config/matchkeys")
         .then().statusCode(200)
         .contentType("application/json")
         .body("matchKeys", hasSize(1))
@@ -1139,7 +1149,7 @@ public class MainVerticleTest extends TestBase {
         .get("/reservoir/clusters")
         .then().statusCode(400)
         .contentType("text/plain")
-        .body(containsString("does not contain the required query parameter matchkeyid"));
+        .body(containsString("Missing required query parameter: matchkeyid"));
   }
 
   @Test
