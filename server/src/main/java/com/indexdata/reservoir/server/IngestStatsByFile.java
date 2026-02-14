@@ -41,8 +41,14 @@ public class IngestStatsByFile {
     addStats(stats);
   }
 
+  /**
+   * Add stats for a file.
+   * @param stats stats to add
+   */
   public void addStats(IngestStats stats) {
-    byFile.add(new ListEntry(stats.getFileName(), stats));
+    if (stats != null) {
+      byFile.add(new ListEntry(stats.getFileName(), stats));
+    }
   }
 
   /**
