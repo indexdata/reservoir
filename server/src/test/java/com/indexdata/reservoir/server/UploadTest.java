@@ -5,6 +5,8 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.startsWith;
 
+import com.indexdata.reservoir.server.metrics.IngestMetricsMicrometer;
+import com.indexdata.reservoir.util.SourceId;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Timer;
 import io.vertx.core.buffer.Buffer;
@@ -19,9 +21,6 @@ import org.folio.okapi.common.XOkapiHeaders;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-
-import com.indexdata.reservoir.server.metrics.IngestMetricsMicrometer;
-import com.indexdata.reservoir.util.SourceId;
 
 @RunWith(VertxUnitRunner.class)
 public class UploadTest extends TestBase {
