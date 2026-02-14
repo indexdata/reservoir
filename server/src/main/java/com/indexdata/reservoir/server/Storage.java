@@ -635,7 +635,7 @@ public class Storage {
 
   /**
    * Get available match key configurations.
-   * @return async result with array of configurations
+   * @return async result with list of configurations
    */
   public Future<List<MatchKeyConfig>> getAvailableMatchConfigs() {
     return pool.query("SELECT * FROM " + matchKeyConfigTable)
