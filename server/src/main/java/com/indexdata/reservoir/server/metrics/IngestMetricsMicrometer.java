@@ -2,6 +2,7 @@ package com.indexdata.reservoir.server.metrics;
 
 import com.indexdata.reservoir.util.SourceId;
 import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.vertx.micrometer.backends.BackendRegistries;
 import java.time.Duration;
@@ -10,6 +11,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 public class IngestMetricsMicrometer implements IngestMetrics {
+  static MeterRegistry registry = BackendRegistries.getDefaultNow();
+
   static ConcurrentHashMap<String, Counter> recordsIgnoredMap = new ConcurrentHashMap<>();
   static ConcurrentHashMap<String, Counter> recordsInsertedMap = new ConcurrentHashMap<>();
   static ConcurrentHashMap<String, Counter> recordsDeletedMap = new ConcurrentHashMap<>();
@@ -37,7 +40,7 @@ public class IngestMetricsMicrometer implements IngestMetrics {
       .description("Total number of reservoir records ingested")
       .tag("source_id", sourceId.toString())
       .tag("result", result)
-      .register(BackendRegistries.getDefaultNow());
+      .register(registry);
   }
 
   private Counter getCounter(Map<String, Counter> counterMap, SourceId sourceId, String result) {
@@ -65,7 +68,7 @@ public class IngestMetricsMicrometer implements IngestMetrics {
       .maximumExpectedValue(Duration.ofNanos(maxExpectedNS))
       .tag("source_id", sourceId.toString())
       .tag("phase", phase)
-      .register(BackendRegistries.getDefaultNow());
+      .register(registry);
   }
 
   private Timer getTimer(Map<String, Timer> timerMap, SourceId sourceId, String phase) {

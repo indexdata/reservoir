@@ -88,7 +88,7 @@ public class UploadService {
           log.info("Total size {}", sz.get());
           promise.complete();
         });
-        return promise.future();
+        return promise.future(); // a null pointer is returned
       }
       Storage storage = new Storage(ctx);
       int queueSize = storage.pool.getPoolOptions().getMaxSize() * 10;
