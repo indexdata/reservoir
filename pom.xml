@@ -37,7 +37,7 @@
     <log4j2.version>3.0.0-beta3</log4j2.version>
     <snakeyaml.version>2.5</snakeyaml.version>
     <slf4j-api.version>2.0.17</slf4j-api.version>
-    <vertx.version>5.0.7</vertx.version>
+    <vertx.version>5.0.8</vertx.version>
     <okapi.version>7.0.2</okapi.version>
     <vertxlib.version>4.1.1</vertxlib.version>
     <micrometer.version>1.16.3</micrometer.version>
@@ -163,7 +163,7 @@
       <dependency>
         <groupId>org.junit</groupId>
         <artifactId>junit-bom</artifactId>
-        <version>6.0.2</version>
+        <version>6.0.3</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
