@@ -35,7 +35,7 @@
     <graalvm.version>25.0.2</graalvm.version>
     <graalvm-maven-plugin.version>0.11.4</graalvm-maven-plugin.version>
     <log4j2.version>3.0.0-beta3</log4j2.version>
-    <snakeyaml.version>2.5</snakeyaml.version>
+    <snakeyaml.version>2.6</snakeyaml.version>
     <slf4j-api.version>2.0.17</slf4j-api.version>
     <vertx.version>5.0.8</vertx.version>
     <okapi.version>7.0.2</okapi.version>
@@ -136,7 +136,7 @@
       <dependency>
         <groupId>com.jayway.jsonpath</groupId>
         <artifactId>json-path</artifactId>
-        <version>2.10.0</version>
+        <version>3.0.0</version>
       </dependency>
       <dependency>
         <groupId>io.rest-assured</groupId>
@@ -489,7 +489,7 @@
           <dependency>
             <groupId>com.puppycrawl.tools</groupId>
             <artifactId>checkstyle</artifactId>
-            <version>13.2.0</version>
+            <version>13.3.0</version>
           </dependency>
         </dependencies>
         <configuration>
