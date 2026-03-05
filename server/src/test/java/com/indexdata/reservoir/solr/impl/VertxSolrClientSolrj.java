@@ -9,7 +9,7 @@ import java.util.Collection;
 import java.util.LinkedList;
 import java.util.Map;
 import org.apache.solr.client.solrj.SolrClient;
-import org.apache.solr.client.solrj.impl.Http2SolrClient;
+import org.apache.solr.client.solrj.impl.HttpJdkSolrClient;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.client.solrj.response.UpdateResponse;
 import org.apache.solr.common.SolrDocumentList;
@@ -39,7 +39,7 @@ public class VertxSolrClientSolrj implements VertxSolrClient {
    * @param collection collection to use
    */
   public VertxSolrClientSolrj(Vertx vertx, String url, String collection) {
-    this(vertx, new Http2SolrClient.Builder(url).build(), collection);
+    this(vertx, new HttpJdkSolrClient.Builder(url).build(), collection);
   }
 
   /**
