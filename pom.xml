@@ -33,7 +33,7 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <graalvm.version>25.0.2</graalvm.version>
-    <graalvm-maven-plugin.version>0.11.4</graalvm-maven-plugin.version>
+    <graalvm-maven-plugin.version>0.11.5</graalvm-maven-plugin.version>
     <log4j2.version>3.0.0-beta3</log4j2.version>
     <snakeyaml.version>2.6</snakeyaml.version>
     <slf4j-api.version>2.0.17</slf4j-api.version>
@@ -459,7 +459,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>3.5.4</version>
+        <version>3.5.5</version>
         <configuration>
           <!-- not needed on graalvm, move to regular-jvm profile, or better, use JVMCI there
           <systemPropertyVariables>
