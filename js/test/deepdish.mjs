@@ -30,6 +30,7 @@ for (let n = 0; n < testFiles.length; n += 1) {
     const payloadJson = { marc: marcJson };
     const payloadJsonStr = JSON.stringify(payloadJson);
     key = matchkey(payloadJsonStr);
+    console.log(key);
   } catch (e) {
     key = e.message;
   }
