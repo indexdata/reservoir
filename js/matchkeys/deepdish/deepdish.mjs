@@ -1,4 +1,4 @@
-// Generates deepdish and goldrush2024 match keys.
+// Generates deepdish and goldrush2024 match keys and returns an array.
 
 const numFields = ['020', '022', '024'];
 
@@ -417,8 +417,8 @@ function doStandardNum(snum) {
  *
  * @version 1.3.0 (for specification December2024_0)
  * @param {string} record - The MARC-in-JSON input string wrapped in {marc: ...} object.
- * @return {string} The matchkey. Components are gathered from relevant fields
- *     and concatenated to a long string.
+ * @return {array} The matchkeys - goldrush24 and deepdish (from identifier fields).
+ *
  */
 export function matchkey(record) {
   let keyStr = '';
@@ -465,14 +465,18 @@ export function matchkey(record) {
 
   // do identifiers matchkey here
   keyStr = '';
-  const snum = {};
   for (let x = 0; x < numFields.length; x += 1) {
     const tag = numFields[x];
-    snum.num = getRelevantSubField(marcObj, tag, 'a');
-    snum.tag = tag;
-    if (snum.num) {
+    let nums = getMultiSubfields(marcObj, tag, 'a');
+    nums = nums.sort();
+    let prevKey = '';
+    for (let y = 0; y < nums.length; y++) {
+      let snum = { tag: tag, num: nums[y] };
       let keyStr = doStandardNum(snum);
-      if (keyStr) out.push(keyStr.toLowerCase());
+      if (keyStr !== prevKey) {
+        if (keyStr) out.push(keyStr.toLowerCase());
+        prevKey = keyStr;
+      }
     }
   }
 
