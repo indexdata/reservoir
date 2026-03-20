@@ -1,7 +1,8 @@
 {
-  "test/records/numbers/isbn.json":                   "020_886372762",
-  "test/records/numbers/issn.json":                   "022_1432069x",
-  "test/records/numbers/other-id.json":               "024_747014471029",
-  "test/records/numbers/no-number.json":              "mynewattitude_________________________________________________________2003silbejsilbep",
-  "test/records/numbers/no-number-slim.json":         "larivistacommerceemargueritecaetani___________________________________2015storia_____p"
+  "test/records/numbers/isbn.json":              "[\"larivistacommerceemargueritecaetani___________________________________2015____1__storia____________________________________________________________p\",\"020_886372762\"]",
+  "test/records/numbers/isbnDupe.json":          "[\"larivistacommerceemargueritecaetani___________________________________2015____1__storia____________________________________________________________p\",\"020_886372762\"]",
+  "test/records/numbers/issn.json":              "[\"archivesofdermatologicalresearch______________________________________1949____1__sprina____________________________________________________________p\",\"022_00039187\",\"022_1432069x\"]",
+  "test/records/numbers/other-id.json":          "[\"mynewattitude_________________________________________________________2003____1__silbej________________________________________silbe_______________p\",\"024_747014471029\"]",
+  "test/records/numbers/no-number.json":         "[\"mynewattitude_________________________________________________________2003____1__silbej________________________________________silbe_______________p\"]",
+  "test/records/numbers/no-number-slim.json":    "[\"larivistacommerceemargueritecaetani___________________________________2015____1__storia____________________________________________________________p\"]"
 }
