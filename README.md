@@ -108,7 +108,7 @@ to confirm that indeed the property has been read correctly.
 java -Dtenant_default=lib -Dport=8081 --enable-native-access=ALL-UNNAMED \
    --sun-misc-unsafe-memory-access=allow \
    -jar server/target/reservoir-server-fat.jar
-16:49:25 [] [] [] [] INFO  MainVerticle         Starting reservoir-server 0.0.1-SNAPSHOT 1233a870ca676d3121121722ebd7ba51ea6f2eb1
+16:49:25 [] [] [] [] INFO  MainVerticle         Starting reservoir-server X.Y.Z <git-sha>
 16:49:25 [] [] [] [] INFO  MainVerticle         Listening on port 8081
 16:49:25 [] [] [] [] INFO  MainVerticle         Tenant default: lib
 ```
