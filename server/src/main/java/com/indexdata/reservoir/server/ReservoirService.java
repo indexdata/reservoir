@@ -33,7 +33,6 @@ import org.folio.tlib.postgres.cqlfield.PgCqlFieldAlwaysMatches;
 import org.folio.tlib.postgres.cqlfield.PgCqlFieldNumber;
 import org.folio.tlib.postgres.cqlfield.PgCqlFieldText;
 import org.folio.tlib.postgres.cqlfield.PgCqlFieldUuid;
-import org.folio.tlib.util.TenantUtil;
 
 public class ReservoirService implements RouterCreator, TenantInitHooks {
 
@@ -42,9 +41,11 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
   private static final Logger log = LogManager.getLogger(ReservoirService.class);
 
   private final ModuleVersionReporter moduleVersionReporter;
+  private final String defaultTenant;
 
-  public ReservoirService(ModuleVersionReporter moduleVersionReporter) {
+  public ReservoirService(ModuleVersionReporter moduleVersionReporter, String defaultTenant) {
     this.moduleVersionReporter = moduleVersionReporter;
+    this.defaultTenant = defaultTenant;
   }
 
   Future<Void> getServiceInfo(RoutingContext ctx) {
@@ -88,7 +89,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
   Future<Void> reloadCodeModule(RoutingContext ctx) {
     final String id = Util.getPathParameter(ctx, "id");
     final Storage storage = new Storage(ctx);
-    final String tenant = TenantUtil.tenant(ctx);
+    final String tenant = Tenant.get(ctx);
     return storage.selectCodeModuleEntity(id)
       .compose(res -> {
         if (res == null) {
@@ -115,7 +116,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
                 String.format(ENTITY_ID_NOT_FOUND_PATTERN, MODULE_LABEL, id));
             return Future.succeededFuture();
           }
-          ModuleCache.getInstance().purge(TenantUtil.tenant(ctx), id);
+          ModuleCache.getInstance().purge(Tenant.get(ctx), id);
           return ctx.response().setStatusCode(204).end();
         });
   }
@@ -370,7 +371,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     JsonObject request = validatedRequest.getBody().getJsonObject();
     return new CodeModuleEntity.CodeModuleBuilder(request)
       .resolve(ctx.vertx())
-      .compose(cm -> ModuleCache.getInstance().lookup(ctx.vertx(), TenantUtil.tenant(ctx), cm)
+      .compose(cm -> ModuleCache.getInstance().lookup(ctx.vertx(), Tenant.get(ctx), cm)
         .compose(module -> storage.insertCodeModuleEntity(cm))
         .compose(res ->
           HttpResponse.responseJson(ctx, 201)
@@ -400,7 +401,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     JsonObject request = validatedRequest.getBody().getJsonObject();
     return new CodeModuleEntity.CodeModuleBuilder(request)
       .resolve(ctx.vertx())
-      .compose(cm -> ModuleCache.getInstance().lookup(ctx.vertx(), TenantUtil.tenant(ctx), cm)
+      .compose(cm -> ModuleCache.getInstance().lookup(ctx.vertx(), Tenant.get(ctx), cm)
         .compose(module -> storage.updateCodeModuleEntity(cm))
         .compose(res -> {
           if (Boolean.FALSE.equals(res)) {
@@ -568,6 +569,11 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
           add(routerBuilder, "statusOaiPmhClient", oaiPmhClient::status);
 
           Router router = Router.router(vertx);
+
+          router.route().order(Integer.MIN_VALUE).handler(ctx -> {
+            Tenant.populate(ctx, defaultTenant);
+            ctx.next();
+          });
 
           router.get("/reservoir/oai").handler(ctx ->
               OaiService.get(ctx).onFailure(cause -> failHandler(400, ctx, cause)));
