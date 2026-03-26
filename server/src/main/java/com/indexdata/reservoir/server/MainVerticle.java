@@ -16,6 +16,8 @@ import org.folio.tlib.postgres.TenantPgPool;
 public class MainVerticle extends VerticleBase {
   final Logger log = LogManager.getLogger(MainVerticle.class);
 
+  String tenantDefault = System.getenv("TENANT_DEFAULT");
+
   @Override
   public Future<?> start() {
     System.setProperty("org.marc4j.marc.MarcFactory", "org.marc4j.marc.impl.MarcFactoryImpl");
@@ -27,7 +29,6 @@ public class MainVerticle extends VerticleBase {
         Config.getSysConf("http.port", "port", "8081", config()));
     log.info("Listening on port {}", port);
 
-    String tenantDefault = Config.getSysConf("tenant_default", null, config());
     Future<Void> future = Future.succeededFuture();
     if (tenantDefault != null) {
       log.info("Tenant default: {}", tenantDefault);

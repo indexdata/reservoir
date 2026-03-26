@@ -96,16 +96,16 @@ java -Dport=8081 --upgrade-module-path=server/target/compiler \
 
 ## Running without Okapi
 
-It is possible to run Reservoir without Okapi by supplying property `tenant_default` with
-a value of the tenant. This will allow accessing the Reservoir services without supplying
-Okapi HTTP headers such as `X-Okapi-Tenant`. In this mode, when launching the
-application the server will also prepare DB tables.
+It is possible to run Reservoir without Okapi by defining environment variable
+`TENANT_DEFAULT` with a value of the tenant. This will allow accessing the Reservoir
+services without supplying Okapi HTTP headers such as `X-Okapi-Tenant`.
+In this mode, when launching the application the server will also prepare DB tables.
 
 Example with GraalVM launch where the tenant is `lib`. Observe the info message
 to confirm that indeed the property has been read correctly.
 
 ```
-java -Dtenant_default=lib -Dport=8081 --enable-native-access=ALL-UNNAMED \
+TENANT_DEFAULT=lib java -Dport=8081 --enable-native-access=ALL-UNNAMED \
    --sun-misc-unsafe-memory-access=allow \
    -jar server/target/reservoir-server-fat.jar
 16:49:25 [] [] [] [] INFO  MainVerticle         Starting reservoir-server X.Y.Z <git-sha>
