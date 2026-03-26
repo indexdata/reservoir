@@ -2,6 +2,7 @@ package com.indexdata.reservoir.server;
 
 import io.vertx.core.Future;
 import io.vertx.core.VerticleBase;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerOptions;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -26,7 +27,13 @@ public class MainVerticle extends VerticleBase {
         Config.getSysConf("http.port", "port", "8081", config()));
     log.info("Listening on port {}", port);
 
-    ReservoirService reservoirService = new ReservoirService(m);
+    String tenantDefault = ReservoirLauncher.getSysConfOrEnvString(
+        "tenant.default", null, config());
+    Future<Void> future = Future.succeededFuture();
+    if (tenantDefault != null) {
+      log.info("Tenant default: {}", tenantDefault);
+    }
+    ReservoirService reservoirService = new ReservoirService(m, tenantDefault);
 
     RouterCreator[] routerCreators = {
         reservoirService,
@@ -34,10 +41,13 @@ public class MainVerticle extends VerticleBase {
         new HealthApi(),
         new Healthz(),
     };
-
-    Future<Void> future = Config.getSysConfBoolean("db_check", true, config())
-        ? Healthz.checkDb(vertx)
-        : Future.succeededFuture();
+    if (Config.getSysConfBoolean("db_check", true, config())) {
+      future = future.compose(x -> Healthz.checkDb(vertx));
+    }
+    if (tenantDefault != null) {
+      Storage storage = new Storage(vertx, tenantDefault, HttpMethod.POST);
+      future = future.compose(x -> storage.init());
+    }
     return future
         .compose(x -> RouterCreator.mountAll(vertx, routerCreators, "reservoir"))
         .compose(router -> {

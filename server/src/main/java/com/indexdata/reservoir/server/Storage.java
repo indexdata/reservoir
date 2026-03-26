@@ -43,8 +43,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.tlib.postgres.PgCqlQuery;
 import org.folio.tlib.postgres.TenantPgPool;
-import org.folio.tlib.util.TenantUtil;
-
 
 // Define a constant instead of duplicating this literal
 @java.lang.SuppressWarnings({"squid:S1192"})
@@ -104,7 +102,7 @@ public class Storage {
   }
 
   public Storage(RoutingContext ctx) {
-    this(ctx.vertx(), TenantUtil.tenant(ctx), ctx.request().method());
+    this(ctx.vertx(), Tenant.get(ctx), ctx.request().method());
   }
 
   public TenantPgPool getPool() {
@@ -1363,7 +1361,7 @@ public class Storage {
                   return Future.failedFuture("Transformer module '"
                     + invocation.getModuleName() + "' not found");
                 }
-                return ModuleCache.getInstance().lookup(ctx.vertx(), TenantUtil.tenant(ctx), entity)
+                return ModuleCache.getInstance().lookup(ctx.vertx(), Tenant.get(ctx), entity)
                           .map(mod -> new ModuleExecutable(mod, invocation));
               });
         });
