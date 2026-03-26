@@ -27,7 +27,7 @@ public class MainVerticle extends VerticleBase {
         Config.getSysConf("http.port", "port", "8081", config()));
     log.info("Listening on port {}", port);
 
-    String tenantDefault = Config.getSysConf("TENANT_DEFAULT", "defaultTenant", null, config());
+    String tenantDefault = Config.getSysConf("tenant_default", null, config());
     Future<Void> future = Future.succeededFuture();
     if (tenantDefault != null) {
       log.info("Tenant default: {}", tenantDefault);
