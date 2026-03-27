@@ -556,6 +556,7 @@ public class UploadTest extends TestBase {
         .binaryFileUpload("records", "marc3.mrc", marc3marcBuffer,  "application/marc");
 
     webClient.postAbs(MODULE_URL + "/reservoir/upload")
+        .putHeader(XOkapiHeaders.TENANT, TENANT_1)
         .addQueryParam("sourceId", "SOURCE-1")
         .addQueryParam("sourceVersion", "1")
         .sendMultipartForm(requestForm)
@@ -572,6 +573,7 @@ public class UploadTest extends TestBase {
 
     webClient.postAbs(MODULE_URL + "/reservoir/upload")
         .putHeader(XOkapiHeaders.PERMISSIONS, "reservoir-upload.all-sources")
+        .putHeader(XOkapiHeaders.TENANT, TENANT_1)
         .addQueryParam("sourceId", "SOURCE-1")
         .addQueryParam("sourceVersion", "1")
         .sendMultipartForm(requestForm)

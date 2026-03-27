@@ -130,7 +130,7 @@ public class UploadService {
   }
 
   private String enforcePermissionsBySource(RoutingContext ctx) {
-    if (Tenant.enforcePermissions(ctx)) {
+    if (!Tenant.enforcePermissions(ctx)) {
       return UPLOAD_PERMISSIONS_ALLSOURCES;
     }
     String sourceId = IngestParams.validateSourceId(ctx.request());
