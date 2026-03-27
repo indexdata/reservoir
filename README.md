@@ -104,7 +104,7 @@ In this mode, when launching the application the server will also prepare DB tab
 If the module tenant API is not used, the database schema for the tenant must
 be created manually.
 
-Reservoir assumes that schema <tenant>`_mod_reservoir` is available. So
+Reservoir assumes that schema `<tenant>_mod_reservoir` is available. So
 in the case of tenant `default`, the preparation can be achieved with:
 
 ```
