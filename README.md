@@ -105,7 +105,7 @@ If the module tenant API is not used, the database schema for the tenant must
 be created manually.
 
 Reservoir assumes that schema tenant_`_mod_reservoir` is available. So
-in the case of tenant `lib`, the prepartion could be achived with:
+in the case of tenant `lib`, the prepartion can be achieved with:
 
 ```
 sudo -u postgres psql -d folio_modules
