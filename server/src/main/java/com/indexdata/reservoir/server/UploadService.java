@@ -43,7 +43,7 @@ public class UploadService {
   public Future<Void> uploadRecords(RoutingContext ctx) {
     try {
       String sourceId = IngestParams.validateSourceId(ctx.request());
-      Tenant.hasPermissionsSource(ctx, sourceId);
+      Tenant.ensurePermissionsSource(ctx, sourceId);
       IngestParams params = new IngestParams(ctx.request());
       HttpServerRequest request = ctx.request();
       Future<IngestStatsByFile> future;

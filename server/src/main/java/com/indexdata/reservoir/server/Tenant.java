@@ -60,7 +60,7 @@ public final class Tenant {
    * @param sourceId source identifier
    * @throws ForbiddenException if the tenant does not have the required permissions
    */
-  public static void hasPermissionsSource(RoutingContext ctx, String sourceId)
+  public static void ensurePermissionsSource(RoutingContext ctx, String sourceId)
       throws ForbiddenException {
     try {
       Set<String> perms = parsePermissions(ctx);
