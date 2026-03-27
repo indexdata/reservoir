@@ -101,16 +101,33 @@ It is possible to run Reservoir without Okapi by defining environment variable
 services without supplying Okapi HTTP headers such as `X-Okapi-Tenant`.
 In this mode, when launching the application the server will also prepare DB tables.
 
-Example with GraalVM launch where the tenant is `lib`. Observe the info message
+If the module tenant API is not used, the database schema for the tenant must
+be created manually.
+
+Reservoir assumes that schema <tenant>`_mod_reservoir` is available. So
+in the case of tenant `default`, the preparation can be achieved with:
+
+```
+sudo -u postgres psql -d folio_modules
+# CREATE ROLE reservoir NOLOGIN;
+# GRANT reservoir TO folio;
+# CREATE SCHEMA default_mod_reservoir AUTHORIZATION reservoir;
+```
+
+Example with GraalVM launch where the tenant is `default`. Observe the info message
 to confirm that indeed the property has been read correctly.
 
 ```
-TENANT_DEFAULT=lib java -Dport=8081 --enable-native-access=ALL-UNNAMED \
+DB_USERNAME=folio \
+DB_PASSWORD=folio \
+DB_DATABASE=folio_modules \
+TENANT_DEFAULT=default \
+java -Dport=8081 --enable-native-access=ALL-UNNAMED \
    --sun-misc-unsafe-memory-access=allow \
    -jar server/target/reservoir-server-fat.jar
 16:49:25 [] [] [] [] INFO  MainVerticle         Starting reservoir-server X.Y.Z <git-sha>
 16:49:25 [] [] [] [] INFO  MainVerticle         Listening on port 8081
-16:49:25 [] [] [] [] INFO  MainVerticle         Tenant default: lib
+16:49:25 [] [] [] [] INFO  MainVerticle         Tenant default: default
 ```
 
 ## Running with Docker
