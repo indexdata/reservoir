@@ -76,7 +76,11 @@ GRANT ALL PRIVILEGES ON DATABASE folio_modules TO folio;
 
 The server's database connection is then configured by setting environment variables:
 `DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD`, `DB_DATABASE`,
-`DB_MAXPOOLSIZE`, `DB_SERVER_PEM`, `DB_CONNECTIONRELEASEDELAY`.
+`DB_MAXPOOLSIZE`, `DB_RECONNECTATTEMPTS`, `DB_RECONNECTINTERVAL`, `DB_SERVER_PEM`.
+
+For a description refer to the
+[`DB_` environment variables](https://github.com/folio-org/raml-module-builder#environment-variables)
+section of RMB.
 
 If using GraalVM java, start the server with:
 
