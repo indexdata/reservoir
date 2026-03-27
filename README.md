@@ -110,7 +110,7 @@ in the case of tenant `lib`, the preparation can be achieved with:
 ```
 sudo -u postgres psql -d folio_modules
 # CREATE ROLE reservoir NOLOGIN;
-# GRANT reservoir TO folio
+# GRANT reservoir TO folio;
 # CREATE SCHEMA lib_mod_reservoir AUTHORIZATION reservoir;
 ```
 
