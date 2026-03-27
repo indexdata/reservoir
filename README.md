@@ -105,13 +105,13 @@ If the module tenant API is not used, the database schema for the tenant must
 be created manually.
 
 Reservoir assumes that schema <tenant>`_mod_reservoir` is available. So
-in the case of tenant `lib`, the preparation can be achieved with:
+in the case of tenant `default`, the preparation can be achieved with:
 
 ```
 sudo -u postgres psql -d folio_modules
 # CREATE ROLE reservoir NOLOGIN;
 # GRANT reservoir TO folio;
-# CREATE SCHEMA lib_mod_reservoir AUTHORIZATION reservoir;
+# CREATE SCHEMA default_mod_reservoir AUTHORIZATION reservoir;
 ```
 
 Example with GraalVM launch where the tenant is `default`. Observe the info message
