@@ -11,27 +11,21 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServerRequest;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.streams.ReadStream;
 import io.vertx.ext.web.RoutingContext;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiConsumer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.HttpResponse;
-import org.folio.okapi.common.XOkapiHeaders;
 
 public class UploadService {
 
   private static final Logger log = LogManager.getLogger(UploadService.class);
-  private static final String UPLOAD_PERMISSIONS_ALLSOURCES = "reservoir-upload.all-sources";
-  private static final String UPLOAD_PERMISSIONS_SOURCE_PREFIX = "reservoir-upload.source";
 
   private Future<IngestStats> uploadPayloadStream(ReadStream<JsonObject> upload,
       IngestWriteStream ingestWriteStream) {
@@ -48,7 +42,8 @@ public class UploadService {
    */
   public Future<Void> uploadRecords(RoutingContext ctx) {
     try {
-      enforcePermissionsBySource(ctx);
+      String sourceId = IngestParams.validateSourceId(ctx.request());
+      Tenant.ensurePermissionsSource(ctx, sourceId);
       IngestParams params = new IngestParams(ctx.request());
       HttpServerRequest request = ctx.request();
       Future<IngestStatsByFile> future;
@@ -127,39 +122,5 @@ public class UploadService {
     }
     parser = new MappingReadStream<>(parser, new MarcJsonToIngestMapper(timingJsonMapper));
     return uploadPayloadStream(parser, ingestWriteStream);
-  }
-
-  private String enforcePermissionsBySource(RoutingContext ctx) {
-    if (Tenant.enforcePermissions(ctx)) {
-      return UPLOAD_PERMISSIONS_ALLSOURCES;
-    }
-    String sourceId = IngestParams.validateSourceId(ctx.request());
-    try {
-      Set<String> perms = parsePermissions(ctx);
-      if (perms.contains(UPLOAD_PERMISSIONS_ALLSOURCES)) {
-        return UPLOAD_PERMISSIONS_ALLSOURCES;
-      }
-      String perm = UPLOAD_PERMISSIONS_SOURCE_PREFIX + "." + sourceId;
-      if (perms.contains(perm)) {
-        return perm;
-      }
-    } catch (Exception e) {
-      throw new ForbiddenException("Cannot verify permissions to upload records for source '"
-      + sourceId + "'", e);
-    }
-    throw new ForbiddenException("Insufficient permissions to upload records for source '"
-        + sourceId + "'");
-  }
-
-  @SuppressWarnings("unchecked")
-  private static Set<String> parsePermissions(RoutingContext ctx) {
-    Set<String> perms = new HashSet<>();
-    String permsHeader = ctx.request().getHeader(XOkapiHeaders.PERMISSIONS);
-    if (permsHeader == null || permsHeader.isEmpty()) {
-      return perms;
-    }
-    JsonArray permsArray = new JsonArray(permsHeader);
-    perms.addAll(permsArray.getList());
-    return perms;
   }
 }
