@@ -28,7 +28,7 @@ public final class Tenant {
     String tenant = ctx.request().getHeader(XOkapiHeaders.TENANT);
     if (tenant == null && defaultTenant != null) {
       ctx.put(CTX_KEY_TENANT, defaultTenant);
-      ctx.put(CTX_KEY_PERMS, "[" + UPLOAD_PERMISSIONS_ALLSOURCES + "]");
+      ctx.put(CTX_KEY_PERMS, "[\"" + UPLOAD_PERMISSIONS_ALLSOURCES + "\"]");
     } else {
       ctx.put(CTX_KEY_TENANT, tenant);
       ctx.put(CTX_KEY_PERMS, ctx.request().getHeader(XOkapiHeaders.PERMISSIONS));
