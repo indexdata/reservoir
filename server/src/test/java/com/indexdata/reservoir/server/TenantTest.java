@@ -79,7 +79,7 @@ class TenantTest {
   void missingPermissionsIncorrectSource() {
     RoutingContext mockContext = mock(RoutingContext.class);
     JsonArray perms = new JsonArray().add("reservoir-upload.source.other-source");
-    when(mockContext.get("perms")).thenReturn(perms.encode()) ;
+    when(mockContext.get("perms")).thenReturn(perms.encode());
     Throwable t = Assertions.assertThrows(ForbiddenException.class, () -> {
       Tenant.ensurePermissionsSource(mockContext, "my-source");
     });
