@@ -1,7 +1,10 @@
 package com.indexdata.reservoir.server;
 
 import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.json.JsonArray;
 import io.vertx.ext.web.RoutingContext;
+import org.folio.okapi.common.XOkapiHeaders;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -9,94 +12,107 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-public class TenantTest {
+class TenantTest {
 
-    @Test
-    public void TestTenantWithTenant() {
-      HttpServerRequest mockRequest = mock(HttpServerRequest.class);
-      when(mockRequest.getHeader("X-Okapi-Tenant")).thenReturn("tenant1");
-      when(mockRequest.getHeader("X-Okapi-Permissions")).thenReturn("[\"" + Tenant.UPLOAD_PERMISSIONS_SOURCE_PREFIX + ".my-source\"]");
+  @Test
+  void withTenant() {
+    HttpServerRequest mockRequest = mock(HttpServerRequest.class);
+    when(mockRequest.getHeader(XOkapiHeaders.TENANT)).thenReturn("tenant1");
 
-      RoutingContext mockContext = mock(RoutingContext.class);
-      when(mockContext.request()).thenReturn(mockRequest);
+    JsonArray perms = new JsonArray()
+      .add("reservoir-upload.source.other-source")
+      .add("reservoir-upload.source.my-source");
 
-      Tenant.populate(mockContext, "tenant2");
+    when(mockRequest.getHeader(XOkapiHeaders.PERMISSIONS)).thenReturn(perms.encode());
 
-      verify(mockContext).put("tenant", "tenant1");
-      verify(mockContext).put("perms", "[\"" + Tenant.UPLOAD_PERMISSIONS_SOURCE_PREFIX + ".my-source\"]");
+    RoutingContext mockContext = mock(RoutingContext.class);
+    when(mockContext.request()).thenReturn(mockRequest);
 
-      when(mockContext.get("tenant")).thenReturn("tenant1");
-      when(mockContext.get("perms")).thenReturn("[\"" + Tenant.UPLOAD_PERMISSIONS_SOURCE_PREFIX + ".my-source\"]");
+    Tenant.populate(mockContext, "tenant2");
 
-      String tenant = Tenant.get(mockContext);
-      assertEquals("tenant1", tenant);
+    verify(mockContext).put("tenant", "tenant1");
+    verify(mockContext).put("perms", perms.encode());
 
-      Tenant.ensurePermissionsSource(mockContext, "my-source");
-    }
+    when(mockContext.get("tenant")).thenReturn("tenant1");
+    when(mockContext.get("perms")).thenReturn(perms.encode());
 
-    @Test
-    public void TestTenantDefaultTenant() {
-      HttpServerRequest mockRequest = mock(HttpServerRequest.class);
-      when(mockRequest.getHeader("X-Okapi-Tenant")).thenReturn(null);
+    String tenant = Tenant.get(mockContext);
+    assertEquals("tenant1", tenant);
 
-      RoutingContext mockContext = mock(RoutingContext.class);
-      when(mockContext.request()).thenReturn(mockRequest);
-
-      Tenant.populate(mockContext, "tenant2");
-
-      verify(mockContext).put("tenant", "tenant2");
-      verify(mockContext).put("perms", "[\"" + Tenant.UPLOAD_PERMISSIONS_ALLSOURCES + "\"]");
-
-      when(mockContext.get("tenant")).thenReturn("tenant2");
-      when(mockContext.get("perms")).thenReturn("[\"" + Tenant.UPLOAD_PERMISSIONS_ALLSOURCES + "\"]");
-
-      String tenant = Tenant.get(mockContext);
-      assertEquals("tenant2", tenant);
-
-      Tenant.ensurePermissionsSource(mockContext, "my-source");
-    }
-
-    @Test
-    public void MissingTenant() {
-      RoutingContext mockContext = mock(RoutingContext.class);
-      when(mockContext.get("tenant")).thenReturn(null);
-      try {
-        Tenant.get(mockContext);
-      } catch (IllegalStateException e) {
-        assertEquals("X-Okapi-Tenant header is missing", e.getMessage());
-      }
-    }
-
-    @Test
-    public void MissingPermissionsNull() {
-      RoutingContext mockContext = mock(RoutingContext.class);
-      when(mockContext.get("perms")).thenReturn(null);
-      try {
-        Tenant.ensurePermissionsSource(mockContext, "my-source");
-      } catch (ForbiddenException e) {
-        assertEquals("Insufficient permissions to upload records for source 'my-source'", e.getMessage());
-      }
-    }
-
-    @Test
-    public void MissingPermissionsEmpty() {
-      RoutingContext mockContext = mock(RoutingContext.class);
-      when(mockContext.get("perms")).thenReturn("");
-      try {
-        Tenant.ensurePermissionsSource(mockContext, "my-source");
-      } catch (ForbiddenException e) {
-        assertEquals("Insufficient permissions to upload records for source 'my-source'", e.getMessage());
-      }
-    }
-
-    @Test
-    public void MissingPermissionsInvalid() {
-      RoutingContext mockContext = mock(RoutingContext.class);
-      when(mockContext.get("perms")).thenReturn("{");
-      try {
-        Tenant.ensurePermissionsSource(mockContext, "my-source");
-      } catch (ForbiddenException e) {
-        assertEquals("Cannot verify permissions to upload records for source 'my-source'", e.getMessage());
-      }
-    }
+    Tenant.ensurePermissionsSource(mockContext, "my-source");
   }
+
+  @Test
+  void defaultTenant() {
+    HttpServerRequest mockRequest = mock(HttpServerRequest.class);
+    when(mockRequest.getHeader(XOkapiHeaders.TENANT)).thenReturn(null);
+
+    RoutingContext mockContext = mock(RoutingContext.class);
+    when(mockContext.request()).thenReturn(mockRequest);
+
+    Tenant.populate(mockContext, "tenant2");
+
+    JsonArray perms = new JsonArray().add("reservoir-upload.all-sources");
+    verify(mockContext).put("tenant", "tenant2");
+    verify(mockContext).put("perms", perms.encode());
+
+    when(mockContext.get("tenant")).thenReturn("tenant2");
+    when(mockContext.get("perms")).thenReturn(perms.encode());
+
+    String tenant = Tenant.get(mockContext);
+    assertEquals("tenant2", tenant);
+
+    Tenant.ensurePermissionsSource(mockContext, "my-source");
+  }
+
+  @Test
+  void missingTenant() {
+    RoutingContext mockContext = mock(RoutingContext.class);
+    when(mockContext.get("tenant")).thenReturn(null);
+    Throwable t = Assertions.assertThrows(IllegalStateException.class, () -> {
+      Tenant.get(mockContext);
+    });
+    assertEquals("X-Okapi-Tenant header is missing", t.getMessage());
+  }
+
+  @Test
+  void missingPermissionsIncorrectSource() {
+    RoutingContext mockContext = mock(RoutingContext.class);
+    JsonArray perms = new JsonArray().add("reservoir-upload.source.other-source");
+    when(mockContext.get("perms")).thenReturn(perms.encode()) ;
+    Throwable t = Assertions.assertThrows(ForbiddenException.class, () -> {
+      Tenant.ensurePermissionsSource(mockContext, "my-source");
+    });
+    assertEquals("Insufficient permissions to upload records for source 'my-source'", t.getMessage());
+  }
+
+  @Test
+  void missingPermissionsNull() {
+    RoutingContext mockContext = mock(RoutingContext.class);
+    when(mockContext.get("perms")).thenReturn(null);
+    Throwable t = Assertions.assertThrows(ForbiddenException.class, () -> {
+      Tenant.ensurePermissionsSource(mockContext, "my-source");
+    });
+    assertEquals("Insufficient permissions to upload records for source 'my-source'", t.getMessage());
+  }
+
+  @Test
+  void missingPermissionsEmpty() {
+    RoutingContext mockContext = mock(RoutingContext.class);
+    when(mockContext.get("perms")).thenReturn("");
+    Throwable t = Assertions.assertThrows(ForbiddenException.class, () -> {
+      Tenant.ensurePermissionsSource(mockContext, "my-source");
+    });
+    assertEquals("Insufficient permissions to upload records for source 'my-source'", t.getMessage());
+  }
+
+  @Test
+  void missingPermissionsInvalid() {
+    RoutingContext mockContext = mock(RoutingContext.class);
+    when(mockContext.get("perms")).thenReturn("{");
+    Throwable t = Assertions.assertThrows(ForbiddenException.class, () -> {
+      Tenant.ensurePermissionsSource(mockContext, "my-source");
+    });
+    assertEquals("Cannot verify permissions to upload records for source 'my-source'", t.getMessage());
+  }
+}

@@ -12,8 +12,8 @@ public final class Tenant {
   private static final Pattern TENANT_PATTERN = Pattern.compile(TENANT_PATTERN_STRING);
   private static final String CTX_KEY_TENANT = "tenant";
   private static final String CTX_KEY_PERMS = "perms";
-  static final String UPLOAD_PERMISSIONS_ALLSOURCES = "reservoir-upload.all-sources";
-  static final String UPLOAD_PERMISSIONS_SOURCE_PREFIX = "reservoir-upload.source";
+  private static final String UPLOAD_PERMISSIONS_ALLSOURCES = "reservoir-upload.all-sources";
+  private static final String UPLOAD_PERMISSIONS_SOURCE_PREFIX = "reservoir-upload.source";
 
   private Tenant() {
     // utility class
