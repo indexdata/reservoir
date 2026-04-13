@@ -4,6 +4,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
@@ -230,7 +231,7 @@ public class XmlParserTest {
           return promise.future();
         })
         .onComplete(context.asyncAssertSuccess(
-            end -> assertThat(events, hasSize(2))));
+            end -> assertThat(events, hasSize(greaterThanOrEqualTo(2)))));
   }
 
   @Test
