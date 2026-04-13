@@ -40,7 +40,7 @@
     <vertx.version>5.0.10</vertx.version>
     <okapi.version>7.0.3</okapi.version>
     <vertxlib.version>4.1.2</vertxlib.version>
-    <micrometer.version>1.16.4</micrometer.version>
+    <micrometer.version>1.16.5</micrometer.version>
     <!-- vert.x is shipped with 4.2.5.Final, but we pin here to be able to experiment with SNAPSHOT versions -->
     <netty.version>4.2.12.Final</netty.version>
   </properties>
