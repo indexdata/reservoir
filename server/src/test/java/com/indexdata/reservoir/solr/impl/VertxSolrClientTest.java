@@ -20,7 +20,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.solr.SolrContainer;
 
@@ -30,13 +29,14 @@ public class VertxSolrClientTest {
 
   private final static String COLLECTION = "col1";
 
-  @Container
-  private static final SolrContainer solrContainer = new SolrContainer("solr:9.8.1-slim").withCollection(COLLECTION);
+  private static SolrContainer solrContainer;
 
   private static String solrUrl;
 
   @BeforeAll
   public static void beforeClass() {
+    solrContainer = new SolrContainer("solr:9.8.1-slim");
+    solrContainer.withCollection(COLLECTION).start();
     solrUrl = "http://" + solrContainer.getHost() + ":" + solrContainer.getSolrPort() + "/solr";
   }
 
@@ -44,6 +44,7 @@ public class VertxSolrClientTest {
   public static void afterClass() throws Exception {
     if (solrContainer != null) {
       solrContainer.stop();
+      solrContainer.close();
     }
   }
 
