@@ -33,7 +33,7 @@ import org.apache.logging.log4j.Logger;
 import org.folio.tlib.postgres.testing.TenantPgPoolContainer;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.xml.sax.SAXException;
 
 public class TestBase {
@@ -62,7 +62,7 @@ public class TestBase {
 
   protected static Validator oaiSchemaValidator;
 
-  public static PostgreSQLContainer<?> postgresSQLContainer;
+  public static PostgreSQLContainer postgresSQLContainer;
 
   @AfterClass
   public static void afterClass(TestContext context) {
