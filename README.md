@@ -29,7 +29,7 @@ This project has three subprojects:
 Requirements:
 
 * Java 25.0.2, preferably GraalVM
-* Maven 3.9.11 (earlier might work)
+* Maven 3.9.15 (earlier might work)
 * Docker (unless `-DskipTests` is used)
 
 It is easiest to use [sdkman](https://sdkman.io):
@@ -62,7 +62,7 @@ One binary is created when using the native profile:
 
     server/target/reservoir-native
 
-## Server
+## Running the server
 
 You will need Postgres 12 or later.
 
@@ -85,18 +85,23 @@ section of RMB.
 If using GraalVM java, start the server with:
 
 ```
-java -Dport=8081 --enable-native-access=ALL-UNNAMED \
-   --sun-misc-unsafe-memory-access=allow \
-   -jar server/target/reservoir-server-fat.jar
+java -Dport=8081 \
+  --enable-native-access=ALL-UNNAMED --sun-misc-unsafe-memory-access=allow \
+  -jar server/target/reservoir-server-fat.jar
 ```
 
 If using regular JVM, you must pass additional arguments to embed the Graal JS compiler:
 
 ```
-java -Dport=8081 --upgrade-module-path=server/target/compiler \
-   -XX:+UnlockExperimentalVMOptions -XX:+EnableJVMCI \
-   -jar server/target/reservoir-server-fat.jar
+java -Dport=8081 \
+  --enable-native-access=ALL-UNNAMED --sun-misc-unsafe-memory-access=allow \
+  --upgrade-module-path=server/target/compiler \
+  -XX:+UnlockExperimentalVMOptions -XX:+EnableJVMCI \
+  -jar server/target/reservoir-server-fat.jar
 ```
+
+If you see warnings about polyglot engine using a fallback runtime, ensure
+that you have compiled Reservoir with `-Pregular-jvm`.
 
 ## Running without Okapi
 
