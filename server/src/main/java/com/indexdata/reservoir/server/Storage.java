@@ -254,13 +254,29 @@ public class Storage {
                 + " (id, local_id, source_id, source_version, payload)"
                 + " VALUES ($1, $2, $3, $4, $5)"
                 + " ON CONFLICT (local_id, source_id, source_version) DO UPDATE "
-                + " SET payload = $5"
-                + " RETURNING id"
+                + " SET payload = EXCLUDED.payload"
+                + " WHERE " + GLOBAL_RECORDS_TABLE + ".payload IS DISTINCT FROM EXCLUDED.payload"
+                + " RETURNING id, (xmax = 0) AS inserted"
         )
         .execute(Tuple.of(startId, localIdentifier, sourceId.toString(), sourceVersion, payload))
-        .map(rowSet -> rowSet.iterator().next().getUUID("id"))
-        .compose(id -> updateMatchKeyValues(conn, id, matcherResults, ingestMetrics)
-            .map(x -> id.equals(startId)));
+        .compose(rowSet -> {
+          RowIterator<Row> iterator = rowSet.iterator();
+          Future<UUID> idFuture;
+          Boolean inserted = false;
+          if (iterator.hasNext()) {
+            Row row = iterator.next();
+            idFuture = Future.succeededFuture(row.getUUID("id"));
+            inserted = row.getBoolean("inserted");
+          } else {
+            idFuture = conn.preparedQuery("SELECT id FROM " + globalRecordTable
+                    + " WHERE local_id = $1 AND source_id = $2 AND source_version = $3")
+                .execute(Tuple.of(localIdentifier, sourceId.toString(), sourceVersion))
+                .map(existing -> existing.iterator().next().getUUID("id"));
+          }
+          Boolean finalInserted = inserted;
+          return idFuture.compose(id -> updateMatchKeyValues(conn, id, matcherResults,
+              ingestMetrics).map(x -> Boolean.TRUE.equals(finalInserted)));
+        });
   }
 
   Future<Void> deleteGlobalRecord(String localIdentifier, SourceId sourceId, int sourceVersion) {
@@ -293,12 +309,8 @@ public class Storage {
       SourceId sourceId, int sourceVersion, JsonObject globalRecord,
       List<IngestMatcher> ingestMatchers, IngestMetrics ingestMetrics) {
 
-    long startTime = System.nanoTime();
     return ingestGlobalRecord2(vertx, sourceId, sourceVersion, globalRecord,
-        ingestMatchers, ingestMetrics)
-        .onComplete(x -> ingestMetrics.recordStoring(
-            System.nanoTime() - startTime, TimeUnit.NANOSECONDS)
-        );
+        ingestMatchers, ingestMetrics);
   }
 
   private Future<Boolean> ingestGlobalRecord2(Vertx vertx,
@@ -311,7 +323,10 @@ public class Storage {
       return Future.failedFuture("localId required");
     }
     if (Boolean.TRUE.equals(globalRecord.getBoolean("delete"))) {
+      long startTime = System.nanoTime();
       return deleteGlobalRecord(localIdentifier, sourceId, sourceVersion)
+        .onComplete(x -> ingestMetrics.recordStoring(
+            System.nanoTime() - startTime, TimeUnit.NANOSECONDS))
         .map(x -> {
           ingestMetrics.incrementRecordsDeleted();
           return null;
@@ -335,8 +350,11 @@ public class Storage {
       for (int i = 0; i < cf.size(); i++) {
         results.add((MatcherResult) cf.resultAt(i));
       }
+      long startTime = System.nanoTime();
       return upsertGlobalRecord(localIdentifier, sourceId, sourceVersion,
           payload, results, ingestMetrics)
+        .onComplete(x -> ingestMetrics.recordStoring(
+            System.nanoTime() - startTime, TimeUnit.NANOSECONDS))
         .map(inserted -> {
           if (inserted) {
             ingestMetrics.incrementRecordsInserted();
@@ -432,26 +450,18 @@ public class Storage {
 
   Future<Set<UUID>> updateClusterValues(SqlConnection conn, UUID newClusterId,
       MatcherResult matcherResult) {
-    StringBuilder q = new StringBuilder("SELECT cluster_id, match_value FROM " + clusterValueTable
-        + " WHERE match_key_config_id = $1 AND (");
-    List<Object> tupleList = new ArrayList<>();
-    tupleList.add(matcherResult.matchKeyId);
+    List<String> keys = new ArrayList<>();
     Set<UUID> clustersFound = new HashSet<>();
-    int no = 2;
     for (String key : matcherResult.keys) {
       if (key.isEmpty()) {
         return Future.succeededFuture(clustersFound);
       }
-      if (no > 2) {
-        q.append(" OR ");
-      }
-      q.append("match_value = $" + no++);
-      tupleList.add(key);
+      keys.add(key);
     }
-    q.append(")");
     Set<String> foundKeys = new HashSet<>();
-    return conn.preparedQuery(q.toString())
-        .execute(Tuple.from(tupleList))
+    return conn.preparedQuery("SELECT cluster_id, match_value FROM " + clusterValueTable
+            + " WHERE match_key_config_id = $1 AND match_value = ANY($2::varchar[])")
+        .execute(Tuple.of(matcherResult.matchKeyId, (Object) keys.toArray(String[]::new)))
         .map(rowSet -> {
           rowSet.forEach(row -> {
             foundKeys.add(row.getString("match_value"));
@@ -528,7 +538,9 @@ public class Storage {
             conn.preparedQuery("INSERT INTO " + clusterRecordTable
                     + " (record_id, match_key_config_id, cluster_id) VALUES ($1, $2, $3)"
                     + " ON CONFLICT (record_id, match_key_config_id)"
-                    + " DO UPDATE SET record_id = $1, match_key_config_id = $2, cluster_id = $3")
+                    + " DO UPDATE SET cluster_id = EXCLUDED.cluster_id"
+                    + " WHERE " + CLUSTER_RECORDS_TABLE
+                    + ".cluster_id IS DISTINCT FROM EXCLUDED.cluster_id")
                 .execute(Tuple.of(globalId, matcherResult.matchKeyId, clusterId))
         )
         .mapEmpty();
@@ -570,40 +582,23 @@ public class Storage {
   }
 
   Future<Void> updateMetaEntries(SqlConnection conn, Set<UUID> clusters) {
-    Iterator<UUID> iterator = clusters.iterator();
-    StringBuilder setClause = new StringBuilder("UPDATE " + clusterMetaTable
-        + " SET datestamp = $1 WHERE ");
-    List<Object> tupleList = new ArrayList<>();
-    tupleList.add(LocalDateTime.now(ZoneOffset.UTC));
-    for (int no = 2; iterator.hasNext(); no++) {
-      tupleList.add(iterator.next());
-      if (no > 2) {
-        setClause.append(" OR ");
-      }
-      setClause.append("cluster_id = $");
-      setClause.append(no);
-    }
-    return conn.preparedQuery(setClause.toString())
-        .execute(Tuple.from(tupleList))
+    return conn.preparedQuery("UPDATE " + clusterMetaTable
+            + " SET datestamp = $1 WHERE cluster_id = ANY($2::uuid[])")
+        .execute(Tuple.of(LocalDateTime.now(ZoneOffset.UTC),
+            (Object) clusters.toArray(UUID[]::new)))
         .mapEmpty();
   }
 
   Future<Void> mergeClusters(SqlConnection conn, UUID clusterId, Iterator<UUID> iterator) {
-    StringBuilder setClause = new StringBuilder(" SET cluster_id = $1 WHERE ");
     List<UUID> tupleList = new ArrayList<>();
-    tupleList.add(clusterId); // $1
-    for (int no = 2; iterator.hasNext(); no++) {
+    while (iterator.hasNext()) {
       tupleList.add(iterator.next());
-      if (no > 2) {
-        setClause.append(" OR ");
-      }
-      setClause.append("cluster_id = $");
-      setClause.append(no);
     }
+    String setClause = " SET cluster_id = $1 WHERE cluster_id = ANY($2::uuid[])";
     return conn.preparedQuery("UPDATE " + clusterValueTable + setClause)
-        .execute(Tuple.from(tupleList))
+        .execute(Tuple.of(clusterId, (Object) tupleList.toArray(UUID[]::new)))
         .compose(x -> conn.preparedQuery("UPDATE " + clusterRecordTable + setClause)
-            .execute(Tuple.from(tupleList)))
+            .execute(Tuple.of(clusterId, (Object) tupleList.toArray(UUID[]::new))))
         .mapEmpty();
   }
 
