@@ -9,6 +9,7 @@ public class MatchKeyConfig {
   private final String method;
   private final JsonObject params;
   private final String update;
+  private final JsonObject cql;
 
   private static final String ID_LABEL = "id";
   private static final String ARGS_LABEL = "args";
@@ -16,17 +17,19 @@ public class MatchKeyConfig {
   private static final String METHOD_LABEL = "method";
   private static final String PARAMS_LABEL = "params";
   private static final String UPDATE_LABEL = "update";
+  private static final String CQL_LABEL = "cql";
 
   /**
    * Constructor.
    * @param id match key id
    * @param args kind of args to be passed to the matcher
+   * @param cql CQL query as json object
    * @param matcher matcher code module id
    * @param method matching method
    * @param params OAI-PMH parameters as json object
    * @param update "manual" or "ingest"
    */
-  public MatchKeyConfig(String id, String args, String matcher, String method,
+  public MatchKeyConfig(String id, String args, JsonObject cql, String matcher, String method,
       JsonObject params, String update) {
     this.id = id;
     this.args = args;
@@ -34,6 +37,7 @@ public class MatchKeyConfig {
     this.method = method;
     this.params = params;
     this.update = update;
+    this.cql = cql;
   }
 
   /**
@@ -47,6 +51,7 @@ public class MatchKeyConfig {
     this.method = json.getString(METHOD_LABEL);
     this.params = json.getJsonObject(PARAMS_LABEL);
     this.update = json.getString(UPDATE_LABEL);
+    this.cql = json.getJsonObject(CQL_LABEL);
   }
 
   public String getId() {
@@ -73,6 +78,10 @@ public class MatchKeyConfig {
     return update;
   }
 
+  public JsonObject getCql() {
+    return cql;
+  }
+
   /**
    * Convert to JsonObject.
    * @return json object
@@ -94,6 +103,9 @@ public class MatchKeyConfig {
     }
     if (update != null) {
       json.put(UPDATE_LABEL, update);
+    }
+    if (cql != null) {
+      json.put(CQL_LABEL, cql);
     }
     return json;
   }

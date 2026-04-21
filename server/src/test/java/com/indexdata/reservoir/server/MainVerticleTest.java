@@ -510,7 +510,8 @@ public class MainVerticleTest extends TestBase {
     JsonObject matchKey = new JsonObject()
         .put("id", UUID.randomUUID().toString())
         .put("matcher", module10a.getString("id"))
-        .put("update", "ingest");
+        .put("update", "ingest")
+        .put("cql", new JsonObject().put("isbn", "isbn-matcher"));
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
@@ -555,7 +556,8 @@ public class MainVerticleTest extends TestBase {
         .body("matchKeys[0].id", is(matchKey.getString("id")))
         .body("matchKeys[0].method", is(matchKey.getString("method")))
         .body("matchKeys[0].update", is(matchKey.getString("update")))
-        .body("matchKeys[0].matcher", is(matchKey.getString("matcher")));
+        .body("matchKeys[0].matcher", is(matchKey.getString("matcher")))
+        .body("matchKeys[0].cql.isbn", is("isbn-matcher"));
         // should really check that params are same
 
     RestAssured.given()
@@ -570,6 +572,7 @@ public class MainVerticleTest extends TestBase {
         .body("matchKeys[0].update", is(matchKey.getString("update")));
 
     matchKey.put("update", "manual");
+    matchKey.put("cql", new JsonObject().put("isbn", "isbn-matcher-updated"));
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)

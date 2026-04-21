@@ -164,11 +164,14 @@ public class Storage {
                 + " method VARCHAR, "
                 + " update VARCHAR, "
                 + " params JSONB, "
-                + " args VARCHAR)",
+                + " args VARCHAR, "
+                + " cql JSONB)",
             "ALTER TABLE " + matchKeyConfigTable + " ADD COLUMN IF NOT EXISTS"
                 + " matcher VARCHAR",
             "ALTER TABLE " + matchKeyConfigTable + " ADD COLUMN IF NOT EXISTS"
                 + " args VARCHAR",
+            "ALTER TABLE " + matchKeyConfigTable + " ADD COLUMN IF NOT EXISTS"
+                + " cql JSONB",
             CREATE_IF_NO_EXISTS + clusterMetaTable
                 + "(cluster_id uuid NOT NULL PRIMARY KEY,"
                 + " match_key_config_id VARCHAR NOT NULL,"
@@ -785,15 +788,16 @@ public class Storage {
    */
   public Future<Void> insertMatchKeyConfig(MatchKeyConfig matchKey) {
     return pool.preparedQuery(
-        "INSERT INTO " + matchKeyConfigTable + " (id, matcher, method, params, update, args)"
-            + " VALUES ($1, $2, $3, $4, $5, $6)")
+        "INSERT INTO " + matchKeyConfigTable + " (id, matcher, method, params, update, args, cql)"
+            + " VALUES ($1, $2, $3, $4, $5, $6, $7)")
         .execute(Tuple.of(
           matchKey.getId(),
           matchKey.getMatcher(),
           matchKey.getMethod(),
           matchKey.getParams(),
           matchKey.getUpdate(),
-          matchKey.getArgs()))
+          matchKey.getArgs(),
+          matchKey.getCql()))
         .mapEmpty();
   }
 
@@ -806,7 +810,7 @@ public class Storage {
 
     return pool.preparedQuery(
             "UPDATE " + matchKeyConfigTable
-                + " SET matcher = $2, method = $3, params = $4, update = $5, args = $6"
+                + " SET matcher = $2, method = $3, params = $4, update = $5, args = $6, cql = $7"
                 + " WHERE id = $1")
         .execute(Tuple.of(
           matchKey.getId(),
@@ -814,7 +818,8 @@ public class Storage {
           matchKey.getMethod(),
           matchKey.getParams(),
           matchKey.getUpdate(),
-          matchKey.getArgs()))
+          matchKey.getArgs(),
+          matchKey.getCql()))
         .map(res -> res.rowCount() > 0);
   }
 
@@ -822,6 +827,7 @@ public class Storage {
     return new MatchKeyConfig(
       row.getString("id"),
       row.getString("args"),
+      row.getJsonObject("cql"),
       row.getString("matcher"),
       row.getString("method"),
       row.getJsonObject("params"),
