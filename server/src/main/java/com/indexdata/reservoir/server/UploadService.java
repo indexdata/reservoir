@@ -62,11 +62,9 @@ public class UploadService {
         future = promise.future();
       } else {
         future = uploadContent(ctx, request, params, params.fileName, params.contentType)
-            .map(IngestStatsByFile::new);
+            .<IngestStatsByFile>map(IngestStatsByFile::new);
       }
-      return future.onSuccess(res ->
-        HttpResponse.responseJson(ctx, 200).end(res.toJson().encode()))
-        .mapEmpty();
+      return future.compose(res -> HttpResponse.responseJson(ctx, 200).end(res.toJson().encode()));
     } catch (Exception e) {
       return Future.failedFuture(e);
     }
