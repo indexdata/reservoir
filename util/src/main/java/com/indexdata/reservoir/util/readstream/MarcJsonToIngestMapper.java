@@ -7,7 +7,6 @@ import io.vertx.core.json.JsonObject;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.function.BiConsumer;
 
 /**
  * Converts stream of JSON-in-MARC to payload JSON objects.
@@ -16,15 +15,21 @@ import java.util.function.BiConsumer;
  */
 public class MarcJsonToIngestMapper implements Mapper<JsonObject, JsonObject> {
 
+  @FunctionalInterface
+  public interface TimingConsumer {
+    void accept(long amount, TimeUnit unit);
+  }
+
   private boolean ended;
 
   List<JsonObject> marc = new LinkedList<>();
 
-  protected final BiConsumer<Long, TimeUnit> timingConsumer;
+  protected final TimingConsumer timingConsumer;
 
   long startTime;
 
-  public MarcJsonToIngestMapper(BiConsumer<Long, TimeUnit> timingConsumer) {
+
+  public MarcJsonToIngestMapper(TimingConsumer timingConsumer) {
     this.timingConsumer = timingConsumer;
   }
 
