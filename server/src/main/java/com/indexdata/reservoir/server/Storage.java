@@ -1362,7 +1362,7 @@ public class Storage {
                     + invocation.getModuleName() + "' not found");
                 }
                 return ModuleCache.getInstance().lookup(ctx.vertx(), Tenant.get(ctx), entity)
-                          .map(mod -> new ModuleExecutable(mod, invocation));
+                          .<ModuleExecutable>map(mod -> new ModuleExecutable(mod, invocation));
               });
         });
   }
