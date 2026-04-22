@@ -60,6 +60,12 @@ public class Storage {
   private static final String CREATE_IF_NO_EXISTS = "CREATE TABLE IF NOT EXISTS ";
   private static final int MATCHVALUE_MAX_LENGTH = 600; // < 2704 / 4
 
+  static class GlobalRecordChange {
+    UUID id;
+    boolean inserted;
+    boolean changed;
+  }
+
   final TenantPgPool pool;
   final String globalRecordTable;
   final String matchKeyConfigTable;
@@ -220,19 +226,35 @@ public class Storage {
       .compose(x -> resolveCodeModuleTable(vertx));
   }
 
-  private Future<Boolean> upsertGlobalRecord(String localIdentifier, SourceId sourceId,
-      int sourceVersion, JsonObject payload, List<MatcherResult> matcherResults,
-      IngestMetrics ingestMetrics) {
-    return upsertGlobalRecord(matcherResults.size(), localIdentifier, sourceId,
-        sourceVersion, payload, matcherResults, ingestMetrics);
+  private Future<Boolean> upsertGlobalRecord(Vertx vertx, String localIdentifier,
+      SourceId sourceId, int sourceVersion, JsonObject globalRecord,
+      List<IngestMatcher> ingestMatchers, IngestMetrics ingestMetrics) {
+    JsonObject payload = globalRecord.getJsonObject(ClusterBuilder.PAYLOAD_LABEL);
+    return pool.withConnection(conn -> upsertGlobalRecordPayload(conn, localIdentifier,
+        sourceId, sourceVersion, payload))
+        .compose(change -> {
+          if (!change.changed) {
+            return Future.succeededFuture(false);
+          }
+          List<Future<MatcherResult>> futures = new ArrayList<>();
+          for (IngestMatcher ingestMatcher : ingestMatchers) {
+            futures.add(runMatcher(ingestMatcher, ingestMetrics, globalRecord));
+          }
+          return Future.all(futures).compose(cf -> {
+            List<MatcherResult> results = new ArrayList<>(cf.size());
+            for (int i = 0; i < cf.size(); i++) {
+              results.add((MatcherResult) cf.resultAt(i));
+            }
+            return updateMatchKeyValuesWithRetry(results.size(), change.id, results, ingestMetrics)
+                .map(x -> change.inserted);
+          });
+        });
   }
 
-  private Future<Boolean> upsertGlobalRecord(int retryCount, String localIdentifier,
-      SourceId sourceId, int sourceVersion, JsonObject payload, List<MatcherResult> matcherResults,
-      IngestMetrics ingestMetrics) {
-    return pool.withTransaction(conn ->
-            upsertGlobalRecord(conn, localIdentifier, sourceId, sourceVersion,
-                payload, matcherResults, ingestMetrics))
+  private Future<Void> updateMatchKeyValuesWithRetry(int retryCount, UUID globalId,
+      List<MatcherResult> matcherResults, IngestMetrics ingestMetrics) {
+    return pool.withTransaction(conn -> updateMatchKeyValues(conn, globalId,
+        matcherResults, ingestMetrics))
         // addValuesToCluster may fail if for same new match key for parallel operations
         // we recover just once for that. 2nd will find the new value for the one that
         // succeeded.
@@ -240,14 +262,13 @@ public class Storage {
           if (retryCount == 0) {
             return Future.failedFuture(e);
           }
-          return upsertGlobalRecord(retryCount - 1, localIdentifier, sourceId, sourceVersion,
-              payload, matcherResults, ingestMetrics);
+          return updateMatchKeyValuesWithRetry(retryCount - 1, globalId, matcherResults,
+              ingestMetrics);
         });
   }
 
-  Future<Boolean> upsertGlobalRecord(SqlConnection conn, String localIdentifier,
-      SourceId sourceId, int sourceVersion, JsonObject payload, List<MatcherResult> matcherResults,
-      IngestMetrics ingestMetrics) {
+  Future<GlobalRecordChange> upsertGlobalRecordPayload(SqlConnection conn,
+      String localIdentifier, SourceId sourceId, int sourceVersion, JsonObject payload) {
     UUID startId = UUID.randomUUID();
     return conn.preparedQuery(
             "INSERT INTO " + globalRecordTable
@@ -256,26 +277,18 @@ public class Storage {
                 + " ON CONFLICT (local_id, source_id, source_version) DO UPDATE "
                 + " SET payload = EXCLUDED.payload"
                 + " WHERE " + GLOBAL_RECORDS_TABLE + ".payload IS DISTINCT FROM EXCLUDED.payload"
-                + " RETURNING id, (xmax = 0) AS inserted"
+                + " RETURNING id"
         )
         .execute(Tuple.of(startId, localIdentifier, sourceId.toString(), sourceVersion, payload))
-        .compose(rowSet -> {
+        .map(rowSet -> {
+          GlobalRecordChange change = new GlobalRecordChange();
           RowIterator<Row> iterator = rowSet.iterator();
-          Future<UUID> idFuture;
-          Boolean inserted = false;
           if (iterator.hasNext()) {
-            Row row = iterator.next();
-            idFuture = Future.succeededFuture(row.getUUID("id"));
-            inserted = row.getBoolean("inserted");
-          } else {
-            idFuture = conn.preparedQuery("SELECT id FROM " + globalRecordTable
-                    + " WHERE local_id = $1 AND source_id = $2 AND source_version = $3")
-                .execute(Tuple.of(localIdentifier, sourceId.toString(), sourceVersion))
-                .map(existing -> existing.iterator().next().getUUID("id"));
+            change.id = iterator.next().getUUID("id");
+            change.inserted = change.id.equals(startId);
+            change.changed = true;
           }
-          Boolean finalInserted = inserted;
-          return idFuture.compose(id -> updateMatchKeyValues(conn, id, matcherResults,
-              ingestMetrics).map(x -> Boolean.TRUE.equals(finalInserted)));
+          return change;
         });
   }
 
@@ -341,29 +354,19 @@ public class Storage {
       ingestMetrics.incrementRecordsIgnored();
       return Future.failedFuture("sourceId required");
     }
-    List<Future<MatcherResult>> futures = new ArrayList<>();
-    for (IngestMatcher ingestMatcher : ingestMatchers) {
-      futures.add(runMatcher(ingestMatcher, ingestMetrics, globalRecord));
-    }
-    return Future.all(futures).compose(cf -> {
-      List<MatcherResult> results = new ArrayList<>(cf.size());
-      for (int i = 0; i < cf.size(); i++) {
-        results.add((MatcherResult) cf.resultAt(i));
-      }
-      long startTime = System.nanoTime();
-      return upsertGlobalRecord(localIdentifier, sourceId, sourceVersion,
-          payload, results, ingestMetrics)
-        .onComplete(x -> ingestMetrics.recordStoring(
-            System.nanoTime() - startTime, TimeUnit.NANOSECONDS))
-        .map(inserted -> {
-          if (inserted) {
-            ingestMetrics.incrementRecordsInserted();
-          } else {
-            ingestMetrics.incrementRecordsUpdated();
-          }
-          return inserted;
-        });
-    });
+    long startTime = System.nanoTime();
+    return upsertGlobalRecord(vertx, localIdentifier, sourceId, sourceVersion,
+        globalRecord, ingestMatchers, ingestMetrics)
+      .onComplete(x -> ingestMetrics.recordStoring(
+          System.nanoTime() - startTime, TimeUnit.NANOSECONDS))
+      .map(inserted -> {
+        if (inserted) {
+          ingestMetrics.incrementRecordsInserted();
+        } else {
+          ingestMetrics.incrementRecordsUpdated();
+        }
+        return inserted;
+      });
   }
 
   Future<MatcherResult> runMatcher(IngestMatcher ingestMatcher, IngestMetrics ingestMetrics,
@@ -450,18 +453,26 @@ public class Storage {
 
   Future<Set<UUID>> updateClusterValues(SqlConnection conn, UUID newClusterId,
       MatcherResult matcherResult) {
-    List<String> keys = new ArrayList<>();
     Set<UUID> clustersFound = new HashSet<>();
+    StringBuilder q = new StringBuilder("SELECT cluster_id, match_value FROM " + clusterValueTable
+        + " WHERE match_key_config_id = $1 AND (");
+    List<Object> tupleList = new ArrayList<>();
+    tupleList.add(matcherResult.matchKeyId);
+    int no = 2;
     for (String key : matcherResult.keys) {
       if (key.isEmpty()) {
         return Future.succeededFuture(clustersFound);
       }
-      keys.add(key);
+      if (no > 2) {
+        q.append(" OR ");
+      }
+      q.append("match_value = $" + no);
+      tupleList.add(key);
+      no++;
     }
+    q.append(")");
     Set<String> foundKeys = new HashSet<>();
-    return conn.preparedQuery("SELECT cluster_id, match_value FROM " + clusterValueTable
-            + " WHERE match_key_config_id = $1 AND match_value = ANY($2::varchar[])")
-        .execute(Tuple.of(matcherResult.matchKeyId, (Object) keys.toArray(String[]::new)))
+    return conn.preparedQuery(q.toString()).execute(Tuple.from(tupleList))
         .map(rowSet -> {
           rowSet.forEach(row -> {
             foundKeys.add(row.getString("match_value"));
@@ -582,23 +593,41 @@ public class Storage {
   }
 
   Future<Void> updateMetaEntries(SqlConnection conn, Set<UUID> clusters) {
-    return conn.preparedQuery("UPDATE " + clusterMetaTable
-            + " SET datestamp = $1 WHERE cluster_id = ANY($2::uuid[])")
-        .execute(Tuple.of(LocalDateTime.now(ZoneOffset.UTC),
-            (Object) clusters.toArray(UUID[]::new)))
+    List<Object> tupleList = new ArrayList<>();
+    tupleList.add(LocalDateTime.now(ZoneOffset.UTC));
+    int no = 2;
+    StringBuilder q = new StringBuilder("UPDATE " + clusterMetaTable
+        + " SET datestamp = $1 WHERE ");
+    for (UUID id: clusters) {
+      if (no > 2) {
+        q.append(" OR ");
+      }
+      q.append("cluster_id = $" + no);
+      tupleList.add(id);
+      no++;
+    }
+    return conn.preparedQuery(q.toString()).execute(Tuple.from(tupleList))
         .mapEmpty();
   }
 
   Future<Void> mergeClusters(SqlConnection conn, UUID clusterId, Iterator<UUID> iterator) {
-    List<UUID> tupleList = new ArrayList<>();
+    List<Object> tupleList = new ArrayList<>();
+    tupleList.add(clusterId);
+    int no = 2;
+    StringBuilder where = new StringBuilder();
     while (iterator.hasNext()) {
+      if (no > 2) {
+        where.append(" OR ");
+      }
+      where.append("cluster_id = $" + no);
       tupleList.add(iterator.next());
+      no++;
     }
-    String setClause = " SET cluster_id = $1 WHERE cluster_id = ANY($2::uuid[])";
+    String setClause = " SET cluster_id = $1 WHERE " + where;
     return conn.preparedQuery("UPDATE " + clusterValueTable + setClause)
-        .execute(Tuple.of(clusterId, (Object) tupleList.toArray(UUID[]::new)))
+        .execute(Tuple.from(tupleList))
         .compose(x -> conn.preparedQuery("UPDATE " + clusterRecordTable + setClause)
-            .execute(Tuple.of(clusterId, (Object) tupleList.toArray(UUID[]::new))))
+            .execute(Tuple.from(tupleList)))
         .mapEmpty();
   }
 
