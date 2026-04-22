@@ -49,6 +49,30 @@ public class SruService {
     return true;
   }
 
+  static Future<PgCqlDefinition> createDefinition(Storage storage) {
+    PgCqlDefinition definition = PgCqlDefinition.create();
+    definition.addField(CqlFields.CQL_ALL_RECORDS.getCqlName(), new PgCqlFieldAlwaysMatches());
+    // id instead of clusterId in CqlFields.CLUSTER_ID
+    definition.addField("rec.id",
+      new PgCqlFieldUuid().withColumn(CqlFields.CLUSTER_ID.getSqllName()));
+    return Future.succeededFuture(definition);
+  }
+
+
+  static Future<PgCqlQuery> createQuery(Storage storage, HttpServerResponse response,
+      String query) {
+    return createDefinition(storage).map(definition -> {
+      PgCqlQuery pgCqlQuery;
+      try {
+        pgCqlQuery = definition.parse(query);
+      } catch (Exception e) {
+        returnDiagnostics(response, "10", "Query syntax error", e.getMessage());
+        return null;
+      }
+      return pgCqlQuery;
+    });
+  }
+
   static Future<Void> getSearchRetrieveResponse(RoutingContext ctx, String query) {
     HttpServerResponse response = ctx.response();
     if (!checkVersion(response, ctx)) {
@@ -64,37 +88,28 @@ public class SruService {
       returnDiagnostics(response, "6", "Unsupported parameter value", e.getMessage());
       return Future.succeededFuture();
     }
-
-    // should use createDefinitionBase
-    PgCqlDefinition definition = PgCqlDefinition.create();
-    definition.addField(CqlFields.CQL_ALL_RECORDS.getCqlName(), new PgCqlFieldAlwaysMatches());
-    // id instead of clusterId in CqlFields.CLUSTER_ID
-    definition.addField("rec.id",
-      new PgCqlFieldUuid().withColumn(CqlFields.CLUSTER_ID.getSqllName()));
-    PgCqlQuery pgCqlQuery;
-    try {
-      pgCqlQuery = definition.parse(query);
-    } catch (Exception e) {
-      returnDiagnostics(response, "10", "Query syntax error", e.getMessage());
-      return Future.succeededFuture();
-    }
     String recordSchema = Util.getQueryParameter(ctx, "recordSchema");
     if (recordSchema != null && !recordSchema.equals("marcxml")) {
       returnDiagnostics(response, "66", "Unknown schema for retrieval", recordSchema);
       return Future.succeededFuture();
     }
     Storage storage = new Storage(ctx);
-
-    Future<Void> future = Future.succeededFuture();
-    future = future.compose(x -> storage.getTotalRecords(pgCqlQuery)
-        .map(totalRecords -> {
-          response.write(
-              "  <numberOfRecords>" + totalRecords + "</numberOfRecords>\n");
-          return null;
-        }));
-    future = future.onComplete(x -> response.write("  <records>\n"));
-    future = future.compose(x -> getRecords(ctx, storage, pgCqlQuery, startRecord, maximumRecords));
-    return future.onComplete(x -> response.write("  </records>\n"));
+    return createQuery(storage, response, query)
+      .compose(pgCqlQuery -> {
+        if (pgCqlQuery == null) {
+          return Future.succeededFuture();
+        }
+        Future<Void> future = storage.getTotalRecords(pgCqlQuery)
+            .map(totalRecords -> {
+              response.write(
+                  "  <numberOfRecords>" + totalRecords + "</numberOfRecords>\n");
+              return null;
+            });
+        future = future.onComplete(x -> response.write("  <records>\n"));
+        future = future.compose(x ->
+            getRecords(ctx, storage, pgCqlQuery, startRecord, maximumRecords));
+        return future.onComplete(x -> response.write("  </records>\n"));
+      });
   }
 
   static Future<Void> getExplainResponse(RoutingContext ctx) {

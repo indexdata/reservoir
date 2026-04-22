@@ -12,6 +12,11 @@ public class CqlFieldTermMapper implements PgCqlFieldType {
   final PgCqlFieldType sub;
   final Mapper mapper;
 
+  /**
+   * Create a new CqlFieldTermMapper.
+   * @param sub the field type to delegate to after mapping the term
+   * @param mapper the function to map the term
+   */
   public CqlFieldTermMapper(PgCqlFieldType sub, Mapper mapper) {
     if (sub == null) {
       throw new IllegalArgumentException("sub cannot be null");
