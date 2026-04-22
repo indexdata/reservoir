@@ -26,6 +26,8 @@ jobs:
           - module: jit
             dockerfile: ./Dockerfile-jit
             image: ${{ github.repository }}-jit
+            title: Reservoir GraalVM JIT image
+            licenses: AGPL-3.0-only (Reservoir), GFTC (GraalVM, see /graalvm-license)
           # native build is extremely slow in CI (20m), only enable if the chart uses the  native image
           # - module: native
           #   dockerfile: ./Dockerfile-native
@@ -54,6 +56,16 @@ jobs:
             type=ref,event=tag
             type=ref,event=pr
             type=sha
+          labels: |
+            org.opencontainers.image.title=${{ matrix.title }}
+            org.opencontainers.image.description=${{ github.event.repository.description }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.licenses=${{ matrix.licenses }}
+            org.opencontainers.image.url=https://github.com/${{ github.repository }}
+            org.opencontainers.image.documentation=https://github.com/${{ github.repository }}/README.md
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.created=${{ steps.meta.outputs.created }}
+            org.opencontainers.image.vendor=Index Data ApS
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -66,6 +78,7 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          annotations: ${{ steps.meta.outputs.labels }} # GHCR ignores labels so we push them also as annotations
           build-args: |
             GIT_COMMIT=${{ github.sha }}
           cache-from: type=gha

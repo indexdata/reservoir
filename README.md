@@ -168,6 +168,27 @@ If it is not defined you can specify it by passing `--add-host=host.docker.inter
 
 **Note**: Those docker build and run commands do work as-is with [Colima](https://github.com/abiosoft/colima).
 
+**Note on image licensing**: The default JIT Docker image published from this repository uses _Oracle GraalVM_
+and therefore includes components licensed under Oracle's
+[GraalVM Free Terms and Conditions (GFTC)](https://www.oracle.com/downloads/licenses/graal-free-license.html)
+(included in the image under `/graalvm-license`).
+
+These components are **not covered by this project's AGPL license** and are redistributed
+under Oracle’s terms. Users of this image must comply with those terms.
+
+If you prefer a fully open-source distribution, you can use _GraalVM Community Edition_
+(which is licensed under GPLv2 with the Classpath Exception).
+
+To build a CE-based image, pass:
+
+```
+--build-arg GRAALVM_IMAGE=ghcr.io/graalvm/jdk-community:25
+```
+
+to the Docker build.
+
+GraalVM CE may have slightly different performance characteristics compared to Oracle GraalVM.
+
 ## Installing with Helm
 
 Helm chart is published to the GitHub packages repository to simplify installation on Kubernetes. The chart uses the GraalVM JIT image by default.
