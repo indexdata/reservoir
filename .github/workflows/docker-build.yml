@@ -61,6 +61,11 @@ jobs:
             org.opencontainers.image.description=${{ github.event.repository.description }}
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.licenses=${{ matrix.licenses }}
+            org.opencontainers.image.url=https://github.com/${{ github.repository }}
+            org.opencontainers.image.documentation=https://github.com/${{ github.repository }}/README.md
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.created=${{ steps.meta.outputs.created }}
+            org.opencontainers.image.vendor=Index Data ApS
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -73,6 +78,7 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          annotations: ${{ steps.meta.outputs.labels }} # GHCR ignores labels so we push them also as annotations
           build-args: |
             GIT_COMMIT=${{ github.sha }}
           cache-from: type=gha
