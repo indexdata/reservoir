@@ -16,9 +16,7 @@ import io.vertx.core.streams.ReadStream;
 import io.vertx.ext.web.RoutingContext;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.BiConsumer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.HttpResponse;
@@ -106,7 +104,7 @@ public class UploadService {
       contentType = "application/octet-stream";
     }
 
-    BiConsumer<Long, TimeUnit> timingJsonMapper = ingestMetrics::recordParsing;
+    MarcJsonToIngestMapper.TimingConsumer timingJsonMapper = ingestMetrics::recordParsing;
 
     switch (contentType) {
       case "application/octet-stream", "application/marc" ->
