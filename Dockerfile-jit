@@ -1,4 +1,6 @@
-FROM container-registry.oracle.com/graalvm/jdk:25 AS builder
+ARG GRAALVM_IMAGE=container-registry.oracle.com/graalvm/jdk:25
+
+FROM ${GRAALVM_IMAGE} AS builder
 
 RUN microdnf install -y maven && microdnf clean all
 
@@ -15,17 +17,20 @@ COPY pom.xml .
 COPY server/pom.xml server/pom.xml
 COPY util/pom.xml util/pom.xml
 
-RUN --mount=type=${MAVEN_MOUNT_TYPE},source=${MAVEN_MOUNT_SOURCE},target=/root/.m2/repository mvn -B dependency:go-offline
+RUN --mount=type=${MAVEN_MOUNT_TYPE},source=${MAVEN_MOUNT_SOURCE},target=/root/.m2/repository \
+    mvn -B dependency:go-offline
 
 COPY server/ server
 COPY util/ util
 COPY descriptors/ descriptors
+
 ARG GIT_COMMIT=master
 RUN echo "git.commit.id=${GIT_COMMIT}" > server/src/main/resources/git.properties
 
-RUN --mount=type=${MAVEN_MOUNT_TYPE},source=${MAVEN_MOUNT_SOURCE},target=/root/.m2/repository mvn -B -DskipTests -Pdocker-build package
+RUN --mount=type=${MAVEN_MOUNT_TYPE},source=${MAVEN_MOUNT_SOURCE},target=/root/.m2/repository \
+    mvn -B -DskipTests -Pdocker-build package
 
-FROM container-registry.oracle.com/graalvm/jdk:25 AS slim
+FROM ${GRAALVM_IMAGE} AS slim
 
 ENV JAVA_MODULES=\
 java.base,\
@@ -40,9 +45,17 @@ org.graalvm.truffle.compiler
 
 # Build a slim runtime image with just what's needed
 RUN $JAVA_HOME/bin/jlink \
-    --strip-debug --no-header-files --no-man-pages --compress=2 \
+    --strip-debug \
+    --no-header-files \
+    --no-man-pages \
+    --compress=2 \
     --add-modules $JAVA_MODULES \
     --output /opt/graalvm-slim
+
+# store license
+RUN mkdir -p /graalvm-license && \
+    cp -f "$JAVA_HOME/LICENSE.txt" /graalvm-license/LICENSE.txt || true && \
+    cp -f "$JAVA_HOME/NOTICE.txt" /graalvm-license/NOTICE.txt || true
 
 FROM oraclelinux:10-slim
 
@@ -55,6 +68,9 @@ COPY --from=slim /opt/graalvm-slim /opt/graalvm-slim
 # Copy app JAR
 COPY --from=builder /app/server/target/reservoir-server-fat.jar /reservoir.jar
 RUN chown reservoir:reservoir /reservoir.jar
+
+# Copy license
+COPY --from=slim /graalvm-license /graalvm-license
 
 # Switch to non-root user
 USER reservoir
