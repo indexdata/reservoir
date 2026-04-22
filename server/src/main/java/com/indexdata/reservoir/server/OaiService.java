@@ -178,7 +178,7 @@ public final class OaiService {
       }
       ResumptionToken resumptionToken = new ResumptionToken(conf.getString("id"), until);
       sqlQuery.append(" ORDER BY datestamp, cluster_id");
-      return storage.getTransformer(ctx)
+      return storage.getTransformerOai(ctx)
           .compose(transformer -> storage.getPool().getConnection()
               .compose(conn ->
                 listRecordsResponse(ctx, transformer, storage, conn, sqlQuery.toString(),
@@ -295,7 +295,7 @@ public final class OaiService {
     }
     UUID clusterId = decodeOaiIdentifier(identifier);
     Storage storage = new Storage(ctx);
-    return storage.getTransformer(ctx).compose(transformer -> {
+    return storage.getTransformerOai(ctx).compose(transformer -> {
       return storage.getClusterRecord(clusterId).compose(row -> {
         if (row == null) {
           throw OaiException.idDoesNotExist(identifier);

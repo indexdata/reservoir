@@ -146,7 +146,7 @@ public class IngestWriteStream implements WriteStream<JsonObject> {
 
   private static Future<Collection<String>> lookupPath(Vertx vertx,
       ModuleJsonPath jsonPath, JsonObject payload) {
-    return jsonPath.executeAsCollection(null, payload);
+    return Future.succeededFuture(jsonPath.executeAsCollection(null, payload));
   }
 
   private Future<JsonObject> lookupId(JsonObject rec) {

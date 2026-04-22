@@ -9,6 +9,7 @@ import com.indexdata.reservoir.module.ModuleExecutable;
 import com.indexdata.reservoir.module.ModuleInvocation;
 import com.indexdata.reservoir.server.entity.ClusterBuilder;
 import com.indexdata.reservoir.server.entity.CodeModuleEntity.CodeModuleBuilder;
+
 import io.vertx.core.Vertx;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
@@ -176,9 +177,9 @@ public class ModuleTest {
       .put("function", "transform");
 
     new CodeModuleBuilder(config).resolve(vertx)
-        .compose(entity -> ModuleCache.getInstance().lookup(vertx, TENANT, entity))
-        .compose(m -> m.execute(null, input).eventually(() -> m.terminate()))
-        .onComplete(context.asyncAssertSuccess(output -> context.assertEquals(recordOut, output))
+      .compose(entity -> ModuleCache.getInstance().lookup(vertx, TENANT, entity))
+      .map(m -> m.execute(null, input))
+      .onComplete(context.asyncAssertSuccess(output -> context.assertEquals(recordOut, output))
     );
   }
 
@@ -192,7 +193,7 @@ public class ModuleTest {
     new CodeModuleBuilder(config)
       .resolve(vertx)
       .compose(entity -> ModuleCache.getInstance().lookup(vertx, TENANT, entity))
-      .compose(m -> m.execute(null, null).eventually(() -> m.terminate()))
+      .map(m -> m.execute(null, null))
       .onComplete(context.asyncAssertFailure(e ->
          assertThat(e.getMessage(), is(
          "JS url modules require 'function' defined in config or by caller")))
@@ -267,8 +268,9 @@ public class ModuleTest {
 
     new CodeModuleBuilder(config).resolve(vertx).compose(entity ->
       ModuleCache.getInstance().lookup(vertx, TENANT, entity)
-        .compose(m -> new ModuleExecutable(m, new ModuleInvocation("marc-transformer::transform"))
-          .execute(input).eventually(() -> m.terminate())))
+        .compose(m ->
+          new ModuleExecutable(m, new ModuleInvocation("marc-transformer::transform"), vertx)
+          .execute(input)))
         .onComplete(context.asyncAssertSuccess(output -> context.assertEquals(recordOut, output)
     ));
   }
@@ -284,15 +286,15 @@ public class ModuleTest {
         .put("url", HOSTPORT + "/lib/returns-int.mjs")
         .put("function", "transform");
 
-    new CodeModuleBuilder(config).resolve(vertx).compose(entity ->
-      ModuleCache.getInstance().lookup(vertx, TENANT, entity)
-        .compose(m -> m.execute(null, input).eventually(() -> m.terminate())))
-        .onComplete(context.asyncAssertFailure(
-            e -> {
-              assertThat(e.getClass(), is(IllegalArgumentException.class));
-              assertThat(e.getMessage(), containsString("must return JSON string"));
-            }
-        ));
+    new CodeModuleBuilder(config).resolve(vertx)
+      .compose(entity -> ModuleCache.getInstance().lookup(vertx, TENANT, entity))
+      .map(m -> m.execute(null, input))
+      .onComplete(context.asyncAssertFailure(
+          e -> {
+            assertThat(e.getClass(), is(IllegalArgumentException.class));
+            assertThat(e.getMessage(), containsString("must return JSON string"));
+          }
+      ));
   }
 
   @Test
@@ -306,15 +308,15 @@ public class ModuleTest {
         .put("url", HOSTPORT + "/lib/throw.mjs")
         .put("function", "transform");
 
-    new CodeModuleBuilder(config).resolve(vertx).compose(entity ->
-      ModuleCache.getInstance().lookup(vertx, TENANT, entity)
-        .compose(m -> m.execute(null, input).eventually(() -> m.terminate())))
-        .onComplete(context.asyncAssertFailure(
-            e -> {
-              assertThat(e.getClass(), is(PolyglotException.class));
-              assertThat(e.getMessage(), is("Error"));
-            }
-        ));
+    new CodeModuleBuilder(config).resolve(vertx)
+      .compose(entity -> ModuleCache.getInstance().lookup(vertx, TENANT, entity))
+      .map(m -> m.execute(null, input))
+      .onComplete(context.asyncAssertFailure(
+        e -> {
+          assertThat(e.getClass(), is(PolyglotException.class));
+          assertThat(e.getMessage(), is("Error"));
+        }
+      ));
   }
 
   @Test
@@ -330,7 +332,7 @@ public class ModuleTest {
 
     new CodeModuleBuilder(config).resolve(vertx).compose(entity ->
     ModuleCache.getInstance().lookup(vertx, TENANT, entity)
-        .compose(m -> m.execute(null, input).eventually(() -> m.terminate())))
+        .map(m -> m.execute(null, input)))
         .onComplete(context.asyncAssertFailure(
             e -> {
               assertThat(e.getClass(), is(DecodeException.class));
@@ -416,7 +418,7 @@ public class ModuleTest {
 
     new CodeModuleBuilder(config1).resolve(vertx).compose(entity1 ->
     ModuleCache.getInstance().lookup(vertx, TENANT, entity1)
-        .compose(m -> m.execute(null, null).eventually(() -> m.terminate()))
+        .map(m -> m.execute(null, null))
         .onComplete(context.asyncAssertFailure(e ->
             assertThat(e.getMessage(), containsString("does not include function transform1")))));
   }
@@ -518,7 +520,7 @@ public class ModuleTest {
     ModuleCache.getInstance()
       .lookup(vertx, TENANT, entity)
       .map(m -> m.executeAsCollection(null, payload)))
-      .onComplete(context.asyncAssertSuccess(result -> context.assertEquals(expected, result.result())));
+      .onComplete(context.asyncAssertSuccess(result -> context.assertEquals(expected, result)));
   }
 
   @Test
@@ -549,7 +551,7 @@ public class ModuleTest {
 
     new CodeModuleBuilder(config).resolve(vertx)
       .compose(entity -> ModuleCache.getInstance().lookup(vertx, TENANT, entity)
-        .compose(m -> m.executeAsCollection(null, payload)))
+      .map(m -> m.executeAsCollection(null, payload)))
       .onComplete(context.asyncAssertSuccess(result -> {
         context.assertEquals(expected, result);
       }));
@@ -565,7 +567,7 @@ public class ModuleTest {
     new CodeModuleBuilder(config).resolve(vertx).compose(entity ->
       ModuleCache.getInstance()
         .lookup(vertx, TENANT, entity)
-        .compose(m -> m.executeAsCollection(null, new JsonObject())))
+        .map(m -> m.executeAsCollection(null, new JsonObject())))
         .onComplete(context.asyncAssertFailure(e ->
           assertThat(e.getMessage(), is("JS url modules require 'function' defined in config or by caller")))
         );
@@ -594,7 +596,7 @@ public class ModuleTest {
 
     new CodeModuleBuilder(config).resolve(vertx)
       .compose(entity -> ModuleCache.getInstance().lookup(vertx, TENANT, entity)
-        .compose(m -> m.executeAsCollection(null, payload)))
+      .map(m -> m.executeAsCollection(null, payload)))
       .onComplete(context.asyncAssertSuccess(result -> context.assertEquals(expected, result)));
   }
 
@@ -619,7 +621,7 @@ public class ModuleTest {
 
     new CodeModuleBuilder(config).resolve(vertx)
       .compose(entity -> ModuleCache.getInstance().lookup(vertx, TENANT, entity)
-        .compose(m -> m.executeAsCollection("matchkey", payload)))
+      .map(m -> m.executeAsCollection("matchkey", payload)))
       .onComplete(context.asyncAssertSuccess(result -> context.assertEquals(expected, result)));
   }
 
@@ -644,9 +646,9 @@ public class ModuleTest {
 
     new CodeModuleBuilder(config).resolve(vertx)
       .compose(entity -> ModuleCache.getInstance().lookup(vertx, TENANT, entity)
-        .compose(m -> new ModuleExecutable(m,
-          new ModuleInvocation("matchkey-isbn::matchkey"))
-            .executeAsCollection(payload)))
+      .map(m ->
+         new ModuleExecutable(m, new ModuleInvocation("matchkey-isbn::matchkey"), vertx)
+          .executeAsCollectionSync(payload)))
       .onComplete(context.asyncAssertSuccess(result -> context.assertEquals(expected, result)));
   }
 
@@ -676,8 +678,9 @@ public class ModuleTest {
 
     new CodeModuleBuilder(config).resolve(vertx)
       .compose(entity -> ModuleCache.getInstance().lookup(vertx, TENANT, entity)
-        .compose(m -> new ModuleExecutable(m,
-          new ModuleInvocation("matchkey-full::matchkey"))
+      .compose(m ->
+        new ModuleExecutable(m,
+          new ModuleInvocation("matchkey-full::matchkey"), vertx)
             .executeAsCollection(payload)))
       .onComplete(context.asyncAssertSuccess(result -> context.assertEquals(expected, result)));
   }

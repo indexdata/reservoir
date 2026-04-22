@@ -28,7 +28,7 @@ This project has three subprojects:
 
 Requirements:
 
-* Java 25.0.2, preferably GraalVM
+* Java 25.0.3, preferably GraalVM
 * Maven 3.9.15 (earlier might work)
 * Docker (unless `-DskipTests` is used)
 
@@ -36,7 +36,7 @@ It is easiest to use [sdkman](https://sdkman.io):
 
     curl -s "https://get.sdkman.io" | bash
     . $HOME/.sdkman/bin/sdkman-init.sh
-    sdk install java 25.0.2-graal
+    sdk install java 25.0.3-graal
     sdk install maven
 
 Otherwise, you'll need to install everything manually and set `JAVA_HOME`:

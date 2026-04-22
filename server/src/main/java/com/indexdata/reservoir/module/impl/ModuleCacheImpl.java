@@ -30,7 +30,6 @@ public class ModuleCacheImpl implements ModuleCache {
       this.module = module;
       this.entity = entity;
     }
-
   }
 
   private Module createInstance(String type) {
@@ -61,11 +60,10 @@ public class ModuleCacheImpl implements ModuleCache {
       entries.remove(cacheKey);
     }
     Module module = createInstance(entity.getType());
-    return module.initialize(vertx, entity).map(x -> {
-      CacheEntry e = new CacheEntry(module, entity);
-      entries.put(cacheKey, e);
-      return module;
-    });
+    module.initialize(entity);
+    CacheEntry e = new CacheEntry(module, entity);
+    entries.put(cacheKey, e);
+    return Future.succeededFuture(module);
   }
 
   @Override

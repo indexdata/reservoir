@@ -400,7 +400,7 @@ public class Storage {
             }
             return ModuleCache.getInstance().lookup(vertx, tenant, entity)
               .compose(module -> {
-                ingestMatcher.moduleExecutable = new ModuleExecutable(module, invocation);
+                ingestMatcher.moduleExecutable = new ModuleExecutable(module, invocation, vertx);
                 return Future.succeededFuture(ingestMatcher);
               });
           });
@@ -1350,7 +1350,20 @@ public class Storage {
             .onFailure(x -> sqlConnection.close()));
   }
 
-  Future<ModuleExecutable> getTransformer(RoutingContext ctx) {
+  Future<ModuleExecutable> getTransformer(RoutingContext ctx, String transformerProp) {
+    ModuleInvocation invocation = new ModuleInvocation(transformerProp);
+    return selectCodeModuleEntity(invocation.getModuleName())
+        .compose(entity -> {
+          if (entity == null) {
+            return Future.failedFuture("Transformer module '"
+              + invocation.getModuleName() + "' not found");
+          }
+          return ModuleCache.getInstance().lookup(ctx.vertx(), Tenant.get(ctx), entity)
+              .<ModuleExecutable>map(mod -> new ModuleExecutable(mod, invocation, ctx.vertx()));
+        });
+  }
+
+  Future<ModuleExecutable> getTransformerOai(RoutingContext ctx) {
     return selectOaiConfig()
         .compose(oaiCfg -> {
           if (oaiCfg == null) {
@@ -1360,41 +1373,45 @@ public class Storage {
           if (transformerProp == null) {
             return Future.succeededFuture(null);
           }
-          ModuleInvocation invocation = new ModuleInvocation(transformerProp);
-          return selectCodeModuleEntity(invocation.getModuleName())
-              .compose(entity -> {
-                if (entity == null) {
-                  return Future.failedFuture("Transformer module '"
-                    + invocation.getModuleName() + "' not found");
-                }
-                return ModuleCache.getInstance().lookup(ctx.vertx(), Tenant.get(ctx), entity)
-                          .<ModuleExecutable>map(mod -> new ModuleExecutable(mod, invocation));
-              });
+          return getTransformer(ctx, transformerProp);
         });
   }
 
-  Future<Integer> getTotalRecords(PgCqlQuery pgCqlQuery) {
+  String getSqlFromCluster(PgCqlQuery pgCqlQuery) {
     String sqlWhere = pgCqlQuery.getWhereClause();
     final String wClause = sqlWhere == null ? "" : " WHERE " + sqlWhere;
-    String sqlQuery = "SELECT COUNT(*) FROM " + getClusterMetaTable() + wClause;
-    return getPool()
-        .withConnection(conn -> conn.query(sqlQuery)
-            .execute()
-            .map(res -> res.iterator().next().getInteger(0)));
+    String joinClusterValue = "";
+    if (sqlWhere != null && sqlWhere.contains(CqlFields.MATCH_VALUE.getQualifiedSqlName())) {
+      joinClusterValue = " LEFT JOIN " + clusterValueTable + " ON "
+          + clusterValueTable + ".cluster_id = " + clusterMetaTable + ".cluster_id";
+    }
+    return getClusterMetaTable() + joinClusterValue + wClause;
+  }
+
+  Future<Integer> getTotalRecords(RoutingContext ctx, PgCqlQuery pgCqlQuery) {
+    return ctx.vertx().executeBlocking(() -> getSqlFromCluster(pgCqlQuery))
+      .compose(where -> {
+        String sqlQuery = "SELECT COUNT(*) FROM " + where;
+        return getPool()
+            .withConnection(conn -> conn.query(sqlQuery)
+                .execute()
+                .map(res -> res.iterator().next().getInteger(0)));
+      });
   }
 
   Future<Void> getMarcxmlRecords(RoutingContext ctx, PgCqlQuery pgCqlQuery,
       int offset, int limit, Function<String, Future<Void>> handler) {
-    String sqlWhere = pgCqlQuery.getWhereClause();
-    final String wClause = sqlWhere == null ? "" : " WHERE " + sqlWhere;
-    String sqlQuery = "SELECT * FROM " + getClusterMetaTable() + wClause
-        + " LIMIT " + limit + " OFFSET " + offset;
-    return getMarcxmlRecords(ctx, sqlQuery, handler);
+    return ctx.vertx().executeBlocking(() -> getSqlFromCluster(pgCqlQuery))
+      .compose(where -> {
+        String sqlQuery = "SELECT * FROM " + where
+            + " LIMIT " + limit + " OFFSET " + offset;
+        return getMarcxmlRecords(ctx, sqlQuery, handler);
+      });
   }
 
   private Future<Void> getMarcxmlRecords(RoutingContext ctx, String sqlQuery,
       Function<String, Future<Void>> handler) {
-    return getTransformer(ctx).compose(transformer -> {
+    return getTransformerOai(ctx).compose(transformer -> {
       log.info("SQL Query: {}", sqlQuery);
       return getPool()
           .withConnection(conn -> conn.query(sqlQuery)
