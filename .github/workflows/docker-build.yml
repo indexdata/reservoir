@@ -26,6 +26,8 @@ jobs:
           - module: jit
             dockerfile: ./Dockerfile-jit
             image: ${{ github.repository }}-jit
+            title: Reservoir GraalVM JIT image
+            licenses: AGPL-3.0-only (Reservoir), GFTC (GraalVM, see /graalvm-license)
           # native build is extremely slow in CI (20m), only enable if the chart uses the  native image
           # - module: native
           #   dockerfile: ./Dockerfile-native
@@ -54,6 +56,11 @@ jobs:
             type=ref,event=tag
             type=ref,event=pr
             type=sha
+          labels: |
+            org.opencontainers.image.title=${{ matrix.title }}
+            org.opencontainers.image.description=${{ github.event.repository.description }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.licenses=${{ matrix.licenses }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
