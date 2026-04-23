@@ -17,7 +17,7 @@
     },
     "cql": {
       "type": "object",
-      "description": "CQL query mapping"
+      "description": "CQL query mapping from index name to module invocation string: moduleId<::function> (the ::function suffix is optional)"
     },
     "update": {
       "type": "string",

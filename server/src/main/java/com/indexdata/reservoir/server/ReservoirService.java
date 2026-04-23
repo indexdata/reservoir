@@ -99,7 +99,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
         }
         return new CodeModuleEntity.CodeModuleBuilder(res.asJson())
           .resolve(ctx.vertx())
-          .compose(cm -> ModuleCache.getInstance().lookup(ctx.vertx(), tenant, cm)
+          .compose(cm -> ModuleCache.getInstance().lookup(tenant, cm)
             .compose(module -> storage.updateCodeModuleEntity(cm))
             .compose(x -> ctx.response().setStatusCode(204).end())
           );
@@ -371,7 +371,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     JsonObject request = validatedRequest.getBody().getJsonObject();
     return new CodeModuleEntity.CodeModuleBuilder(request)
       .resolve(ctx.vertx())
-      .compose(cm -> ModuleCache.getInstance().lookup(ctx.vertx(), Tenant.get(ctx), cm)
+      .compose(cm -> ModuleCache.getInstance().lookup(Tenant.get(ctx), cm)
         .compose(module -> storage.insertCodeModuleEntity(cm))
         .compose(res ->
           HttpResponse.responseJson(ctx, 201)
@@ -401,7 +401,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     JsonObject request = validatedRequest.getBody().getJsonObject();
     return new CodeModuleEntity.CodeModuleBuilder(request)
       .resolve(ctx.vertx())
-      .compose(cm -> ModuleCache.getInstance().lookup(ctx.vertx(), Tenant.get(ctx), cm)
+      .compose(cm -> ModuleCache.getInstance().lookup(Tenant.get(ctx), cm)
         .compose(module -> storage.updateCodeModuleEntity(cm))
         .compose(res -> {
           if (Boolean.FALSE.equals(res)) {

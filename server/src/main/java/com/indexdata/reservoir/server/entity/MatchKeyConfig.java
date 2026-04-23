@@ -38,6 +38,7 @@ public class MatchKeyConfig {
     this.params = params;
     this.update = update;
     this.cql = cql;
+    validate();
   }
 
   /**
@@ -52,6 +53,16 @@ public class MatchKeyConfig {
     this.params = json.getJsonObject(PARAMS_LABEL);
     this.update = json.getString(UPDATE_LABEL);
     this.cql = json.getJsonObject(CQL_LABEL);
+    validate();
+  }
+
+  private void validate() {
+    if (id == null) {
+      throw new IllegalArgumentException("MatchKeyConfig id is required");
+    }
+    if (id.contains("'") || id.contains("\"")) {
+      throw new IllegalArgumentException("MatchKeyConfig id cannot contain quotes");
+    }
   }
 
   public String getId() {

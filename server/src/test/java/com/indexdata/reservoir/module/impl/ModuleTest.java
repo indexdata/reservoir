@@ -177,10 +177,9 @@ public class ModuleTest {
       .put("function", "transform");
 
     new CodeModuleBuilder(config).resolve(vertx)
-      .compose(entity -> ModuleCache.getInstance().lookup(vertx, TENANT, entity))
-      .map(m -> m.execute(null, input))
-      .onComplete(context.asyncAssertSuccess(output -> context.assertEquals(recordOut, output))
-    );
+      .compose(entity -> ModuleCache.getInstance().lookup(TENANT, entity))
+      .map(m ->  m.execute(null, input))
+      .onComplete(context.asyncAssertSuccess(output -> context.assertEquals(recordOut, output)));
   }
 
   @Test
@@ -192,7 +191,7 @@ public class ModuleTest {
 
     new CodeModuleBuilder(config)
       .resolve(vertx)
-      .compose(entity -> ModuleCache.getInstance().lookup(vertx, TENANT, entity))
+      .compose(entity -> ModuleCache.getInstance().lookup(TENANT, entity))
       .map(m -> m.execute(null, null))
       .onComplete(context.asyncAssertFailure(e ->
          assertThat(e.getMessage(), is(
@@ -267,7 +266,7 @@ public class ModuleTest {
       .put("url", HOSTPORT + "/lib/marc-transformer.mjs");
 
     new CodeModuleBuilder(config).resolve(vertx).compose(entity ->
-      ModuleCache.getInstance().lookup(vertx, TENANT, entity)
+      ModuleCache.getInstance().lookup(TENANT, entity)
         .compose(m ->
           new ModuleExecutable(m, new ModuleInvocation("marc-transformer::transform"), vertx)
           .execute(input)))
@@ -287,7 +286,7 @@ public class ModuleTest {
         .put("function", "transform");
 
     new CodeModuleBuilder(config).resolve(vertx)
-      .compose(entity -> ModuleCache.getInstance().lookup(vertx, TENANT, entity))
+      .compose(entity -> ModuleCache.getInstance().lookup(TENANT, entity))
       .map(m -> m.execute(null, input))
       .onComplete(context.asyncAssertFailure(
           e -> {
@@ -309,7 +308,7 @@ public class ModuleTest {
         .put("function", "transform");
 
     new CodeModuleBuilder(config).resolve(vertx)
-      .compose(entity -> ModuleCache.getInstance().lookup(vertx, TENANT, entity))
+      .compose(entity -> ModuleCache.getInstance().lookup(TENANT, entity))
       .map(m -> m.execute(null, input))
       .onComplete(context.asyncAssertFailure(
         e -> {
@@ -331,7 +330,7 @@ public class ModuleTest {
         .put("function", "transform");
 
     new CodeModuleBuilder(config).resolve(vertx).compose(entity ->
-    ModuleCache.getInstance().lookup(vertx, TENANT, entity)
+    ModuleCache.getInstance().lookup(TENANT, entity)
         .map(m -> m.execute(null, input)))
         .onComplete(context.asyncAssertFailure(
             e -> {
@@ -350,8 +349,8 @@ public class ModuleTest {
 
     new CodeModuleBuilder(config).resolve(vertx)
       .compose(entity ->
-        ModuleCache.getInstance().lookup(vertx, TENANT, entity).compose(m1 ->
-          ModuleCache.getInstance().lookup(vertx, TENANT, entity).map(m2 -> m1 == m2)))
+        ModuleCache.getInstance().lookup(TENANT, entity).compose(m1 ->
+          ModuleCache.getInstance().lookup(TENANT, entity).map(m2 -> m1 == m2)))
       .onComplete(context.asyncAssertSuccess(equals -> context.assertTrue(equals)));
   }
 
@@ -363,10 +362,10 @@ public class ModuleTest {
         .put("function", "transform");
 
     new CodeModuleBuilder(config).resolve(vertx).compose(entity ->
-      ModuleCache.getInstance().lookup(vertx, TENANT, entity).compose(m1 -> {
+      ModuleCache.getInstance().lookup(TENANT, entity).compose(m1 -> {
         ModuleCache.getInstance().purge(TENANT, "marc-transformer");
         ModuleCache.getInstance().purge(TENANT, "marc-transformer");
-        return ModuleCache.getInstance().lookup(vertx, TENANT, entity).map(m2 -> m1 == m2);
+        return ModuleCache.getInstance().lookup(TENANT, entity).map(m2 -> m1 == m2);
       })
       .onComplete(context.asyncAssertSuccess(equals -> context.assertFalse(equals)))
     );
@@ -380,10 +379,10 @@ public class ModuleTest {
         .put("function", "transform");
 
     new CodeModuleBuilder(config).resolve(vertx).compose(entity ->
-    ModuleCache.getInstance().lookup(vertx, TENANT, entity).compose(m1 -> {
+    ModuleCache.getInstance().lookup(TENANT, entity).compose(m1 -> {
       config.put("id", "marc-transformer2");
       return new CodeModuleBuilder(config).resolve(vertx).compose(entity2 ->
-        ModuleCache.getInstance().lookup(vertx, TENANT, entity2).map(m2 -> m1 == m2));
+        ModuleCache.getInstance().lookup(TENANT, entity2).map(m2 -> m1 == m2));
       }))
       .onComplete(context.asyncAssertSuccess(equals -> context.assertFalse(equals))
     );
@@ -403,8 +402,8 @@ public class ModuleTest {
 
     new CodeModuleBuilder(config1).resolve(vertx).compose(entity1 ->
       new CodeModuleBuilder(config2).resolve(vertx).compose(entity2 ->
-        ModuleCache.getInstance().lookup(vertx, TENANT, entity1).compose(m1 ->
-          ModuleCache.getInstance().lookup(vertx, TENANT, entity2).map(m2 -> m1 == m2))))
+        ModuleCache.getInstance().lookup(TENANT, entity1).compose(m1 ->
+          ModuleCache.getInstance().lookup(TENANT, entity2).map(m2 -> m1 == m2))))
         .onComplete(context.asyncAssertSuccess(equals -> context.assertFalse(equals))
     );
   }
@@ -417,7 +416,7 @@ public class ModuleTest {
         .put("function", "transform1");
 
     new CodeModuleBuilder(config1).resolve(vertx).compose(entity1 ->
-    ModuleCache.getInstance().lookup(vertx, TENANT, entity1)
+    ModuleCache.getInstance().lookup(TENANT, entity1)
         .map(m -> m.execute(null, null))
         .onComplete(context.asyncAssertFailure(e ->
             assertThat(e.getMessage(), containsString("does not include function transform1")))));
@@ -431,7 +430,7 @@ public class ModuleTest {
         .put("function", "transform1");
 
     new CodeModuleBuilder(config1).resolve(vertx).compose(entity1 ->
-      ModuleCache.getInstance().lookup(vertx, TENANT, entity1))
+      ModuleCache.getInstance().lookup(TENANT, entity1))
         .onComplete(context.asyncAssertFailure(e ->
             assertThat(e.getMessage(), is("url must end with .mjs to designate ES module"))));
   }
@@ -443,7 +442,7 @@ public class ModuleTest {
         .put("function", "transform");
 
     new CodeModuleBuilder(config1).resolve(vertx).compose(entity1 ->
-      ModuleCache.getInstance().lookup(vertx, TENANT, entity1))
+      ModuleCache.getInstance().lookup(TENANT, entity1))
         .onComplete(context.asyncAssertFailure(e ->
             assertThat(e.getMessage(), is("Module config must include 'url' or 'script'"))));
   }
@@ -455,7 +454,7 @@ public class ModuleTest {
         .put("url", HOSTPORT + "/lib/marc-transformer.mjs");
 
     new CodeModuleBuilder(config1).resolve(vertx).compose(entity1 ->
-      ModuleCache.getInstance().lookup(vertx, TENANT, entity1)
+      ModuleCache.getInstance().lookup(TENANT, entity1)
         .onComplete(context.asyncAssertSuccess()));
   }
 
@@ -466,7 +465,7 @@ public class ModuleTest {
         .put("function", "transform");
 
     new CodeModuleBuilder(config1).resolve(vertx).compose(entity1 ->
-      ModuleCache.getInstance().lookup(vertx, TENANT, entity1))
+      ModuleCache.getInstance().lookup(TENANT, entity1))
         .onComplete(context.asyncAssertFailure(e ->
             assertThat(e.getMessage(), is("module config must include 'id'"))));
   }
@@ -518,7 +517,7 @@ public class ModuleTest {
 
     new CodeModuleBuilder(config).resolve(vertx).compose(entity ->
     ModuleCache.getInstance()
-      .lookup(vertx, TENANT, entity)
+      .lookup(TENANT, entity)
       .map(m -> m.executeAsCollection(null, payload)))
       .onComplete(context.asyncAssertSuccess(result -> context.assertEquals(expected, result)));
   }
@@ -550,7 +549,7 @@ public class ModuleTest {
       + "}");
 
     new CodeModuleBuilder(config).resolve(vertx)
-      .compose(entity -> ModuleCache.getInstance().lookup(vertx, TENANT, entity)
+      .compose(entity -> ModuleCache.getInstance().lookup(TENANT, entity)
       .map(m -> m.executeAsCollection(null, payload)))
       .onComplete(context.asyncAssertSuccess(result -> {
         context.assertEquals(expected, result);
@@ -566,7 +565,7 @@ public class ModuleTest {
 
     new CodeModuleBuilder(config).resolve(vertx).compose(entity ->
       ModuleCache.getInstance()
-        .lookup(vertx, TENANT, entity)
+        .lookup(TENANT, entity)
         .map(m -> m.executeAsCollection(null, new JsonObject())))
         .onComplete(context.asyncAssertFailure(e ->
           assertThat(e.getMessage(), is("JS url modules require 'function' defined in config or by caller")))
@@ -595,7 +594,7 @@ public class ModuleTest {
 
 
     new CodeModuleBuilder(config).resolve(vertx)
-      .compose(entity -> ModuleCache.getInstance().lookup(vertx, TENANT, entity)
+      .compose(entity -> ModuleCache.getInstance().lookup(TENANT, entity)
       .map(m -> m.executeAsCollection(null, payload)))
       .onComplete(context.asyncAssertSuccess(result -> context.assertEquals(expected, result)));
   }
@@ -620,7 +619,7 @@ public class ModuleTest {
       .put("url", HOSTPORT + "/lib/matchkey-isbn.mjs");
 
     new CodeModuleBuilder(config).resolve(vertx)
-      .compose(entity -> ModuleCache.getInstance().lookup(vertx, TENANT, entity)
+      .compose(entity -> ModuleCache.getInstance().lookup(TENANT, entity)
       .map(m -> m.executeAsCollection("matchkey", payload)))
       .onComplete(context.asyncAssertSuccess(result -> context.assertEquals(expected, result)));
   }
@@ -645,7 +644,7 @@ public class ModuleTest {
       .put("url", HOSTPORT + "/lib/matchkey-isbn.mjs");
 
     new CodeModuleBuilder(config).resolve(vertx)
-      .compose(entity -> ModuleCache.getInstance().lookup(vertx, TENANT, entity)
+      .compose(entity -> ModuleCache.getInstance().lookup(TENANT, entity)
       .map(m ->
          new ModuleExecutable(m, new ModuleInvocation("matchkey-isbn::matchkey"), vertx)
           .executeAsCollectionSync(payload)))
@@ -677,7 +676,7 @@ public class ModuleTest {
       .put("url", HOSTPORT + "/lib/matchkey-inventory-issn.mjs");
 
     new CodeModuleBuilder(config).resolve(vertx)
-      .compose(entity -> ModuleCache.getInstance().lookup(vertx, TENANT, entity)
+      .compose(entity -> ModuleCache.getInstance().lookup(TENANT, entity)
       .compose(m ->
         new ModuleExecutable(m,
           new ModuleInvocation("matchkey-full::matchkey"), vertx)
