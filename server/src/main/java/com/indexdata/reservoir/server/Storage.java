@@ -1391,7 +1391,9 @@ public class Storage {
   Future<Integer> getTotalRecords(RoutingContext ctx, PgCqlQuery pgCqlQuery) {
     return ctx.vertx().executeBlocking(() -> getSqlFromCluster(pgCqlQuery))
       .compose(where -> {
-        String sqlQuery = "SELECT COUNT(*) FROM " + where;
+        String sqlQuery = "SELECT COUNT(DISTINCT "
+            + Storage.CLUSTER_META_TABLE + ".cluster_id) FROM " + where;
+        log.info("SQL Query: {}", sqlQuery);
         return getPool()
             .withConnection(conn -> conn.query(sqlQuery)
                 .execute()
@@ -1403,7 +1405,9 @@ public class Storage {
       int offset, int limit, Function<String, Future<Void>> handler) {
     return ctx.vertx().executeBlocking(() -> getSqlFromCluster(pgCqlQuery))
       .compose(where -> {
-        String sqlQuery = "SELECT * FROM " + where
+        String sqlQuery = "SELECT DISTINCT ON ("
+            + Storage.CLUSTER_META_TABLE + ".cluster_id) "
+            + Storage.CLUSTER_META_TABLE + ".* FROM " + where
             + " LIMIT " + limit + " OFFSET " + offset;
         return getMarcxmlRecords(ctx, sqlQuery, handler);
       });
