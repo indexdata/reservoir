@@ -5,13 +5,14 @@ import org.z3950.zing.cql.CQLTermNode;
 
 public class CqlFieldTermMapper implements PgCqlFieldType {
 
+  @FunctionalInterface
   public interface Mapper {
     String apply(String term);
   }
 
-  final PgCqlFieldType sub;
-  final Mapper termMapper;
-  final Mapper sqlMapper;
+  private final PgCqlFieldType sub;
+  private final Mapper termMapper;
+  private final Mapper sqlMapper;
 
   /**
    * Create a new CqlFieldTermMapper.
