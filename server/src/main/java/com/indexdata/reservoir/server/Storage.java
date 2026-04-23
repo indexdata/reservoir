@@ -1377,23 +1377,25 @@ public class Storage {
         });
   }
 
-  String getSqlFromCluster(PgCqlQuery pgCqlQuery) {
-    String sqlWhere = pgCqlQuery.getWhereClause();
-    final String wClause = sqlWhere == null ? "" : " WHERE " + sqlWhere;
-    String joinClusterValue = "";
-    if (sqlWhere != null && sqlWhere.contains(CqlFields.MATCH_VALUE.getQualifiedSqlName())) {
-      joinClusterValue = " LEFT JOIN " + clusterValueTable + " ON "
-          + clusterValueTable + ".cluster_id = " + clusterMetaTable + ".cluster_id";
-    }
-    return getClusterMetaTable() + joinClusterValue + wClause;
+  Future<String> getSqlFromCluster(RoutingContext ctx, PgCqlQuery pgCqlQuery) {
+    // getWhereClause can be CPU intensive, so execute in worker thread
+    return ctx.vertx().executeBlocking(() -> pgCqlQuery.getWhereClause())
+      .map(sqlWhere -> {
+        final String wClause = sqlWhere == null ? "" : " WHERE " + sqlWhere;
+        String joinClusterValue = "";
+        if (sqlWhere != null && sqlWhere.contains(CqlFields.MATCH_VALUE.getQualifiedSqlName())) {
+          joinClusterValue = " LEFT JOIN " + clusterValueTable + " ON "
+              + clusterValueTable + ".cluster_id = " + clusterMetaTable + ".cluster_id";
+        }
+        return getClusterMetaTable() + joinClusterValue + wClause;
+      });
   }
 
   Future<Integer> getTotalRecords(RoutingContext ctx, PgCqlQuery pgCqlQuery) {
-    return ctx.vertx().executeBlocking(() -> getSqlFromCluster(pgCqlQuery))
+    return getSqlFromCluster(ctx, pgCqlQuery)
       .compose(where -> {
         String sqlQuery = "SELECT COUNT(DISTINCT "
             + Storage.CLUSTER_META_TABLE + ".cluster_id) FROM " + where;
-        log.info("SQL Query: {}", sqlQuery);
         return getPool()
             .withConnection(conn -> conn.query(sqlQuery)
                 .execute()
@@ -1403,7 +1405,7 @@ public class Storage {
 
   Future<Void> getMarcxmlRecords(RoutingContext ctx, PgCqlQuery pgCqlQuery,
       int offset, int limit, Function<String, Future<Void>> handler) {
-    return ctx.vertx().executeBlocking(() -> getSqlFromCluster(pgCqlQuery))
+    return getSqlFromCluster(ctx, pgCqlQuery)
       .compose(where -> {
         String sqlQuery = "SELECT DISTINCT ON ("
             + Storage.CLUSTER_META_TABLE + ".cluster_id) "
