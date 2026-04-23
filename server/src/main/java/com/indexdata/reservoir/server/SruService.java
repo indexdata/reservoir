@@ -112,9 +112,8 @@ public class SruService {
   }
 
   static Future<PgCqlQuery> createQuery(RoutingContext ctx, Storage storage, String query) {
-    return createDefinition(ctx, storage)
-      // query parse may call Modules, so execute it in a worker thread
-      .compose(definition -> ctx.vertx().executeBlocking(() -> definition.parse(query)));
+    // could be expensive as JS module may be called
+    return createDefinition(ctx, storage).map(definition -> definition.parse(query));
   }
 
   static Future<Void> getSearchRetrieveResponse(RoutingContext ctx, String query) {
