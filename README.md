@@ -28,7 +28,7 @@ This project has three subprojects:
 
 Requirements:
 
-* Java 25.0.2, preferably GraalVM
+* Java 25.0.3, preferably GraalVM
 * Maven 3.9.15 (earlier might work)
 * Docker (unless `-DskipTests` is used)
 
