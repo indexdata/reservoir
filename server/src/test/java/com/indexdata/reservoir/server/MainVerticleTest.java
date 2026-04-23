@@ -2923,7 +2923,7 @@ public class MainVerticleTest extends TestBase {
 
     s = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
-        .param("query", "isbn=3")
+        .param("query", "rec.id=" + identifiers.get(0).substring(4) + " and isbn=1")
         .param("startRecord", "1")
         .param("maximumRecord", "1")
         .param("recordSchema", "marcxml")

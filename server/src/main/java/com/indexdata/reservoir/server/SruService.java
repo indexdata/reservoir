@@ -88,7 +88,9 @@ public class SruService {
         definition.addField(CqlFields.CQL_ALL_RECORDS.getCqlName(), new PgCqlFieldAlwaysMatches());
         // id instead of clusterId in CqlFields.CLUSTER_ID
         definition.addField("rec.id",
-          new PgCqlFieldUuid().withColumn(CqlFields.CLUSTER_ID.getSqllName()));
+          new PgCqlFieldUuid().withColumn(
+            Storage.CLUSTER_META_TABLE + "." + CqlFields.CLUSTER_ID.getSqlName()
+          ));
         Future<Void> future = Future.succeededFuture();
         for (MatchKeyConfig matchConfig : matchConfigs) {
           JsonObject cql = matchConfig.getCql();
