@@ -538,7 +538,7 @@ The OAI-PMH server returns MarcXML and expects that the payload provides MARC-in
 ## SRU
 
 Clustered records can also be accessed via SRU at URI prefix `/reservoir/sru`.
-By default the cluster identifier is searcable by specifying CQL field `rec.id` and the returned
+By default the cluster identifier is searchable by specifying CQL field `rec.id` and the returned
 record content is same as for OAI's `verb=GetRecord' , that is `marcxml`, but wrapped in SRU 2.0 XML
 envelope instead. For example:
 
@@ -548,7 +548,7 @@ curl -HX-Okapi-Tenant:$OKAPI_TENANT \
   "$OKAPI_URL/reservoir/sru?query=rec.id%3D<cluster UUID>"
 ```
 
-(`%3D` is the encoded `=' part of the query paraameter value)
+(`%3D` is the encoded `=' part of the query parameter value)
 
 It is not necessary to specify the match key configuration (pool) for this single cluster lookup as the
 cluster ID is unique for all match key configurations.
@@ -563,7 +563,7 @@ cat isxn-pool.json
 {
   "id": "isxn",
   "matcher": "isxn-matcher::matchkey",
-  "cql: {
+  "cql": {
     "isbn": "isxn-matcher::normIsbn",
     "issn": "isxn-matcher::normIssn"
   },
