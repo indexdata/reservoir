@@ -44,7 +44,7 @@ for (let n = 0; n < testFiles.length; n += 1) {
 let isbn_term = {
   term: '978-3-16-148410-0',
   field: 'isbn',
-}
+};
 
 let kayAr = normIsbn(JSON.stringify(isbn_term));
 let expected = '9783161484100';
@@ -56,7 +56,7 @@ if (!assert(kayAr[0] === expected, `Should match:\n${expected}`)) {
 let issn_term = {
   term: '1432-069X',
   field: 'issn',
-}
+};
 
 kayAr = normIssn(JSON.stringify(issn_term));
 expected = '1432069X';
