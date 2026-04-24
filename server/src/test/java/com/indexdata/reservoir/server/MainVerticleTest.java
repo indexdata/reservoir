@@ -104,6 +104,8 @@ public class MainVerticleTest extends TestBase {
     List<String> identifiers = new LinkedList<>();
     List<String> errors = new LinkedList<>();
     int numberOfRecords = 0;
+    int numberOfRecordsReturned = 0;
+    int numberOfRecordSchemas = 0;
     String response;
 
     public SruVerify(String s) throws XMLStreamException {
@@ -144,7 +146,9 @@ public class MainVerticleTest extends TestBase {
                 throw new IllegalStateException("records not at level 2");
               }
             } else if ("record".equals(elem)) {
-              if (level != 3 && level <= 4) {
+              if (level == 3) {
+                numberOfRecordsReturned++;
+              } else if (level < 4) {
                 throw new IllegalStateException("record not at level 3");
               }
             } else if ("recordData".equals(elem)) {
@@ -152,14 +156,24 @@ public class MainVerticleTest extends TestBase {
                 throw new IllegalStateException("recordData not at level 4");
               }
               identifiers.add("1");
+            } else if ("recordSchema".equals(elem)) {
+              if (level == 4) {
+                numberOfRecordSchemas++;
+              } else if (level < 4) {
+                throw new IllegalStateException("recordSchema not at level 4");
+              }
             }
           }
           if (event == XMLStreamConstants.END_ELEMENT) {
             level--;
           }
         }
+        if (numberOfRecordSchemas != numberOfRecordsReturned) {
+          throw new IllegalStateException("numberOfSchemas " + numberOfRecordSchemas
+            + " does not match numberOfRecordsReturned " + numberOfRecordsReturned);
+        }
       }
-    }
+  }
 
   @Test
   public void testMainPage() {
