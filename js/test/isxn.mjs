@@ -46,7 +46,7 @@ let isbn_term = {
   field: 'isbn',
 }
 
-let kayAr = normIsbn(isbn_term);
+let kayAr = normIsbn(JSON.stringify(isbn_term));
 let expected = '9783161484100';
 if (!assert(kayAr[0] === expected, `Should match:\n${expected}`)) {
   console.log(`Received:\n${kayAr[0]}`);
@@ -58,7 +58,7 @@ let issn_term = {
   field: 'issn',
 }
 
-kayAr = normIssn(issn_term);
+kayAr = normIssn(JSON.stringify(issn_term));
 expected = '1432069X';
 if (!assert(kayAr[0] === expected, `Should match:\n${expected}`)) {
   console.log(`Received:\n${kayAr[0]}`);
