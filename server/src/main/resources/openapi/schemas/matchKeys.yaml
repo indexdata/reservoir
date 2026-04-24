@@ -1,0 +1,17 @@
+# match keys
+---
+description: match key configurations
+type: object
+properties:
+  matchKeys:
+    description: List of match key configurations
+    type: array
+    items:
+      $ref: matchKey.yaml
+  resultInfo:
+    description: Common result set information
+    type: object
+    $ref: resultInfo.json
+additionalProperties: false
+required:
+  - matchKeys

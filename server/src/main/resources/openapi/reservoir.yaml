@@ -90,14 +90,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: schemas/matchKey.json
+              $ref: schemas/matchKey.yaml
       responses:
         "201":
           description: Match key configuration created
           content:
             application/json:
               schema:
-                $ref: schemas/matchKey.json
+                $ref: schemas/matchKey.yaml
         "400":
           $ref: "#/components/responses/trait_400"
         "500":
@@ -116,7 +116,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: schemas/matchKeys.json
+                $ref: schemas/matchKeys.yaml
         "400":
           $ref: "#/components/responses/trait_400"
         "500":
@@ -141,7 +141,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: schemas/matchKey.json
+                $ref: schemas/matchKey.yaml
         "400":
           $ref: "#/components/responses/trait_400"
         "404":
@@ -167,7 +167,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: schemas/matchKey.json
+              $ref: schemas/matchKey.yaml
       responses:
         "204":
           description: Match Key configuration updated
