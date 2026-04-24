@@ -15,6 +15,8 @@ import org.folio.tlib.postgres.cqlfield.PgCqlFieldUuid;
 
 public class SruService {
 
+  private static final String RECORD_SCHEMA_MARCXML = "marcxml";
+
   private SruService() { }
 
   private static Future<Void> getRecords(RoutingContext ctx, Storage storage, PgCqlQuery pgCqlQuery,
@@ -26,6 +28,7 @@ public class SruService {
       }
       HttpServerResponse response = ctx.response();
       response.write("    <record>\n");
+      response.write("      <recordSchema>" + RECORD_SCHEMA_MARCXML + "</recordSchema>\n");
       response.write("      <recordData>\n");
       response.write(marcxml);
       response.write("      </recordData>\n");
@@ -132,7 +135,7 @@ public class SruService {
       return Future.succeededFuture();
     }
     String recordSchema = Util.getQueryParameter(ctx, "recordSchema");
-    if (recordSchema != null && !recordSchema.equals("marcxml")) {
+    if (recordSchema != null && !recordSchema.equals(RECORD_SCHEMA_MARCXML)) {
       returnDiagnostics(response, "66", "Unknown schema for retrieval", recordSchema);
       return Future.succeededFuture();
     }
