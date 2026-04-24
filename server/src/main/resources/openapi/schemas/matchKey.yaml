@@ -22,7 +22,7 @@ properties:
       CQL query mapping from index name to module invocation string: moduleId<::function> (the ::function suffix is optional).
       For example: { "isbn": "module1::get_isbn", "issn": "module2::get_issn" }.
       A JSON object is passed to the matcher for each field and term in CQL. This object has property "term" with the term value,
-      and property "index" with the index name. The function should return a list with exactly one string value,
+      and property "field" with the field name. The function should return a list with exactly one string value,
       which is the result of transforming the input
   update:
     type: string
