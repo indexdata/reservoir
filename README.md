@@ -539,7 +539,7 @@ The OAI-PMH server returns MarcXML and expects that the payload provides MARC-in
 
 Clustered records can also be accessed via SRU at URI prefix `/reservoir/sru`.
 By default the cluster identifier is searchable by specifying CQL field `rec.id` and the returned
-record content is same as for OAI's `verb=GetRecord` , that is `marcxml`, but wrapped in SRU 2.0 XML
+record content is same as for OAI's `verb=GetRecord`, that is `marcxml`, but wrapped in SRU 2.0 XML
 envelope instead. For example:
 
 
