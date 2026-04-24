@@ -572,7 +572,7 @@ cat isxn-pool.json
 ```
 
 The matcher `matchkey` function returns ISBN/ISSN identifier for a MARC record.
-For an example of an `isxn` matcher module implementation, refer to [js/matchkeys/isxn].
+For an example of an `isxn` matcher module implementation, refer to [js/matchkeys/isxn](js/matchkeys/isxn/).
 The `cql` section is used purely for searching and lists the two CQL fields as well
 as a search term normalizing function. With this in place and `isxn` match key configuration
 properly initialized, an SRU search such as the following is supported.
