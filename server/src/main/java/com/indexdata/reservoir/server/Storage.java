@@ -164,11 +164,14 @@ public class Storage {
                 + " method VARCHAR, "
                 + " update VARCHAR, "
                 + " params JSONB, "
-                + " args VARCHAR)",
+                + " args VARCHAR, "
+                + " cql JSONB)",
             "ALTER TABLE " + matchKeyConfigTable + " ADD COLUMN IF NOT EXISTS"
                 + " matcher VARCHAR",
             "ALTER TABLE " + matchKeyConfigTable + " ADD COLUMN IF NOT EXISTS"
                 + " args VARCHAR",
+            "ALTER TABLE " + matchKeyConfigTable + " ADD COLUMN IF NOT EXISTS"
+                + " cql JSONB",
             CREATE_IF_NO_EXISTS + clusterMetaTable
                 + "(cluster_id uuid NOT NULL PRIMARY KEY,"
                 + " match_key_config_id VARCHAR NOT NULL,"
@@ -395,9 +398,9 @@ public class Storage {
                   "Module '" + invocation.getModuleName()
                       + "' does not exist for '" + invocation + "'");
             }
-            return ModuleCache.getInstance().lookup(vertx, tenant, entity)
+            return ModuleCache.getInstance().lookup(tenant, entity)
               .compose(module -> {
-                ingestMatcher.moduleExecutable = new ModuleExecutable(module, invocation);
+                ingestMatcher.moduleExecutable = new ModuleExecutable(module, invocation, vertx);
                 return Future.succeededFuture(ingestMatcher);
               });
           });
@@ -785,15 +788,16 @@ public class Storage {
    */
   public Future<Void> insertMatchKeyConfig(MatchKeyConfig matchKey) {
     return pool.preparedQuery(
-        "INSERT INTO " + matchKeyConfigTable + " (id, matcher, method, params, update, args)"
-            + " VALUES ($1, $2, $3, $4, $5, $6)")
+        "INSERT INTO " + matchKeyConfigTable + " (id, matcher, method, params, update, args, cql)"
+            + " VALUES ($1, $2, $3, $4, $5, $6, $7)")
         .execute(Tuple.of(
           matchKey.getId(),
           matchKey.getMatcher(),
           matchKey.getMethod(),
           matchKey.getParams(),
           matchKey.getUpdate(),
-          matchKey.getArgs()))
+          matchKey.getArgs(),
+          matchKey.getCql()))
         .mapEmpty();
   }
 
@@ -806,7 +810,7 @@ public class Storage {
 
     return pool.preparedQuery(
             "UPDATE " + matchKeyConfigTable
-                + " SET matcher = $2, method = $3, params = $4, update = $5, args = $6"
+                + " SET matcher = $2, method = $3, params = $4, update = $5, args = $6, cql = $7"
                 + " WHERE id = $1")
         .execute(Tuple.of(
           matchKey.getId(),
@@ -814,7 +818,8 @@ public class Storage {
           matchKey.getMethod(),
           matchKey.getParams(),
           matchKey.getUpdate(),
-          matchKey.getArgs()))
+          matchKey.getArgs(),
+          matchKey.getCql()))
         .map(res -> res.rowCount() > 0);
   }
 
@@ -822,6 +827,7 @@ public class Storage {
     return new MatchKeyConfig(
       row.getString("id"),
       row.getString("args"),
+      row.getJsonObject("cql"),
       row.getString("matcher"),
       row.getString("method"),
       row.getJsonObject("params"),
@@ -1344,7 +1350,20 @@ public class Storage {
             .onFailure(x -> sqlConnection.close()));
   }
 
-  Future<ModuleExecutable> getTransformer(RoutingContext ctx) {
+  Future<ModuleExecutable> getTransformer(RoutingContext ctx, String transformerProp) {
+    ModuleInvocation invocation = new ModuleInvocation(transformerProp);
+    return selectCodeModuleEntity(invocation.getModuleName())
+        .compose(entity -> {
+          if (entity == null) {
+            return Future.failedFuture("Transformer module '"
+              + invocation.getModuleName() + "' not found");
+          }
+          return ModuleCache.getInstance().lookup(Tenant.get(ctx), entity)
+              .<ModuleExecutable>map(mod -> new ModuleExecutable(mod, invocation, ctx.vertx()));
+        });
+  }
+
+  Future<ModuleExecutable> getTransformerOai(RoutingContext ctx) {
     return selectOaiConfig()
         .compose(oaiCfg -> {
           if (oaiCfg == null) {
@@ -1354,41 +1373,51 @@ public class Storage {
           if (transformerProp == null) {
             return Future.succeededFuture(null);
           }
-          ModuleInvocation invocation = new ModuleInvocation(transformerProp);
-          return selectCodeModuleEntity(invocation.getModuleName())
-              .compose(entity -> {
-                if (entity == null) {
-                  return Future.failedFuture("Transformer module '"
-                    + invocation.getModuleName() + "' not found");
-                }
-                return ModuleCache.getInstance().lookup(ctx.vertx(), Tenant.get(ctx), entity)
-                          .<ModuleExecutable>map(mod -> new ModuleExecutable(mod, invocation));
-              });
+          return getTransformer(ctx, transformerProp);
         });
   }
 
-  Future<Integer> getTotalRecords(PgCqlQuery pgCqlQuery) {
-    String sqlWhere = pgCqlQuery.getWhereClause();
-    final String wClause = sqlWhere == null ? "" : " WHERE " + sqlWhere;
-    String sqlQuery = "SELECT COUNT(*) FROM " + getClusterMetaTable() + wClause;
-    return getPool()
-        .withConnection(conn -> conn.query(sqlQuery)
-            .execute()
-            .map(res -> res.iterator().next().getInteger(0)));
+  Future<String> getSqlFromCluster(RoutingContext ctx, PgCqlQuery pgCqlQuery) {
+    // getWhereClause can be CPU intensive, so execute in worker thread
+    return ctx.vertx().executeBlocking(() -> pgCqlQuery.getWhereClause())
+      .map(sqlWhere -> {
+        final String wClause = sqlWhere == null ? "" : " WHERE " + sqlWhere;
+        String joinClusterValue = "";
+        if (sqlWhere != null && sqlWhere.contains(CqlFields.MATCH_VALUE.getQualifiedSqlName())) {
+          joinClusterValue = " LEFT JOIN " + clusterValueTable + " ON "
+              + clusterValueTable + ".cluster_id = " + clusterMetaTable + ".cluster_id";
+        }
+        return getClusterMetaTable() + joinClusterValue + wClause;
+      });
+  }
+
+  Future<Integer> getTotalRecords(RoutingContext ctx, PgCqlQuery pgCqlQuery) {
+    return getSqlFromCluster(ctx, pgCqlQuery)
+      .compose(where -> {
+        String sqlQuery = "SELECT COUNT(DISTINCT "
+            + Storage.CLUSTER_META_TABLE + ".cluster_id) FROM " + where;
+        return getPool()
+            .withConnection(conn -> conn.query(sqlQuery)
+                .execute()
+                .map(res -> res.iterator().next().getInteger(0)));
+      });
   }
 
   Future<Void> getMarcxmlRecords(RoutingContext ctx, PgCqlQuery pgCqlQuery,
       int offset, int limit, Function<String, Future<Void>> handler) {
-    String sqlWhere = pgCqlQuery.getWhereClause();
-    final String wClause = sqlWhere == null ? "" : " WHERE " + sqlWhere;
-    String sqlQuery = "SELECT * FROM " + getClusterMetaTable() + wClause
-        + " LIMIT " + limit + " OFFSET " + offset;
-    return getMarcxmlRecords(ctx, sqlQuery, handler);
+    return getSqlFromCluster(ctx, pgCqlQuery)
+      .compose(where -> {
+        String sqlQuery = "SELECT DISTINCT ON ("
+            + Storage.CLUSTER_META_TABLE + ".cluster_id) "
+            + Storage.CLUSTER_META_TABLE + ".* FROM " + where
+            + " LIMIT " + limit + " OFFSET " + offset;
+        return getMarcxmlRecords(ctx, sqlQuery, handler);
+      });
   }
 
   private Future<Void> getMarcxmlRecords(RoutingContext ctx, String sqlQuery,
       Function<String, Future<Void>> handler) {
-    return getTransformer(ctx).compose(transformer -> {
+    return getTransformerOai(ctx).compose(transformer -> {
       log.info("SQL Query: {}", sqlQuery);
       return getPool()
           .withConnection(conn -> conn.query(sqlQuery)

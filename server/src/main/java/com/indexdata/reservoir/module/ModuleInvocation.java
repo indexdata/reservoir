@@ -36,7 +36,7 @@ public class ModuleInvocation {
 
   /**
    * Get function name for this invocation.
-   * @return the functio nName
+   * @return the function name
    */
   public String getFunctionName() {
     return functionName;

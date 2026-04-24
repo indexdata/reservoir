@@ -144,25 +144,23 @@ public class IngestWriteStream implements WriteStream<JsonObject> {
     return stats;
   }
 
-  private static Future<Collection<String>> lookupPath(Vertx vertx,
-      ModuleJsonPath jsonPath, JsonObject payload) {
-    return jsonPath.executeAsCollection(null, payload);
-  }
-
   private Future<JsonObject> lookupId(JsonObject rec) {
     if (params.jsonPath == null) {
       return Future.succeededFuture(rec);
     }
-    return lookupPath(vertx, params.jsonPath, rec.getJsonObject("payload"))
-      .map(strings -> {
-        Iterator<String> iterator = strings.iterator();
-        if (iterator.hasNext()) {
-          rec.put(ClusterBuilder.LOCAL_ID_LABEL, iterator.next().trim());
-        } else {
-          rec.remove(ClusterBuilder.LOCAL_ID_LABEL);
-        }
-        return rec;
-      });
+    try {
+      var strings = params.jsonPath.executeAsCollection(null,
+          rec.getJsonObject("payload"));
+      Iterator<String> iterator = strings.iterator();
+      if (iterator.hasNext()) {
+        rec.put(ClusterBuilder.LOCAL_ID_LABEL, iterator.next().trim());
+      } else {
+        rec.remove(ClusterBuilder.LOCAL_ID_LABEL);
+      }
+    } catch (Exception e) {
+      return Future.failedFuture(e);
+    }
+    return Future.succeededFuture(rec);
   }
 
   private void log(JsonObject rec) {

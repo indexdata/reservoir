@@ -15,6 +15,10 @@
       "enum": ["full", "payload"],
       "description": "how arguments are passed to matcher, \"full\": full record, \"payload\": only record payload; if omitted , \"payload\" is used"
     },
+    "cql": {
+      "type": "object",
+      "description": "CQL query mapping from index name to module invocation string: moduleId<::function> (the ::function suffix is optional)"
+    },
     "update": {
       "type": "string",
       "enum": ["ingest", "manual"],

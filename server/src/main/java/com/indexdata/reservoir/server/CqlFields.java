@@ -32,7 +32,7 @@ public enum CqlFields {
     return cqlName;
   }
 
-  public String getSqllName() {
+  public String getSqlName() {
     return sqlColumnName;
   }
 

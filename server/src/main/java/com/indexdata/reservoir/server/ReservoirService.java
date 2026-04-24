@@ -99,7 +99,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
         }
         return new CodeModuleEntity.CodeModuleBuilder(res.asJson())
           .resolve(ctx.vertx())
-          .compose(cm -> ModuleCache.getInstance().lookup(ctx.vertx(), tenant, cm)
+          .compose(cm -> ModuleCache.getInstance().lookup(tenant, cm)
             .compose(module -> storage.updateCodeModuleEntity(cm))
             .compose(x -> ctx.response().setStatusCode(204).end())
           );
@@ -132,13 +132,13 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     def.addField(CqlFields.ID.getCqlName(),
       new PgCqlFieldUuid());
     def.addField(CqlFields.GLOBAL_ID.getCqlName(),
-      new PgCqlFieldUuid().withColumn(CqlFields.GLOBAL_ID.getSqllName()));
+      new PgCqlFieldUuid().withColumn(CqlFields.GLOBAL_ID.getSqlName()));
     def.addField(CqlFields.LOCAL_ID.getCqlName(),
-      new PgCqlFieldText().withExact().withColumn(CqlFields.LOCAL_ID.getSqllName()));
+      new PgCqlFieldText().withExact().withColumn(CqlFields.LOCAL_ID.getSqlName()));
     def.addField(CqlFields.SOURCE_ID.getCqlName(),
-      new PgCqlFieldText().withExact().withColumn(CqlFields.SOURCE_ID.getSqllName()));
+      new PgCqlFieldText().withExact().withColumn(CqlFields.SOURCE_ID.getSqlName()));
     def.addField(CqlFields.SOURCE_VERSION.getCqlName(),
-      new PgCqlFieldNumber().withColumn(CqlFields.SOURCE_VERSION.getSqllName()));
+      new PgCqlFieldNumber().withColumn(CqlFields.SOURCE_VERSION.getSqlName()));
     return def;
   }
 
@@ -371,7 +371,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     JsonObject request = validatedRequest.getBody().getJsonObject();
     return new CodeModuleEntity.CodeModuleBuilder(request)
       .resolve(ctx.vertx())
-      .compose(cm -> ModuleCache.getInstance().lookup(ctx.vertx(), Tenant.get(ctx), cm)
+      .compose(cm -> ModuleCache.getInstance().lookup(Tenant.get(ctx), cm)
         .compose(module -> storage.insertCodeModuleEntity(cm))
         .compose(res ->
           HttpResponse.responseJson(ctx, 201)
@@ -401,7 +401,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     JsonObject request = validatedRequest.getBody().getJsonObject();
     return new CodeModuleEntity.CodeModuleBuilder(request)
       .resolve(ctx.vertx())
-      .compose(cm -> ModuleCache.getInstance().lookup(ctx.vertx(), Tenant.get(ctx), cm)
+      .compose(cm -> ModuleCache.getInstance().lookup(Tenant.get(ctx), cm)
         .compose(module -> storage.updateCodeModuleEntity(cm))
         .compose(res -> {
           if (Boolean.FALSE.equals(res)) {

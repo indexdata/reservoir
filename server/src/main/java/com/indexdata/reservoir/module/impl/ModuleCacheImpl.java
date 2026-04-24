@@ -4,7 +4,6 @@ import com.indexdata.reservoir.module.Module;
 import com.indexdata.reservoir.module.ModuleCache;
 import com.indexdata.reservoir.server.entity.CodeModuleEntity;
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -30,7 +29,6 @@ public class ModuleCacheImpl implements ModuleCache {
       this.module = module;
       this.entity = entity;
     }
-
   }
 
   private Module createInstance(String type) {
@@ -46,7 +44,7 @@ public class ModuleCacheImpl implements ModuleCache {
   }
 
   @Override
-  public Future<Module> lookup(Vertx vertx, String tenantId, CodeModuleEntity entity) {
+  public Future<Module> lookup(String tenantId, CodeModuleEntity entity) {
     String moduleId = entity.getId();
     if (moduleId == null) {
       return Future.failedFuture("module config must include 'id'");
@@ -60,12 +58,15 @@ public class ModuleCacheImpl implements ModuleCache {
       entry.module.terminate();
       entries.remove(cacheKey);
     }
-    Module module = createInstance(entity.getType());
-    return module.initialize(vertx, entity).map(x -> {
+    try {
+      Module module = createInstance(entity.getType());
+      module.initialize(entity);
       CacheEntry e = new CacheEntry(module, entity);
       entries.put(cacheKey, e);
-      return module;
-    });
+      return Future.succeededFuture(module);
+    } catch (Exception ex) {
+      return Future.failedFuture(ex);
+    }
   }
 
   @Override

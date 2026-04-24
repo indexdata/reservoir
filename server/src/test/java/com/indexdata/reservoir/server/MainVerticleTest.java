@@ -510,7 +510,8 @@ public class MainVerticleTest extends TestBase {
     JsonObject matchKey = new JsonObject()
         .put("id", UUID.randomUUID().toString())
         .put("matcher", module10a.getString("id"))
-        .put("update", "ingest");
+        .put("update", "ingest")
+        .put("cql", new JsonObject().put("isbn", "isbn-matcher"));
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
@@ -555,7 +556,8 @@ public class MainVerticleTest extends TestBase {
         .body("matchKeys[0].id", is(matchKey.getString("id")))
         .body("matchKeys[0].method", is(matchKey.getString("method")))
         .body("matchKeys[0].update", is(matchKey.getString("update")))
-        .body("matchKeys[0].matcher", is(matchKey.getString("matcher")));
+        .body("matchKeys[0].matcher", is(matchKey.getString("matcher")))
+        .body("matchKeys[0].cql.isbn", is("isbn-matcher"));
         // should really check that params are same
 
     RestAssured.given()
@@ -570,6 +572,7 @@ public class MainVerticleTest extends TestBase {
         .body("matchKeys[0].update", is(matchKey.getString("update")));
 
     matchKey.put("update", "manual");
+    matchKey.put("cql", new JsonObject().put("isbn", "isbn-matcher-updated"));
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
@@ -1358,6 +1361,11 @@ public class MainVerticleTest extends TestBase {
   void deleteIsbnMatchKey() {
     RestAssured.given()
       .header(XOkapiHeaders.TENANT, TENANT_1)
+      .delete("/reservoir/config/modules/isbn-cql")
+      .then().statusCode(anyOf(is(204), is(404)));
+
+    RestAssured.given()
+      .header(XOkapiHeaders.TENANT, TENANT_1)
       .delete("/reservoir/config/modules/isbn-matcher")
       .then().statusCode(anyOf(is(204), is(404)));
 
@@ -1386,9 +1394,24 @@ public class MainVerticleTest extends TestBase {
         .contentType("application/json")
         .body(Matchers.is(matchModule.encode()));
 
+    JsonObject matchCqlIsbn = new JsonObject()
+        .put("id", "isbn-cql")
+        .put("type", "jsonpath")
+        .put("script", "$.term");
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .body(matchCqlIsbn.encode())
+        .post("/reservoir/config/modules")
+        .then().statusCode(201)
+        .contentType("application/json")
+        .body(Matchers.is(matchCqlIsbn.encode()));
+
     JsonObject matchKey = new JsonObject()
         .put("id", "isbn")
-        .put("matcher", "isbn-matcher");
+        .put("matcher", "isbn-matcher")
+        .put("cql", new JsonObject().put("isbn", "isbn-cql"));
 
     if (updateValue != null) {
       matchKey.put("update", updateValue);
@@ -2821,7 +2844,7 @@ public class MainVerticleTest extends TestBase {
     assertThat(sruVerify.errors.get(0), is("Unsupported version"));
 
     // unsupported record schema
-        s = RestAssured.given()
+    s = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .param("query", "xd=1")
         .param("version", "2.0")
@@ -2838,6 +2861,24 @@ public class MainVerticleTest extends TestBase {
     assertThat(sruVerify.errors, hasSize(1));
     assertThat(sruVerify.errors.get(0), is("Unknown schema for retrieval"));
 
+    // unsupported index
+    s = RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .param("query", "xd=1")
+        .param("version", "2.0")
+        .param("recordSchema", "marcxml")
+        .get("/reservoir/sru")
+        .then().statusCode(200)
+        .contentType("text/xml")
+        .extract().body().asString();
+
+    sruVerify = new SruVerify(s);
+    assertThat(sruVerify.response, is("searchRetrieveResponse"));
+    assertThat(sruVerify.numberOfRecords, is(0));
+    assertThat(sruVerify.identifiers, hasSize(0));
+    assertThat(sruVerify.errors, hasSize(1));
+    assertThat(sruVerify.errors.get(0), is( "Cannot process query"));
+
     // search for one record
     s = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
@@ -2853,6 +2894,26 @@ public class MainVerticleTest extends TestBase {
     assertThat(s, containsString("numberOfRecords>1<"));
     assertThat(s, containsString("<subfield code=\"s\">SOURCE-1</subfield>"));
 
+    sruVerify = new SruVerify(s);
+    assertThat(sruVerify.response, is("searchRetrieveResponse"));
+    assertThat(sruVerify.numberOfRecords, is(1));
+    assertThat(sruVerify.identifiers, hasSize(1));
+    assertThat(sruVerify.errors, hasSize(0));
+
+    // search for isbn, should return the same record as above
+    s = RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .param("query", "isbn=1")
+        .param("startRecord", "1")
+        .param("maximumRecord", "1")
+        .param("recordSchema", "marcxml")
+        .get("/reservoir/sru")
+        .then().statusCode(200)
+        .contentType("text/xml")
+        .extract().body().asString();
+
+    assertThat(s, containsString("numberOfRecords>1<"));
+    assertThat(s, containsString("<subfield code=\"s\">SOURCE-1</subfield>"));
 
     sruVerify = new SruVerify(s);
     assertThat(sruVerify.response, is("searchRetrieveResponse"));
@@ -2860,6 +2921,46 @@ public class MainVerticleTest extends TestBase {
     assertThat(sruVerify.identifiers, hasSize(1));
     assertThat(sruVerify.errors, hasSize(0));
 
+    s = RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .param("query", "rec.id=" + identifiers.get(0).substring(4) + " and isbn=1")
+        .param("startRecord", "1")
+        .param("maximumRecord", "1")
+        .param("recordSchema", "marcxml")
+        .get("/reservoir/sru")
+        .then().statusCode(200)
+        .contentType("text/xml")
+        .extract().body().asString();
+
+    assertThat(s, containsString("numberOfRecords>1<"));
+    assertThat(s, containsString("<subfield code=\"s\">SOURCE-1</subfield>"));
+
+    sruVerify = new SruVerify(s);
+    assertThat(sruVerify.response, is("searchRetrieveResponse"));
+    assertThat(sruVerify.numberOfRecords, is(1));
+    assertThat(sruVerify.identifiers, hasSize(1));
+    assertThat(sruVerify.errors, hasSize(0));
+
+    s = RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .param("query", "isbn=4")
+        .param("startRecord", "1")
+        .param("maximumRecord", "1")
+        .param("recordSchema", "marcxml")
+        .get("/reservoir/sru")
+        .then().statusCode(200)
+        .contentType("text/xml")
+        .extract().body().asString();
+
+    assertThat(s, containsString("numberOfRecords>0<"));
+
+    sruVerify = new SruVerify(s);
+    assertThat(sruVerify.response, is("searchRetrieveResponse"));
+    assertThat(sruVerify.numberOfRecords, is(0));
+    assertThat(sruVerify.identifiers, hasSize(0));
+    assertThat(sruVerify.errors, hasSize(0));
+
+    // all records
     s = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .param("query", "cql.AllRecords=true")
