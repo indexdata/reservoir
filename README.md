@@ -535,7 +535,7 @@ until the full set is retrieved.
 
 The OAI-PMH server returns MarcXML and expects that the payload provides MARC-in-JSON format under the `marc` key.
 
-## SRU
+## SRU server
 
 Clustered records can also be accessed via SRU at URI prefix `/reservoir/sru`.
 By default the cluster identifier is searchable by specifying CQL field `rec.id` and the returned
