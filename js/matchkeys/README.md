@@ -28,6 +28,10 @@ The [js/matchkeys/deepdish](deepdish) returns an array of matchkeys, utilising t
 
 The [js/matchkeys/malort](malort) creates single record clusters by returning an empty string.
 
+### isxn
+
+The [js/matchkeys/isxn](isxn) for clustering simply around isbn/issn and allow searching on them via SRU.
+
 ## Matchkeys tests of development code
 
 Do 'cd ..' to change to the 'reservoir/js' directory.
