@@ -1,0 +1,8 @@
+{
+  "test/records/numbers/isbn.json":              "[\"9788863727623\"]",
+  "test/records/numbers/issn.json":              "[\"1432069X\",\"00039187\"]",
+  "test/records/numbers/isbnDupe.json":          "[\"9788863727623\",\"8863727627\"]",
+  "test/records/numbers/no-number-slim.json":    "[]",
+  "test/records/numbers/no-number.json":         "[]",
+  "test/records/numbers/other-id.json":          "[]"
+}
