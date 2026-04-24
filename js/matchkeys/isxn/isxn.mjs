@@ -63,7 +63,7 @@ export function matchkey(record) {
 /**
  * Normalize CQL query term for ISBN. Takes a CQL query string as input and normalizes it by
  * removing non-numeric characters and converting to uppercase.
- * @param {*} node string with decodes to object with property "term" containing the CQL query string
+ * @param {*} node string which decodes to object with property "term" containing the CQL query string
  * and "field" containing the CQL query field.
  * @return an array with the normalized ISBN as the only element. Empty if no valid ISBN.
  */
@@ -77,7 +77,7 @@ export function normIsbn(node) {
 /**
  * Normalize CQL query term for ISSN. Takes a CQL query string as input and normalizes it by
  * removing non-numeric characters and converting to uppercase.
- * @param {*} node string with decodes to object with property "term" containing the CQL query string
+ * @param {*} node string which decodes to object with property "term" containing the CQL query string
  * and "field" containing the CQL query field.
  * @return an array with the normalized ISSN as the only element. Empty if no valid ISSN.
  */
