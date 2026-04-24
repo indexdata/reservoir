@@ -535,6 +535,55 @@ until the full set is retrieved.
 
 The OAI-PMH server returns MarcXML and expects that the payload provides MARC-in-JSON format under the `marc` key.
 
+## SRU
+
+Clustered records can also be accessed via SRU at URI prefix `/reservoir/sru`.
+By default the cluster identifier is searcable by specifying CQL field `rec.id` and the returned
+record content is same as for OAI's `verb=GetRecord' , that is `marcxml`, but wrapped in SRU 2.0 XML
+envelope instead. For example:
+
+
+```
+curl -HX-Okapi-Tenant:$OKAPI_TENANT \
+  "$OKAPI_URL/reservoir/sru?query=rec.id%3D<cluster UUID>"
+```
+
+(`%3D` is the encoded `=' part of the query paraameter value)
+
+It is not necessary to specify the match key configuration (pool) for this single cluster lookup as the
+cluster ID is unique for all match key configurations.
+
+The match key value itself can also be made searchable by a custom CQL field. This is done for a
+given match key configuration (pool).
+
+For example if the match key value is an ISBN/ISSN number, the following pool could be used:
+
+```
+cat isxn-pool.json
+{
+  "id": "isxn",
+  "matcher": "isxn-matcher::matchkey",
+  "cql: {
+    "isbn": "isxn-matcher::normIsbn",
+    "issn": "isxn-matcher::normIssn"
+  },
+  "update": "ingest"
+}
+```
+
+The matcher `matchkey` function returns ISBN/ISSN identifier for a MARC record.
+For an example of an `isxn` matcher module implementation, refer to [js/matchkeys/isxn].
+The `cql` section is used purely for searching and lists the two CQL fields as well
+as a search term normalizing function. With this in place and `isxn` match key configuration
+properly initialized, an SRU search such as the following is supported.
+
+
+```
+curl -HX-Okapi-Tenant:$OKAPI_TENANT \
+  "$OKAPI_URL/reservoir/sru?query=isbn%3D<isbn>"
+
+```
+
 ## Transformers
 
 Payloads can be converted or normalized using JavaScript Transformers during export.
