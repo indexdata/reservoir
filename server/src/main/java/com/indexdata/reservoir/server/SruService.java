@@ -44,8 +44,8 @@ public class SruService {
     response.write("  <diagnostics>\n");
     response.write("    <diagnostic xmlns=\"" + NAMESPACE_SRU_DIAGNOSTIC + "\">\n");
     response.write("      <uri>info:srw/diagnostic/1/" + no + "</uri>\n");
-    response.write("      <message>" + message + "</message>\n");
     response.write("      <details>" + details + "</details>\n");
+    response.write("      <message>" + message + "</message>\n");
     response.write("    </diagnostic>\n");
     response.write("  </diagnostics>\n");
   }
