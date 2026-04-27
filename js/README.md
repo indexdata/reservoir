@@ -10,6 +10,72 @@ The various matchkeys implementations are explained at [js/matchkeys](matchkeys)
 
 Example transformer that collects MARC fields from all member records and creates field `999_10` for each with: sourceId, localId and globalId.
 
+### 999 subfield definitions
+
+#### 999 10 (source holdings record)
+```
+{
+  "i": "clusterId",
+  "l": "localId",
+  "s": "sourceId",
+  "m": "matchKey"
+}
+```
+
+#### 999 11 (library items)
+```
+{
+  "a": "location",
+  "b": "barcode",
+  "c": "callNumber",
+  "d": "callNumberType",
+  "g": "copy",
+  "i": "institutionName",
+  "k": "numberOfPieces",
+  "l": "localId",
+  "n": "enumeration",
+  "p": "policy",
+  "s": "sourceId",
+  "t": "type",
+  "u": "chronology",
+  "v": "volume",
+  "w": "yearCaption",
+  "x": "itemMaterialType",
+  "y": "itemId"
+}
+```
+
+#### 999 12 (online items)
+```
+{
+  "i": "instutionName",
+  "l": "localId",
+  "s": "sourceId",
+  "t": "type",
+  "u": "uri",
+  "r": "rights",
+  "x": "nonPublicNote",
+  "z": "publicNote"
+}
+```
+
+#### 999 13 (vendor entries)
+```
+{
+  "a": "fullVendorName",
+  "b": "price",
+  "c": "currencyCode",
+  "e": "priceNote",
+  "i": "vendor",
+  "j": "countryCode",
+  "l": "localId",
+  "s": "sourceId",
+  "t": "type",
+  "z": "availability"
+}
+```
+
+
 ## Verify matchkeys development
 
 Do 'npm install' to install and configure ESLint and Prettier.
