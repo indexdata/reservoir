@@ -16,6 +16,8 @@ import org.folio.tlib.postgres.cqlfield.PgCqlFieldUuid;
 public class SruService {
 
   private static final String RECORD_SCHEMA_MARCXML = "marcxml";
+  private static final String NAMESPACE_SRU_DIAGNOSTIC = "http://docs.oasis-open.org/ns/search-ws/diagnostic";
+  private static final String NAMESPACE_SRU_RESPONSE = "http://docs.oasis-open.org/ns/search-ws/sruResponse";
 
   private SruService() { }
 
@@ -40,7 +42,7 @@ public class SruService {
   static void  returnDiagnostics(HttpServerResponse response, String no,
       String message, String details) {
     response.write("  <diagnostics>\n");
-    response.write("    <diagnostic xmlns:diag=\"http://docs.oasis-open.org/ns/search-ws/diagnostic\">\n");
+    response.write("    <diagnostic xmlns=\"" + NAMESPACE_SRU_DIAGNOSTIC + "\">\n");
     response.write("      <uri>info:srw/diagnostic/1/" + no + "</uri>\n");
     response.write("      <message>" + message + "</message>\n");
     response.write("      <details>" + details + "</details>\n");
@@ -154,26 +156,25 @@ public class SruService {
           return Future.succeededFuture();
         }
         return storage.getTotalRecords(ctx, pgCqlQuery)
-            .otherwise(e -> {
-              returnDiagnostics(response, "47", "Cannot process query", e.getMessage());
-              return 0;
-            })
             .compose(totalRecords -> {
               response.write("  <numberOfRecords>" + totalRecords + "</numberOfRecords>\n");
-              response.write("  <records>\n");
               if (totalRecords > 0) {
-                return getRecords(ctx, storage, pgCqlQuery, startRecord, maximumRecords);
+                return response.write("  <records>\n")
+                  .compose(x -> getRecords(ctx, storage, pgCqlQuery, startRecord, maximumRecords))
+                  .compose(x -> response.write("  </records>\n"));
               }
               return Future.succeededFuture();
-            })
-            .onComplete(x -> response.write("  </records>\n"));
+            }, e -> {
+              returnDiagnostics(response, "47", "Cannot process query", e.getMessage());
+              return Future.succeededFuture();
+            });
       });
   }
 
   static Future<Void> getExplainResponse(RoutingContext ctx) {
     HttpServerResponse response = ctx.response();
 
-    response.write("<explainResponse xmlns=\"http://docs.oasis-open.org/ns/search-ws/sruResponse\">\n");
+    response.write("<explainResponse xmlns=\"" + NAMESPACE_SRU_RESPONSE + "\">\n");
     response.write("  <version>2.0</version>\n");
 
     checkVersion(response, ctx);
@@ -194,7 +195,7 @@ public class SruService {
     if (query == null) {
       return getExplainResponse(ctx);
     }
-    response.write("<searchRetrieveResponse xmlns=\"http://docs.oasis-open.org/ns/search-ws/sruResponse\">\n");
+    response.write("<searchRetrieveResponse xmlns=\"" + NAMESPACE_SRU_RESPONSE + "\">\n");
     response.write("  <version>2.0</version>\n");
     return getSearchRetrieveResponse(ctx, query).onComplete(x -> {
       response.write("</searchRetrieveResponse>\n");
