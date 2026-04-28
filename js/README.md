@@ -19,7 +19,8 @@ The various matchkeys implementations are explained at [js/matchkeys](matchkeys)
 
 ## Transformers
 
-Example transformer that collects MARC fields from all member records and creates field `999_10` for each with: sourceId, localId and globalId.
+A basic example transformer is provided at [transformers](transformers) which
+collects MARC fields from all member records and creates field `999_10` for each with: sourceId, localId and globalId.
 
 ### 999 subfield definitions
 
