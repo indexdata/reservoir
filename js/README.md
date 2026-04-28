@@ -1,5 +1,16 @@
 # JavaScript facilities
 
+## Table of contents
+
+<!-- md2toc -l 2 -h 3 README.md -->
+* [Matchkeys](#matchkeys)
+* [Transformers](#transformers)
+    * [999 subfield definitions](#999-subfield-definitions)
+* [Verify matchkeys development](#verify-matchkeys-development)
+    * [prettier](#prettier)
+    * [lint](#lint)
+    * [Conduct tests](#conduct-tests)
+
 ## Matchkeys
 
 Matchkeys utilise some specific elements from MARC bibliographic records to generate a unique string which identifies common records that describe the same instance.
