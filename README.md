@@ -327,6 +327,8 @@ Records in Reservoir are clustered according to rules expressed in a `matcher`. 
 can be implemented using `jsonpath`, for simple matching rules, or `javascript` for arbitrary
 complexity.
 
+See further information about [matchkeys](js/README.md#matchkeys).
+
 To configure a matcher, first load an appropriate code module, e.g a simple `jsonpath`
 module with a matcher that works for __Marc-in-Json__ payload could be defined like this:
 
@@ -589,6 +591,8 @@ curl -HX-Okapi-Tenant:$OKAPI_TENANT \
 ## Transformers
 
 Payloads can be converted or normalized using JavaScript Transformers during export.
+
+See further information about [transformers](js/README.md#transformers).
 
 Example transformer:
 
