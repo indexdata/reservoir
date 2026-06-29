@@ -1,0 +1,50 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: reservoir_postgres
+    environment:
+      POSTGRES_USER: folio
+      POSTGRES_PASSWORD: folio
+      POSTGRES_DB: folio
+    ports:
+      - "25432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U folio -d folio"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  reservoir-init:
+    image: postgres:latest
+    container_name: reservoir_init
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: [
+      "bash", "-c",
+      "psql -h postgres -U folio -d folio -c \"DO \\$\\$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'reservoir') THEN CREATE ROLE reservoir NOLOGIN; END IF; END \\$\\$;\" && \
+       psql -h postgres -U folio -d folio -c 'GRANT reservoir TO folio;' && \
+       psql -h postgres -U folio -d folio -c \"DO \\$\\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'default_mod_reservoir') THEN CREATE SCHEMA default_mod_reservoir AUTHORIZATION reservoir; END IF; END \\$\\$;\""
+    ]
+    environment:
+      PGPASSWORD: folio
+
+  reservoir:
+    build:
+      context: .
+      dockerfile: Dockerfile-jit
+    container_name: reservoir
+    depends_on:
+      reservoir-init:
+        condition: service_completed_successfully
+    environment:
+      HTTP_PORT: 8082
+      DB_USERNAME: folio
+      DB_PASSWORD: folio
+      DB_HOST: postgres
+      DB_DATABASE: folio
+      DB_PORT: 5432
+      TENANT_DEFAULT: default
+    ports:
+      - "8082:8082"
