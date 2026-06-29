@@ -139,7 +139,7 @@ java -Dport=8081 --enable-native-access=ALL-UNNAMED \
 16:49:25 [] [] [] [] INFO  MainVerticle         Tenant default: default
 ```
 
-Refer to [docker-compose.yml](docker compose) for a system with Reservoir and Postgres combined.
+Refer to [docker-compose.yml](docker-compose.yml) for a system with Reservoir and Postgres combined.
 
 Start with:
 
