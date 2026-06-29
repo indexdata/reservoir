@@ -16,7 +16,7 @@ services:
       start_period: 5s
 
   reservoir-init:
-    image: postgres:latest
+    image: postgres:16
     container_name: reservoir_init
     depends_on:
       postgres:
