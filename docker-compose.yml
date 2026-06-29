@@ -39,7 +39,7 @@ services:
       reservoir-init:
         condition: service_completed_successfully
     environment:
-      HTTP_PORT: 8082
+      HTTP_PORT: 8081
       DB_USERNAME: folio
       DB_PASSWORD: folio
       DB_HOST: postgres
@@ -47,4 +47,4 @@ services:
       DB_PORT: 5432
       TENANT_DEFAULT: default
     ports:
-      - "8082:8082"
+      - "8081:8081"

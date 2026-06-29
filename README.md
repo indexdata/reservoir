@@ -145,7 +145,7 @@ Start with:
 
     docker compose up --build
 
-Reservoir can be accessed at http://localhost:8082.
+Reservoir can be accessed at http://localhost:8081.
 Postgres is exposed on localhost:25432 (user/password/db: folio/folio/folio).
 
 ## Running with Docker
