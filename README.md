@@ -139,6 +139,15 @@ java -Dport=8081 --enable-native-access=ALL-UNNAMED \
 16:49:25 [] [] [] [] INFO  MainVerticle         Tenant default: default
 ```
 
+Refer to [docker-compose.yml](docker-compose.yml) for a minimal setup that runs Reservoir and Postgres locally (without Okapi).
+
+Start with:
+
+    docker compose up --build
+
+Reservoir can be accessed at http://localhost:8081.
+Postgres is exposed on localhost:25432 (user/password/db: folio/folio/folio).
+
 ## Running with Docker
 
 If you feel adventurous and want to run Reservoir in a Docker container, build the container first:
