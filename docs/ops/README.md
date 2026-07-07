@@ -9,4 +9,6 @@ Also refer to the main [Reservoir README](../../README.md)
 and the [Reservoir API documentation](../../README.md#api-documentation).
 
 * [Setup workspace and login](workspace.md)
+* [Reservoir server configuration](configure.md)
+* [Miscellaneous](miscellaneous.md)
 
