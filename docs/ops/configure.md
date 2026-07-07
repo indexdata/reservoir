@@ -19,7 +19,7 @@ Follow [Setup workspace and login](workspace.md).
 
 ## Do matchkeys configuration
 
-(Refer to detailed notes at mod-reservoir [Configuring matchers](https://github.com/indexdata/reservoir#configuring-matchers).)
+(Refer to detailed notes at Reservoir [Configuring matchers](https://github.com/indexdata/reservoir#configuring-matchers).)
 
 Show current matchkeys and modules configuration:
 
