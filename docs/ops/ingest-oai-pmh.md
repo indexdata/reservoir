@@ -138,6 +138,8 @@ https GET "$host/reservoir/records?limit=0&count=exact&query=sourceId=US-MNU and
 If this is a new sourceVersion to replace the previous, then when happy do delete the previous sourceVersion.
 This makes the new sourceVersion become the current collection.
 
+Refer to [Finalise and delete old sourceVersion](miscellaneous.md#finalise-and-delete-old-sourceversion).
+
 ## Manage ongoing ingests
 
 Investigate the job status. It will probably be "idle" meaning that the remote server has finished delivering records and is now up-to-date (otherwise would still be "running").
