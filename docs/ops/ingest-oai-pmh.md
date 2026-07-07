@@ -61,7 +61,7 @@ https GET $host/reservoir/pmh-clients/_all/status x-okapi-token:$token
 
 Add an environment variable for the job identifier:
 
-```bash
+```shell
 export job=umn-us-mnu
 ```
 
@@ -79,7 +79,7 @@ https GET $host/reservoir/pmh-clients/${job)/status x-okapi-token:$token
 
 ## Follow mod-reservoir logs
 
-```bash
+```shell
 kubectl -n test-prod get pods | grep reservoir
 kubectl -n test-prod logs --tail=200 --follow=true reservoir-...
 # Or when multiple replicas, do this:
