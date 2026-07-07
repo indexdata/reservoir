@@ -27,7 +27,7 @@ There needs to be an Okapi user named "test_reservoir_admin" (or some such) with
 
 Clone these repositories:
 
-```
+```shell
 mkdir ~/id-workspace
 export ID_WORKSPACE=~/id-workspace
 git clone https://github.com/indexdata/reservoir
@@ -35,7 +35,7 @@ git clone https://github.com/indexdata/reservoir
 
 ## Create a workspace
 
-```
+```shell
 mkdir $ID_WORKSPACE/reservoir-workspace
 export RESERVOIR_WORKSPACE=$ID_WORKSPACE/reservoir-workspace
 cd $RESERVOIR_WORKSPACE
@@ -47,7 +47,7 @@ The configuration file for a consortium uses the INI format.
 
 Example config.ini
 
-```
+```shell
 [DEFAULT]
 consortium = test
 host = test-prod-okapi.example.com
@@ -63,7 +63,7 @@ OKAPI_PW = ${password}
 Copy the utility tools over to this RESERVOIR_WORKSPACE.
 (Note these are crude but functional scripts, provided as examples. Operators will develop their own mechanisms.)
 
-```
+```shell
 cp $ID_WORKSPACE/reservoir/doc/ops/util/export-ini.sh .
 cp $ID_WORKSPACE/reservoir/doc/ops/util/login_no_refresh.py .
 cp $ID_WORKSPACE/reservoir/doc/ops/util/okapi-login.sh .
@@ -87,31 +87,31 @@ Ensure [Prepare configuration](#prepare-configuration-files) as explained in the
 
 Establish the environment:
 
-```
+```shell
 CONFIG=config.ini source export-ini.sh
 ```
 
 Now do login to obtain the okapi token and export it (the okapi token will be utilised for Reservoir operations throughout this documentation set):
 
-```
+```shell
 source okapi-login.sh
 ```
 
 Verify the setup:
 
-```
+```shell
 source verify_env.sh
 ```
 
 Ensure that the okapi token is operational, and report the Okapi version:
 
-```
+```shell
 https GET $host/_/version x-okapi-token:$token
 ```
 
 Get the most-recent commit SHA of Reservoir source-code, and the SHA of this Reservoir deployment:
 
-```
+```shell
 ./get_reservoir_version.sh
 ```
 

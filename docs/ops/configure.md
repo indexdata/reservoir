@@ -23,7 +23,7 @@ Follow [Setup workspace and login](workspace.md).
 
 Show current matchkeys and modules configuration:
 
-```
+```shell
 https GET $host/reservoir/config/modules x-okapi-token:$token \
   | jq -r '.modules[] | [.id, .type, .url] | @tsv'
 https GET $host/reservoir/config/matchkeys x-okapi-token:$token
@@ -31,12 +31,12 @@ https GET $host/reservoir/config/matchkeys x-okapi-token:$token
 
 POST the initial matchkeys configuration:
 
-```
+```shell
 https POST $host/reservoir/config/modules x-okapi-token:$token \
   < $ID_WORKSPACE/reservoir/js/matchkeys/config-matchkeys-goldrush2024.json
 ```
 
-```
+```shell
 https POST $host/reservoir/config/matchkeys x-okapi-token:$token \
   < $ID_WORKSPACE/reservoir/js/matchkeys/config-pool-goldrush2024.json
 ```
@@ -45,14 +45,14 @@ https POST $host/reservoir/config/matchkeys x-okapi-token:$token \
 
 If this is a new matchkeys pool configuration, then initialize it.
 
-```
+```shell
 https PUT "$host/reservoir/config/matchkeys/goldrush2024/initialize" x-okapi-token:$token
 ```
 
 Note that if this is being modified for a large consortium then this process will take a long time (typical records-per-second=160).
 After 5-minutes there will be an expected NGINX "Gateway timeout".
 
-```
+```shell
 https PUT "$host/reservoir/config/matchkeys/goldrush2024/initialize" x-okapi-token:$token
 ```
 
@@ -60,7 +60,7 @@ Watch the AWS facilities from time-to-time at "CloudWatch > Database insights".
 
 The count and statistics can be done only after the initialisation has completed.
 
-```
+```shell
 https GET "$host/reservoir/clusters?matchkeyid=goldrush2024&count=exact&limit=0" x-okapi-token:$token
 https GET $host/reservoir/config/matchkeys/goldrush2024/stats x-okapi-token:$token | jq '.'
 ```
@@ -72,7 +72,7 @@ So spin up a [container in the cluster](miscellaneous.md#gateway-timeout) to avo
 
 If the script source, to which the matchkeys configuration refers, is subsequently modified then reload it, e.g.:
 
-```
+```shell
 https PUT $host/reservoir/config/modules/goldrush2024-matcher/reload x-okapi-token:$token
 ```
 
@@ -81,7 +81,7 @@ https PUT $host/reservoir/config/modules/goldrush2024-matcher/reload x-okapi-tok
 To update existing matchkeys module configuration, e.g. to verify an in-development branch raw url via "dev" Reservoir.
 (See [API docs](https://s3.amazonaws.com/indexdata-docs/api/reservoir/reservoir.html#operation/putCodeModule).)
 
-```
+```shell
 https PUT $host/reservoir/config/modules/goldrush2024-matcher x-okapi-token:$token \
   < $ID_WORKSPACE/reservoir/js/matchkeys/config-matchkeys-goldrush2024.json
 
@@ -94,7 +94,7 @@ https PUT $host/reservoir/config/modules/goldrush2024-matcher/reload x-okapi-tok
 
 POST the initial transformers configuration:
 
-```
+```shell
 https POST $host/reservoir/config/modules x-okapi-token:$token \
   < $ID_WORKSPACE/reservoir/js/transformers/marc-transformer.json
 ```
@@ -103,7 +103,7 @@ https POST $host/reservoir/config/modules x-okapi-token:$token \
 
 If the script source, to which the transformer configuration refers, is subsequently modified then reload it, e.g.:
 
-```
+```shell
 https PUT $host/reservoir/config/modules/marc-transformer/reload x-okapi-token:$token
 ```
 
@@ -118,7 +118,7 @@ PUT the initial transformer configuration for OAI-PMH.
 The "function" part at the end of the declaration is the name of the exported function in the transformer.mjs code.
 Of course if that function name is later changed, then modify and PUT again.
 
-```
+```shell
 https PUT $host/reservoir/config/oai x-okapi-token:$token \
   < $ID_WORKSPACE/reservoir/js/transformers/config-transformer-oai.json
 ```

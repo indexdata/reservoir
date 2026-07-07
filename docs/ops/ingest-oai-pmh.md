@@ -53,7 +53,7 @@ Save that job descriptor as the file `umn-us-mnu.json`
 
 ## Show all jobs status
 
-```
+```shell
 https GET $host/reservoir/pmh-clients/_all/status x-okapi-token:$token
 ```
 
@@ -61,25 +61,25 @@ https GET $host/reservoir/pmh-clients/_all/status x-okapi-token:$token
 
 Add an environment variable for the job identifier:
 
-```
+```shell
 export job=umn-us-mnu
 ```
 
 Post the job descriptor:
 
-```
+```shell
 https POST $host/reservoir/pmh-clients x-okapi-token:$token < ${job}.json
 ```
 
 Inspect the initial job status:
 
-```
+```shell
 https GET $host/reservoir/pmh-clients/${job)/status x-okapi-token:$token
 ```
 
 ## Follow mod-reservoir logs
 
-```
+```shell
 kubectl -n test-prod get pods | grep reservoir
 kubectl -n test-prod logs --tail=200 --follow=true reservoir-...
 # Or when multiple replicas, do this:
@@ -88,13 +88,13 @@ kubectl -n test-prod logs --selector app.kubernetes.io/name=reservoir --tail=500
 
 ## Start a job
 
-```
+```shell
 https POST $host/reservoir/pmh-clients/${job}/start x-okapi-token:$token
 ```
 
 ## Review job status
 
-```
+```shell
 https GET $host/reservoir/pmh-clients/${job}/status x-okapi-token:$token
 ```
 
@@ -102,7 +102,7 @@ https GET $host/reservoir/pmh-clients/${job}/status x-okapi-token:$token
 
 For example to clear its "from" date, so as to re-ingest (e.g. perhaps there was some complication with their initial ingest):
 
-```
+```shell
 https PUT $host/reservoir/pmh-clients/${job} x-okapi-token:$token ${job}.json
 ```
 
@@ -112,13 +112,13 @@ and then "start" the job again.
 
 If needed then delete the job configuration (not usually needed).
 
-```
+```shell
 https DELETE $host/reservoir/pmh-clients/${job} x-okapi-token:$token
 ```
 
 If needed, then delete its records:
 
-```
+```shell
 https GET "$host/reservoir/records?limit=0&count=exact&query=sourceId=US-MNU" x-okapi-token:$token
 https DELETE "$host/reservoir/records?query=sourceId=US-MNU and sourceVersion=1" x-okapi-token:$token
 https GET "$host/reservoir/records?limit=0&count=exact&query=sourceId=US-MNU" x-okapi-token:$token
@@ -129,7 +129,7 @@ https GET "$host/reservoir/records?limit=0&count=exact&query=sourceId=US-MNU" x-
 If this was a new ingest job, then do a default count or use `sourceVersion=1`.
 Otherwise specify the relevant `sourceVersion` value.
 
-```
+```shell
 https GET "$host/reservoir/records?limit=0&count=exact&query=sourceId=US-MNU and sourceVersion=1" x-okapi-token:$token
 ```
 
@@ -142,13 +142,13 @@ This makes the new sourceVersion become the current collection.
 
 Investigate the job status. It will probably be "idle" meaning that the remote server has finished delivering records and is now up-to-date (otherwise would still be "running").
 
-```
+```shell
 https GET $host/reservoir/pmh-clients/${job}/status x-okapi-token:$token
 ```
 
 Use a daily cronjob to start all jobs. Or devise a method to start jobs in groups for a large consortium.
 
-```
+```shell
 https POST $host/reservoir/pmh-clients/_all/start x-okapi-token:$token
 ```
 

@@ -5,7 +5,7 @@
 Some operations, such as matchkeys statistics, can take a long time and so might encounter an NGINX gateway timeout.
 So spin up a container in the AWS cluster to avoid the ALB/NGINX timeout.
 
-```
+```shell
 kubectl -n test-prod run --rm -it --restart=Never debug --image=alpine:latest sh
 apk add httpie gojq jq bash curl
 http GET "http://reservoir:80/reservoir/config/matchkeys/goldrush2024/stats" x-okapi-tenant:test_reservoir
@@ -22,7 +22,7 @@ When the Transformer is modified for a particular tenant, then we need to trigge
 Or for some reason we want VuFind to completely refresh.
 So "touch" will modify the dates of all cluster records for that MatchKey (e.g. goldrush2024).
 
-```
+```shell
 https POST "$host/reservoir/clusters/touch?count=exact&limit=0&query=matchkeyId==goldrush2024 AND sourceId==US-PPLAS" x-okapi-token:$token
 ```
 
