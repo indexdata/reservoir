@@ -11,5 +11,5 @@ and the [Reservoir API documentation](../../README.md#api-documentation).
 * [Setup workspace and login](workspace.md)
 * [Reservoir server configuration](configure.md)
 * [Reservoir ingest OAI-PMH](ingest-oai-pmh.md)
+* [Reservoir ingest record files](ingest-record-files.md)
 * [Miscellaneous](miscellaneous.md)
-
