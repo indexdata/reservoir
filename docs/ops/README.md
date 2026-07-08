@@ -1,8 +1,5 @@
 # Reservoir operations documentation
 
-> [!IMPORTANT]
-> This documentation is still in development.
-
 This is a selection of some Reservoir operations documents and utility tools.
 
 Also refer to the main [Reservoir README](../../README.md)
