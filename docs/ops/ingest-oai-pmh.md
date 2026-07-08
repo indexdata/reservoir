@@ -2,7 +2,7 @@
 
 This document explains configuration and running [OAI-PMH](https://www.openarchives.org/OAI/openarchivesprotocol.html) ingest jobs.
 
-Also refer to the [Reservoir README](https://github.com/indexdata/reservoir/blob/master/README.md).
+Also refer to the [Reservoir README](../../README.md).
 
 <!-- $GH_FOLIO/okapi/doc/md2toc -l 2 -h 3 ingest-oai-pmh.md -->
 * [Ensure relevant login, and set some additional environment](#ensure-relevant-login-and-set-some-additional-environment)
