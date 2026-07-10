@@ -66,7 +66,7 @@ jobs:
         run: |
           if test -n "${{ env.VERSION_MAJ_MIN }}"; then
             echo "Docs for release version ${{ env.VERSION_MAJ_MIN }}"
-            option_release=$(echo "--version ${{ env.VERSION_MAJ_MIN }}")
+            option_release="--version ${{ env.VERSION_MAJ_MIN }}"
           else
             option_release=""
           fi
