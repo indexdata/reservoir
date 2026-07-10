@@ -1,3 +1,4 @@
+README.md
 test/assertions-*.json
 test/records/invalid-1-broken-json.json
 transformers/marc-transformer.mjs
