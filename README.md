@@ -336,7 +336,7 @@ Records in Reservoir are clustered according to rules expressed in a `matcher`. 
 can be implemented using `jsonpath`, for simple matching rules, or `javascript` for arbitrary
 complexity.
 
-See further information about [matchkeys](js/README.md#matchkeys).
+See further information about [matchkeys](https://github.com/indexdata/matchkeys/blob/main/js/matchkeys/README.md).
 
 To configure a matcher, first load an appropriate code module, e.g a simple `jsonpath`
 module with a matcher that works for __Marc-in-Json__ payload could be defined like this:
@@ -585,7 +585,7 @@ curl -HX-Okapi-Tenant:$OKAPI_TENANT -HContent-type:application/json \
 ```
 
 The matcher `matchkey` function returns ISBN/ISSN identifier for a MARC record.
-For an example of an `isxn` matcher module implementation, refer to [js/matchkeys/isxn](js/matchkeys/isxn/).
+For an example of an `isxn` matcher module implementation, refer to [js/matchkeys/isxn](https://github.com/indexdata/matchkeys/tree/main/js/matchkeys/isxn/).
 The `cql` section is used purely for searching and lists the two CQL fields as well
 as a search term normalizing function. With this in place and `isxn` match key configuration
 properly initialized, an SRU search such as the following is supported.
@@ -601,7 +601,7 @@ curl -HX-Okapi-Tenant:$OKAPI_TENANT \
 
 Payloads can be converted or normalized using JavaScript Transformers during export.
 
-See further information about [transformers](js/README.md#transformers).
+See further information about [transformers](https://github.com/indexdata/matchkeys/blob/main/js/README.md#transformers).
 
 Example transformer:
 
