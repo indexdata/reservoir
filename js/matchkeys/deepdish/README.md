@@ -1,5 +1,11 @@
 # Matchkeys - deepdish
 
+> [!IMPORTANT]
+> Deprecated: All matchkeys facilities have moved to a new repository at:
+> https://github.com/indexdata/matchkeys
+> These facilities still remain at reservoir because they are still used in some deployments.
+> Ongoing development happens at the new repository.
+
 This matchkey returns an array of matches, using goldrush2024 and standard identifier numbers.
 
 The matcher will do the following:

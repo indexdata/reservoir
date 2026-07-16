@@ -1,5 +1,11 @@
 # Matchkeys facilities - JavaScript
 
+> [!IMPORTANT]
+> Deprecated: All matchkeys facilities have moved to a new repository at:
+> https://github.com/indexdata/matchkeys
+> These facilities still remain at reservoir because they are still used in some deployments.
+> Ongoing development happens at the new repository.
+
 ## Overview
 
 Matchkeys utilise some specific elements from MARC bibliographic records to generate a unique string which identifies common records that describe the same instance.
