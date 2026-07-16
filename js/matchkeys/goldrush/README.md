@@ -1,5 +1,11 @@
 # Matchkeys - goldrush2021
 
+> [!IMPORTANT]
+> Deprecated: All matchkeys facilities have moved to a new repository at:
+> https://github.com/indexdata/matchkeys
+> These facilities still remain at reservoir because they are still used in some deployments.
+> Ongoing development happens at the new repository.
+
 This implements the "Gold Rush - Colorado Alliance MARC record match key generation" (specification dated September 2021).
 
 ## Status

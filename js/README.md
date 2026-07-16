@@ -1,5 +1,11 @@
 # JavaScript facilities
 
+> [!IMPORTANT]
+> Deprecated: All matchkeys facilities have moved to a new repository at:
+> https://github.com/indexdata/matchkeys
+> These facilities still remain at reservoir because they are still used in some deployments.
+> Ongoing development happens at the new repository.
+
 ## Table of contents
 
 <!-- md2toc -l 2 -h 3 README.md -->
