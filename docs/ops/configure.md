@@ -33,12 +33,12 @@ POST the initial matchkeys configuration:
 
 ```shell
 https POST $host/reservoir/config/modules x-okapi-token:$token \
-  < $ID_WORKSPACE/reservoir/js/matchkeys/config-matchkeys-goldrush2024.json
+  < $ID_WORKSPACE/matchkeys/js/matchkeys/goldrush2024/config-matchkeys-goldrush2024.json
 ```
 
 ```shell
 https POST $host/reservoir/config/matchkeys x-okapi-token:$token \
-  < $ID_WORKSPACE/reservoir/js/matchkeys/config-pool-goldrush2024.json
+  < $ID_WORKSPACE/matchkeys/js/matchkeys/goldrush2024/config-pool-goldrush2024.json
 ```
 
 ## Initialize the new matchkeys pool
@@ -83,7 +83,7 @@ To update existing matchkeys module configuration, e.g. to verify an in-developm
 
 ```shell
 https PUT $host/reservoir/config/modules/goldrush2024-matcher x-okapi-token:$token \
-  < $ID_WORKSPACE/reservoir/js/matchkeys/config-matchkeys-goldrush2024.json
+  < $ID_WORKSPACE/matchkeys/js/matchkeys/goldrush2024/config-matchkeys-goldrush2024.json
 
 https PUT $host/reservoir/config/modules/goldrush2024-matcher/reload x-okapi-token:$token
 ```
@@ -96,7 +96,7 @@ POST the initial transformers configuration:
 
 ```shell
 https POST $host/reservoir/config/modules x-okapi-token:$token \
-  < $ID_WORKSPACE/reservoir/js/transformers/marc-transformer.json
+  < $ID_WORKSPACE/matchkeys/js/transformers/marc-transformer.json
 ```
 
 ## Reload transformers configuration
@@ -120,7 +120,7 @@ Of course if that function name is later changed, then modify and PUT again.
 
 ```shell
 https PUT $host/reservoir/config/oai x-okapi-token:$token \
-  < $ID_WORKSPACE/reservoir/js/transformers/config-transformer-oai.json
+  < $ID_WORKSPACE/matchkeys/js/transformers/config-transformer-oai.json
 ```
 
 ## Follow other docs
