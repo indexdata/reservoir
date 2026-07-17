@@ -29,7 +29,9 @@ https GET $host/reservoir/config/modules x-okapi-token:$token \
 https GET $host/reservoir/config/matchkeys x-okapi-token:$token
 ```
 
-POST the initial matchkeys configuration:
+POST the initial matchkeys configuration.
+
+Note that the [configuration](https://github.com/indexdata/matchkeys/blob/main/js/matchkeys/goldrush2024/config-matchkeys-goldrush2024.json) refers to its JavaScript implementation via a specific git commit SHA.
 
 ```shell
 https POST $host/reservoir/config/modules x-okapi-token:$token \
@@ -49,7 +51,7 @@ If this is a new matchkeys pool configuration, then initialize it.
 https PUT "$host/reservoir/config/matchkeys/goldrush2024/initialize" x-okapi-token:$token
 ```
 
-Note that if this is being modified for a large consortium then this process will take a long time (typical records-per-second=160).
+Note that if this is being done for a large consortium then this process will take a long time (typical records-per-second=160).
 After 5-minutes there will be an expected NGINX "Gateway timeout".
 
 ```shell
@@ -68,18 +70,12 @@ https GET $host/reservoir/config/matchkeys/goldrush2024/stats x-okapi-token:$tok
 The statistics operation can take a long time.
 So spin up a [container in the cluster](miscellaneous.md#gateway-timeout) to avoid the ALB/NGINX timeouts.
 
-## Reload matchkeys configuration
-
-If the script source, to which the matchkeys configuration refers, is subsequently modified then reload it, e.g.:
-
-```shell
-https PUT $host/reservoir/config/modules/goldrush2024-matcher/reload x-okapi-token:$token
-```
-
 ## Update matchkeys configuration
 
-To update existing matchkeys module configuration, e.g. to verify an in-development branch raw url via "dev" Reservoir.
+To update existing matchkeys module configuration, e.g. to verify an in-development branch raw url.
 (See [API docs](https://s3.amazonaws.com/indexdata-docs/api/reservoir/reservoir.html#operation/putCodeModule).)
+
+Modify its URL to refer to the new commit SHA of the script modification. Then update the matchkey:
 
 ```shell
 https PUT $host/reservoir/config/modules/goldrush2024-matcher x-okapi-token:$token \
