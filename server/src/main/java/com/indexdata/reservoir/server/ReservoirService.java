@@ -19,6 +19,8 @@ import io.vertx.ext.web.openapi.router.RouterBuilder;
 import io.vertx.openapi.contract.OpenAPIContract;
 import io.vertx.openapi.validation.RequestParameter;
 import io.vertx.openapi.validation.ValidatedRequest;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.function.Function;
 import org.apache.logging.log4j.LogManager;
@@ -253,21 +255,24 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     return method;
   }
 
-  static Future<String> checkMatcher(Storage storage, JsonObject config) {
-    String matcherProp = config.getString("matcher");
-    if (matcherProp != null) {
-      ModuleInvocation invocation = new ModuleInvocation(matcherProp);
-      return storage.selectCodeModuleEntity(invocation.getModuleName())
-        .compose(entity -> {
-          if (entity == null) {
-            return Future.failedFuture("Matcher module '" + invocation.getModuleName()
-              + "' does not exist");
-          }
-          return Future.succeededFuture(matcherProp);
-        });
-    } else {
+  static Future<String> checkMatcher(Storage storage, MatchKeyConfig matchKeyConfig) {
+    String[] matcherInvocations = matchKeyConfig.getMatcherInvocations();
+    if (matcherInvocations.length == 0) {
       return Future.succeededFuture(null);
     }
+    List<Future<Void>> futures = new ArrayList<>();
+    for (String matcherInvocation : matcherInvocations) {
+      ModuleInvocation invocation = new ModuleInvocation(matcherInvocation);
+      futures.add(storage.selectCodeModuleEntity(invocation.getModuleName())
+          .compose(entity -> {
+            if (entity == null) {
+              return Future.failedFuture("Matcher module '" + invocation.getModuleName()
+                  + "' does not exist");
+            }
+            return Future.succeededFuture();
+          }));
+    }
+    return Future.all(futures).map(matchKeyConfig.getMatcher());
   }
 
   Future<Void> postConfigMatchKey(RoutingContext ctx) {
@@ -276,7 +281,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     JsonObject request = validatedRequest.getBody().getJsonObject();
 
     MatchKeyConfig matchKey = new MatchKeyConfig(request);
-    return checkMatcher(storage, request)
+    return checkMatcher(storage, matchKey)
         .compose(matcher -> storage.insertMatchKeyConfig(matchKey))
         .compose(res ->
           HttpResponse.responseJson(ctx, 201)
@@ -303,7 +308,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
     JsonObject request = validatedRequest.getBody().getJsonObject();
     MatchKeyConfig matchKey = new MatchKeyConfig(request);
-    return checkMatcher(storage, request)
+    return checkMatcher(storage, matchKey)
         .compose(matcher -> storage.updateMatchKeyConfig(matchKey))
         .compose(res -> {
           if (Boolean.FALSE.equals(res)) {

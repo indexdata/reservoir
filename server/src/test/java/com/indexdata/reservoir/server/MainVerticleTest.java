@@ -354,7 +354,19 @@ public class MainVerticleTest extends TestBase {
 
       JsonObject matchKey = new JsonObject()
           .put("id", "works")
-          .put("matcher", "exists::function");
+          .put("matcher", "exists::function,not-exists");
+
+      RestAssured.given()
+          .header(XOkapiHeaders.TENANT, TENANT_1)
+          .header("Content-Type", "application/json")
+          .body(matchKey.encode())
+          .post("/reservoir/config/matchkeys")
+          .then()
+          .statusCode(400)
+          .contentType("text/plain")
+          .body(Matchers.is("Matcher module 'not-exists' does not exist"));
+
+      matchKey.put("matcher", "exists::function");
 
       RestAssured.given()
           .header(XOkapiHeaders.TENANT, TENANT_1)
@@ -1439,6 +1451,63 @@ public class MainVerticleTest extends TestBase {
         .contentType("application/json")
         .body(Matchers.is(matchKey.encode()));
     return matchKey;
+  }
+
+  @Test
+  public void testClustersMultipleMatchers() {
+    JsonObject firstMatcher = new JsonObject()
+        .put("id", "issn-matcher")
+        .put("type", "jsonpath")
+        .put("script", "$.first");
+    JsonObject secondMatcher = new JsonObject()
+        .put("id", "isbn-matcher")
+        .put("type", "jsonpath")
+        .put("script", "$.second");
+
+    for (JsonObject matcher : List.of(firstMatcher, secondMatcher)) {
+      RestAssured.given()
+          .header(XOkapiHeaders.TENANT, TENANT_1)
+          .header("Content-Type", "application/json")
+          .body(matcher.encode())
+          .post("/reservoir/config/modules")
+          .then().statusCode(201);
+    }
+
+    JsonObject matchKey = new JsonObject()
+        .put("id", "issn")
+        .put("matcher", "issn-matcher,isbn-matcher")
+        .put("update", "ingest");
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .body(matchKey.encode())
+        .post("/reservoir/config/matchkeys")
+        .then().statusCode(201)
+        .body(Matchers.is(matchKey.encode()));
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .get("/reservoir/config/matchkeys/issn")
+        .then().statusCode(200)
+        .body(Matchers.is(matchKey.encode()));
+
+    JsonArray records = new JsonArray()
+        .add(new JsonObject()
+            .put("localId", "MULTI-1")
+            .put("payload", new JsonObject().put("first", "shared").put("second", "one")))
+        .add(new JsonObject()
+            .put("localId", "MULTI-2")
+            .put("payload", new JsonObject().put("first", "two").put("second", "shared")));
+    ingestRecords(records, SOURCE_ID_1);
+
+    String response = RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .param("matchkeyid", "issn")
+        .get("/reservoir/clusters")
+        .then().statusCode(200)
+        .body("items", hasSize(1))
+        .extract().body().asString();
+    verifyClusterResponse(response, List.of(List.of("MULTI-1", "MULTI-2")));
   }
 
   @Test
