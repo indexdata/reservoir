@@ -27,6 +27,7 @@ import io.vertx.sqlclient.Tuple;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -357,14 +358,20 @@ public class Storage {
     result.matchKeyId = ingestMatcher.matchKeyId;
     result.keys = new HashSet<>();
     var startTime = System.nanoTime();
-    if (ingestMatcher.moduleExecutable != null) {
-      if (ingestMatcher.onlyPayload) {
-        globalRecord = globalRecord.getJsonObject(ClusterBuilder.PAYLOAD_LABEL);
+    if (ingestMatcher.moduleExecutables != null) {
+      JsonObject matcherInput = ingestMatcher.onlyPayload
+          ? globalRecord.getJsonObject(ClusterBuilder.PAYLOAD_LABEL) : globalRecord;
+      List<Future<Collection<String>>> futures = new ArrayList<>();
+      for (ModuleExecutable executable : ingestMatcher.moduleExecutables) {
+        futures.add(executable.executeAsCollection(matcherInput));
       }
-      return ingestMatcher.moduleExecutable.executeAsCollection(globalRecord)
-          .map(values -> {
-            values.forEach(k -> result.keys.add(k.length() > MATCHVALUE_MAX_LENGTH
-                ? k.substring(0, MATCHVALUE_MAX_LENGTH) : k));
+      return Future.all(futures)
+          .map(results -> {
+            for (int i = 0; i < results.size(); i++) {
+              Collection<String> values = results.resultAt(i);
+              values.forEach(k -> result.keys.add(k.length() > MATCHVALUE_MAX_LENGTH
+                  ? k.substring(0, MATCHVALUE_MAX_LENGTH) : k));
+            }
             ingestMetrics.recordMatcher(System.nanoTime() - startTime, TimeUnit.NANOSECONDS);
             return result;
           });
@@ -388,22 +395,29 @@ public class Storage {
     ingestMatcher.onlyPayload = argsType == null || "payload".equals(argsType);
 
     ingestMatcher.matchKeyId = matchKeyConfig.getId();
-    String matcherProp = matchKeyConfig.getMatcher();
-    if (matcherProp != null) {
-      ModuleInvocation invocation = new ModuleInvocation(matcherProp);
-      return selectCodeModuleEntity(invocation.getModuleName())
-          .compose(entity -> {
-            if (entity == null) {
-              return Future.failedFuture(
-                  "Module '" + invocation.getModuleName()
-                      + "' does not exist for '" + invocation + "'");
-            }
-            return ModuleCache.getInstance().lookup(tenant, entity)
-              .compose(module -> {
-                ingestMatcher.moduleExecutable = new ModuleExecutable(module, invocation, vertx);
-                return Future.succeededFuture(ingestMatcher);
-              });
-          });
+    String[] matcherInvocations = matchKeyConfig.getMatcherInvocations();
+    if (matcherInvocations.length > 0) {
+      List<Future<ModuleExecutable>> futures = new ArrayList<>();
+      for (String matcherInvocation : matcherInvocations) {
+        ModuleInvocation invocation = new ModuleInvocation(matcherInvocation);
+        futures.add(selectCodeModuleEntity(invocation.getModuleName())
+            .compose(entity -> {
+              if (entity == null) {
+                return Future.failedFuture(
+                    "Module '" + invocation.getModuleName()
+                        + "' does not exist for '" + invocation + "'");
+              }
+              return ModuleCache.getInstance().lookup(tenant, entity)
+                  .map(module -> new ModuleExecutable(module, invocation, vertx));
+            }));
+      }
+      return Future.all(futures).map(results -> {
+        ingestMatcher.moduleExecutables = new ModuleExecutable[results.size()];
+        for (int i = 0; i < results.size(); i++) {
+          ingestMatcher.moduleExecutables[i] = results.resultAt(i);
+        }
+        return ingestMatcher;
+      });
     }
     return Future.failedFuture("match key config must include 'matcher'");
   }
