@@ -5,7 +5,7 @@ This document explains configuration of matchkeys and transformers, and Reservoi
 <!-- $GH_FOLIO/okapi/doc/md2toc -l 2 -h 3 configure.md -->
 * [Ensure relevant login, and set some additional environment](#ensure-relevant-login-and-set-some-additional-environment)
 * [Do matchkeys configuration](#do-matchkeys-configuration)
-* [Initialize the new matchkeys pool](#initialize-the-new-matchkeys-pool)
+* [Initialize the matchkeys pool](#initialize-the-matchkeys-pool)
 * [Reload matchkeys configuration](#reload-matchkeys-configuration)
 * [Update matchkeys configuration](#update-matchkeys-configuration)
 * [Do transformers configuration](#do-transformers-configuration)
@@ -43,9 +43,9 @@ https POST $host/reservoir/config/matchkeys x-okapi-token:$token \
   < $ID_WORKSPACE/matchkeys/js/matchkeys/goldrush2024/config-pool-goldrush2024.json
 ```
 
-## Initialize the new matchkeys pool
+## Initialize the matchkeys pool
 
-If this is a new matchkeys pool configuration, then initialize it.
+Initialize the pool.
 
 ```shell
 https PUT "$host/reservoir/config/matchkeys/goldrush2024/initialize" x-okapi-token:$token
@@ -83,6 +83,8 @@ https PUT $host/reservoir/config/modules/goldrush2024-matcher x-okapi-token:$tok
 
 https PUT $host/reservoir/config/modules/goldrush2024-matcher/reload x-okapi-token:$token
 ```
+
+Initialize the pool, as [explained](#initialize-the-matchkeys-pool) above.
 
 ## Do transformers configuration
 
