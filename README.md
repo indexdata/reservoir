@@ -336,7 +336,8 @@ Records in Reservoir are clustered according to rules expressed in a `matcher`. 
 can be implemented using `jsonpath`, for simple matching rules, or `javascript` for arbitrary
 complexity.
 
-See further information about [matchkeys](https://github.com/indexdata/matchkeys/blob/main/js/matchkeys/README.md).
+See further information about [matchkeys](https://github.com/indexdata/matchkeys/blob/main/js/matchkeys/README.md)
+and [operations documentation](docs/ops/README.md).
 
 To configure a matcher, first load an appropriate code module, e.g a simple `jsonpath`
 module with a matcher that works for __Marc-in-Json__ payload could be defined like this:
