@@ -57,6 +57,8 @@ Save that job descriptor as the file `umn-us-mnu.json`
 https GET $host/reservoir/pmh-clients/_all/status x-okapi-token:$token
 ```
 
+See [API docs](https://s3.amazonaws.com/indexdata-docs/api/reservoir/reservoir.html#operation/statusOaiPmhClient).
+
 ## Add a job configuration
 
 Add an environment variable for the job identifier:
@@ -70,6 +72,8 @@ Post the job descriptor:
 ```shell
 https POST $host/reservoir/pmh-clients x-okapi-token:$token < ${job}.json
 ```
+
+See [API docs](https://s3.amazonaws.com/indexdata-docs/api/reservoir/reservoir.html#operation/postOaiPmhClient).
 
 Inspect the initial job status:
 
@@ -92,6 +96,8 @@ kubectl -n test-prod logs --selector app.kubernetes.io/name=reservoir --tail=500
 https POST $host/reservoir/pmh-clients/${job}/start x-okapi-token:$token
 ```
 
+See [API docs](https://s3.amazonaws.com/indexdata-docs/api/reservoir/reservoir.html#operation/startOaiPmhClient).
+
 ## Review job status
 
 ```shell
@@ -108,6 +114,8 @@ https PUT $host/reservoir/pmh-clients/${job} x-okapi-token:$token ${job}.json
 
 and then "start" the job again.
 
+See [API docs](https://s3.amazonaws.com/indexdata-docs/api/reservoir/reservoir.html#operation/putOaiPmhClient).
+
 ## Delete a job
 
 If needed then delete the job configuration (not usually needed).
@@ -115,6 +123,8 @@ If needed then delete the job configuration (not usually needed).
 ```shell
 https DELETE $host/reservoir/pmh-clients/${job} x-okapi-token:$token
 ```
+
+See [API docs](https://s3.amazonaws.com/indexdata-docs/api/reservoir/reservoir.html#operation/deleteOaiPmhClient).
 
 If needed, then delete its records:
 
@@ -132,6 +142,8 @@ Otherwise specify the relevant `sourceVersion` value.
 ```shell
 https GET "$host/reservoir/records?limit=0&count=exact&query=sourceId=US-MNU and sourceVersion=1" x-okapi-token:$token
 ```
+
+See [API docs](https://s3.amazonaws.com/indexdata-docs/api/reservoir/reservoir.html#operation/getGlobalRecords).
 
 ## Remove old sourceVersion
 
