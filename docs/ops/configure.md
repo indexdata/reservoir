@@ -32,7 +32,7 @@ https GET $host/reservoir/config/matchkeys x-okapi-token:$token
 POST the initial matchkeys configuration.
 
 > [!WARNING]
-> Note that the example [configuration](https://github.com/indexdata/matchkeys/blob/main/js/matchkeys/goldrush2024/config-matchkeys-goldrush2024.json) refers to its JavaScript implementation via a specific git commit SHA (and might not be current).
+> Note that each example [configuration](https://github.com/indexdata/matchkeys/blob/main/js/matchkeys/goldrush2024/config-matchkeys-goldrush2024.json) refers to its JavaScript implementation via a specific git commit SHA (and might not be current).
 > Operators should manage their own configuration files and not use these examples directly.
 
 ```shell

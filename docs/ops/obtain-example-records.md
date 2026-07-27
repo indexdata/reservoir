@@ -114,7 +114,7 @@ https GET "$host/_/invoke/tenant/${tenant}/reservoir/sru?version=2.0&operation=s
 
 ## Search via VuFind
 
-Locating records via Reservoir can only use `localId` or `globalId` or `clusterId` (as shown earlier in this document).
+Locating records via Reservoir can only use `localId` or `globalId` or `clusterId` (as shown [earlier](#search-facilities) in this document).
 There are no general search facilities.
 
 Use the power of VuFind search.
