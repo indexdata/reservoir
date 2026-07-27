@@ -95,6 +95,8 @@ Initialize the pool, as [explained](#initialize-the-matchkeys-pool) above.
 
 ## Do transformers configuration
 
+Payloads can be converted or normalized using JavaScript Transformers during export.
+
 (Refer to detailed notes at Reservoir [Transformers](../../README.md#transformers).)
 
 POST the initial transformers configuration:
