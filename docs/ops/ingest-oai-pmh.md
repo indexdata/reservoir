@@ -10,7 +10,7 @@ Also refer to the [Reservoir README](../../README.md).
 * [Prepare a job configuration](#prepare-a-job-configuration)
 * [Show all jobs status](#show-all-jobs-status)
 * [Add a job configuration](#add-a-job-configuration)
-* [Follow mod-reservoir logs](#follow-mod-reservoir-logs)
+* [Follow reservoir logs](#follow-reservoir-logs)
 * [Start a job](#start-a-job)
 * [Review job status](#review-job-status)
 * [Update a job configuration](#update-a-job-configuration)
@@ -77,7 +77,7 @@ Inspect the initial job status:
 https GET $host/reservoir/pmh-clients/${job)/status x-okapi-token:$token
 ```
 
-## Follow mod-reservoir logs
+## Follow reservoir logs
 
 ```shell
 kubectl -n test-prod get pods | grep reservoir
