@@ -21,7 +21,10 @@ Follow [Setup workspace and login](workspace.md).
 
 (Refer to detailed notes at Reservoir [Configuring matchers](../../README.md#configuring-matchers).)
 
-Show current matchkeys and modules configuration:
+Matchkeys utilise some specific elements from MARC bibliographic records to generate a unique string which identifies common records that describe the same instance.
+The various matchkeys implementations are explained at the [indexdata/matchkeys](https://github.com/indexdata/matchkeys) repository.
+
+Show current matchkeys and modules configuration for this particular Reservoir server:
 
 ```shell
 https GET $host/reservoir/config/modules x-okapi-token:$token \
