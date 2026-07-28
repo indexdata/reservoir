@@ -390,6 +390,11 @@ curl -HX-Okapi-Tenant:$OKAPI_TENANT $OKAPI_URL/reservoir/clusters?matchkeyid=tit
 
 Obviously, matcher configuration must be aligned with the format of stored records.
 
+Multiple matcher modules can contribute keys to the same pool by separating their module
+invocations with commas, for example `"matcher": "isbn-matcher,issn-matcher::matchkey"`.
+Reservoir combines the keys returned by all configured matchers before clustering. A single
+matcher continues to use the same configuration format as before.
+
 Reservoir ships with a JS module that implements the `goldrush` matching
 algorithm from coalliance.org.
 

@@ -8,7 +8,10 @@ properties:
     description: identifier
   matcher:
     type: string
-    description: matcher module invocation moduleId<::function> (the ::function suffix is optional)
+    description: |
+      Comma-separated matcher module invocations. Each invocation has the form
+      moduleId<::function>, where the ::function suffix is optional. Keys returned by all
+      configured matchers are combined for clustering.
   args:
     type: string
     enum:

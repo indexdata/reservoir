@@ -63,6 +63,7 @@ public class MatchKeyConfig {
     if (id.contains("'") || id.contains("\"")) {
       throw new IllegalArgumentException("MatchKeyConfig id cannot contain quotes");
     }
+    getMatcherInvocations();
   }
 
   public String getId() {
@@ -75,6 +76,24 @@ public class MatchKeyConfig {
 
   public String getMatcher() {
     return matcher;
+  }
+
+  /**
+   * Get the individual module invocations configured for this match key.
+   * @return module invocation strings
+   */
+  public String[] getMatcherInvocations() {
+    if (matcher == null) {
+      return new String[0];
+    }
+    String[] invocations = matcher.split(",", -1);
+    for (int i = 0; i < invocations.length; i++) {
+      invocations[i] = invocations[i].trim();
+      if (invocations[i].isEmpty()) {
+        throw new IllegalArgumentException("Matcher module invocation cannot be empty");
+      }
+    }
+    return invocations;
   }
 
   public String getMethod() {
