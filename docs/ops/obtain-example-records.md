@@ -11,6 +11,7 @@ Obtain a set of sample records for various purposes such as troubleshooting, and
 * [Get the related OAI-PMH records](#get-the-related-oai-pmh-records)
 * [Get records via SRU](#get-records-via-sru)
 * [Search via VuFind](#search-via-vufind)
+* [Harvest into VuFind from Reservoir](#harvest-into-vufind-from-reservoir)
 * [Follow other docs](#follow-other-docs)
 
 ## Ensure relevant login, and set some additional environment
@@ -127,6 +128,16 @@ When a specific record has been located, then its VuFind URL has the Reservoir c
 
 Using that clusterId, obtain the cluster record from Reservoir as shown earlier in this document.
 Then get the actual Reservoir records using their globalId.
+
+## Harvest into VuFind from Reservoir
+
+The OAI-PMH "set" is the matchkeys pool identifier.
+
+```
+https GET "$host/_/invoke/tenant/${tenant}/reservoir/oai?verb=ListRecords&set=${pool_id}"
+```
+
+This will also utilise a [Transformer](configure.md#do-transformers-configuration) if configured, to modify each exported data record.
 
 ## Follow other docs
 
