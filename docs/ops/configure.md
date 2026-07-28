@@ -6,8 +6,8 @@ This document explains configuration of matchkeys and transformers, and Reservoi
 * [Ensure relevant login, and set some additional environment](#ensure-relevant-login-and-set-some-additional-environment)
 * [Do matchkeys configuration](#do-matchkeys-configuration)
 * [Initialize the matchkeys pool](#initialize-the-matchkeys-pool)
-* [Reload matchkeys configuration](#reload-matchkeys-configuration)
 * [Update matchkeys configuration](#update-matchkeys-configuration)
+* [Pool with multiple matchkeys](#pool-with-multiple-matchkeys)
 * [Do transformers configuration](#do-transformers-configuration)
 * [Reload transformers configuration](#reload-transformers-configuration)
 * [Do OAI-PMH transformer configuration](#do-oai-pmh-transformer-configuration)
@@ -92,6 +92,12 @@ https PUT $host/reservoir/config/modules/goldrush2024-matcher/reload x-okapi-tok
 ```
 
 Initialize the pool, as [explained](#initialize-the-matchkeys-pool) above.
+
+## Pool with multiple matchkeys
+
+A pool can declare multiple matchkeys. See [example](https://github.com/indexdata/matchkeys/blob/main/js/matchkeys/goldrush2024/config-pool-goldrush2024-isxn.json).
+
+Reservoir will utilise each and create a union of match values. This avoids duplicating matchkey source-code across multiple JavaScript files.
 
 ## Do transformers configuration
 
