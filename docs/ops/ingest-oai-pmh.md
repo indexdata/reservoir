@@ -78,7 +78,7 @@ See [API docs](https://s3.amazonaws.com/indexdata-docs/api/reservoir/reservoir.h
 Inspect the initial job status:
 
 ```shell
-https GET $host/reservoir/pmh-clients/${job)/status x-okapi-token:$token
+https GET $host/reservoir/pmh-clients/${job}/status x-okapi-token:$token
 ```
 
 ## Follow reservoir logs
