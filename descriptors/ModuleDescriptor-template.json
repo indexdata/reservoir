@@ -510,42 +510,66 @@
     {
       "permissionName": "reservoir-config-pools.item.post",
       "displayName": "reservoir - create pool",
-      "description": "Create pool configuration"
+      "description": "Create pool configuration",
+      "replaces": [
+        "reservoir-config-matchkeys.item.post"
+      ]
     },
     {
       "permissionName": "reservoir-config-pools.collection.get",
       "displayName": "reservoir - get pools",
-      "description": "Get pool configurations"
+      "description": "Get pool configurations",
+      "replaces": [
+        "reservoir-config-matchkeys.collection.get"
+      ]
     },
     {
       "permissionName": "reservoir-config-pools.item.get",
       "displayName": "reservoir - get pool",
-      "description": "Get pool configuration"
+      "description": "Get pool configuration",
+      "replaces": [
+        "reservoir-config-matchkeys.item.get"
+      ]
     },
     {
       "permissionName": "reservoir-config-pools.item.put",
       "displayName": "reservoir - update pool",
-      "description": "Update pool configuration"
+      "description": "Update pool configuration",
+      "replaces": [
+        "reservoir-config-matchkeys.item.put"
+      ]
     },
     {
       "permissionName": "reservoir-config-pools.item.delete",
       "displayName": "reservoir - delete pool",
-      "description": "Delete pool configuration"
+      "description": "Delete pool configuration",
+      "replaces": [
+        "reservoir-config-matchkeys.item.delete"
+      ]
     },
     {
       "permissionName": "reservoir-config-pools.item.initialize",
       "displayName": "reservoir - initialize pool",
-      "description": "Initialize pool"
+      "description": "Initialize pool",
+      "replaces": [
+        "reservoir-config-matchkeys.item.initialize"
+      ]
     },
     {
       "permissionName": "reservoir-config-pools.item.stats",
       "displayName": "reservoir - get pool statistics",
-      "description": "Get pool statistics"
+      "description": "Get pool statistics",
+      "replaces": [
+        "reservoir-config-matchkeys.item.stats"
+      ]
     },
     {
       "permissionName": "reservoir-config-pools.all",
       "displayName": "reservoir - all pool configuration permissions",
       "description": "All pool configuration permissions",
+      "replaces": [
+        "reservoir-config-matchkeys.all"
+      ],
       "subPermissions": [
         "reservoir-config-pools.item.post",
         "reservoir-config-pools.collection.get",
