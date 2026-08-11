@@ -5,7 +5,7 @@ import com.indexdata.reservoir.module.ModuleExecutable;
 import com.indexdata.reservoir.module.ModuleInvocation;
 import com.indexdata.reservoir.server.entity.ClusterBuilder;
 import com.indexdata.reservoir.server.entity.CodeModuleEntity;
-import com.indexdata.reservoir.server.entity.MatchKeyConfig;
+import com.indexdata.reservoir.server.entity.PoolConfig;
 import com.indexdata.reservoir.server.metrics.IngestMetrics;
 import com.indexdata.reservoir.server.metrics.IngestMetricsNop;
 import com.indexdata.reservoir.util.ReadStreamConsumer;
@@ -49,7 +49,7 @@ import org.folio.tlib.postgres.TenantPgPool;
 @java.lang.SuppressWarnings({"squid:S1192"})
 public class Storage {
   public static final String GLOBAL_RECORDS_TABLE = "global_records";
-  public static final String MATCH_KEY_CONFIG_TABLE = "match_key_config";
+  public static final String POOL_CONFIG_TABLE = "match_key_config";
   public static final String CLUSTER_META_TABLE = "cluster_meta";
   public static final String CLUSTER_RECORDS_TABLE = "cluster_records";
   public static final String CLUSTER_VALUES_TABLE = "cluster_values";
@@ -63,7 +63,7 @@ public class Storage {
 
   final TenantPgPool pool;
   final String globalRecordTable;
-  final String matchKeyConfigTable;
+  final String poolConfigTable;
   final String clusterRecordTable;
   final String clusterValueTable;
   final String clusterMetaTable;
@@ -86,7 +86,7 @@ public class Storage {
     this.tenant = tenant;
     this.vertx = vertx;
     this.globalRecordTable = pool.getSchema() + "." + GLOBAL_RECORDS_TABLE;
-    this.matchKeyConfigTable = pool.getSchema() + "." + MATCH_KEY_CONFIG_TABLE;
+    this.poolConfigTable = pool.getSchema() + "." + POOL_CONFIG_TABLE;
     this.clusterRecordTable = pool.getSchema() + "." + CLUSTER_RECORDS_TABLE;
     this.clusterValueTable = pool.getSchema() + "." + CLUSTER_VALUES_TABLE;
     this.clusterMetaTable = pool.getSchema() + "." + CLUSTER_META_TABLE;
@@ -159,7 +159,7 @@ public class Storage {
                 + " (local_id, source_id, source_version)",
             "CREATE INDEX IF NOT EXISTS idx_source ON " + globalRecordTable
                 + " (source_id, source_version)",
-            CREATE_IF_NO_EXISTS + matchKeyConfigTable
+            CREATE_IF_NO_EXISTS + poolConfigTable
                 + "(id VARCHAR NOT NULL PRIMARY KEY,"
                 + " matcher VARCHAR, "
                 + " method VARCHAR, "
@@ -167,17 +167,17 @@ public class Storage {
                 + " params JSONB, "
                 + " args VARCHAR, "
                 + " cql JSONB)",
-            "ALTER TABLE " + matchKeyConfigTable + " ADD COLUMN IF NOT EXISTS"
+            "ALTER TABLE " + poolConfigTable + " ADD COLUMN IF NOT EXISTS"
                 + " matcher VARCHAR",
-            "ALTER TABLE " + matchKeyConfigTable + " ADD COLUMN IF NOT EXISTS"
+            "ALTER TABLE " + poolConfigTable + " ADD COLUMN IF NOT EXISTS"
                 + " args VARCHAR",
-            "ALTER TABLE " + matchKeyConfigTable + " ADD COLUMN IF NOT EXISTS"
+            "ALTER TABLE " + poolConfigTable + " ADD COLUMN IF NOT EXISTS"
                 + " cql JSONB",
             CREATE_IF_NO_EXISTS + clusterMetaTable
                 + "(cluster_id uuid NOT NULL PRIMARY KEY,"
                 + " match_key_config_id VARCHAR NOT NULL,"
                 + " datestamp TIMESTAMP,"
-                + " FOREIGN KEY(match_key_config_id) REFERENCES " + matchKeyConfigTable
+                + " FOREIGN KEY(match_key_config_id) REFERENCES " + poolConfigTable
                 + " ON DELETE CASCADE)",
             "CREATE INDEX IF NOT EXISTS cluster_meta_datestamp_idx ON "
                 + clusterMetaTable + "(datestamp)",
@@ -185,7 +185,7 @@ public class Storage {
                 + "(record_id uuid NOT NULL,"
                 + " match_key_config_id VARCHAR NOT NULL,"
                 + " cluster_id uuid NOT NULL,"
-                + " FOREIGN KEY(match_key_config_id) REFERENCES " + matchKeyConfigTable
+                + " FOREIGN KEY(match_key_config_id) REFERENCES " + poolConfigTable
                 + " ON DELETE CASCADE,"
                 + " FOREIGN KEY(record_id) REFERENCES " + globalRecordTable + " ON DELETE CASCADE)",
             "CREATE UNIQUE INDEX IF NOT EXISTS cluster_record_record_matchkey_idx ON "
@@ -196,7 +196,7 @@ public class Storage {
                 + "(cluster_id uuid NOT NULL,"
                 + " match_key_config_id VARCHAR NOT NULL,"
                 + " match_value VARCHAR NOT NULL,"
-                + " FOREIGN KEY(match_key_config_id) REFERENCES " + matchKeyConfigTable
+                + " FOREIGN KEY(match_key_config_id) REFERENCES " + poolConfigTable
                 + " ON DELETE CASCADE)",
             "CREATE UNIQUE INDEX IF NOT EXISTS cluster_value_value_idx ON "
                 + clusterValueTable + "(match_key_config_id, match_value)",
@@ -289,7 +289,7 @@ public class Storage {
    * @param sourceId source identifier
    * @param sourceVersion source version
    * @param globalRecord global record JSON object
-   * @param ingestMatchers match key configurations in use
+   * @param ingestMatchers pool configurations in use
    * @param ingestMetrics ingest metrics collector
    * @return async result with TRUE=inserted, FALSE=updated, null=deleted
    */
@@ -355,7 +355,7 @@ public class Storage {
   Future<MatcherResult> runMatcher(IngestMatcher ingestMatcher, IngestMetrics ingestMetrics,
       JsonObject globalRecord) {
     MatcherResult result = new MatcherResult();
-    result.matchKeyId = ingestMatcher.matchKeyId;
+    result.poolId = ingestMatcher.poolId;
     result.keys = new HashSet<>();
     var startTime = System.nanoTime();
     if (ingestMatcher.moduleExecutables != null) {
@@ -388,14 +388,14 @@ public class Storage {
     return Future.all(futures).mapEmpty();
   }
 
-  Future<IngestMatcher> createIngestMatcher(MatchKeyConfig matchKeyConfig, Vertx vertx) {
+  Future<IngestMatcher> createIngestMatcher(PoolConfig poolConfig, Vertx vertx) {
     IngestMatcher ingestMatcher = new IngestMatcher();
 
-    String argsType = matchKeyConfig.getArgs();
+    String argsType = poolConfig.getArgs();
     ingestMatcher.onlyPayload = argsType == null || "payload".equals(argsType);
 
-    ingestMatcher.matchKeyId = matchKeyConfig.getId();
-    String[] matcherInvocations = matchKeyConfig.getMatcherInvocations();
+    ingestMatcher.poolId = poolConfig.getId();
+    String[] matcherInvocations = poolConfig.getMatcherInvocations();
     if (matcherInvocations.length > 0) {
       List<Future<ModuleExecutable>> futures = new ArrayList<>();
       for (String matcherInvocation : matcherInvocations) {
@@ -419,19 +419,19 @@ public class Storage {
         return ingestMatcher;
       });
     }
-    return Future.failedFuture("match key config must include 'matcher'");
+    return Future.failedFuture("pool config must include 'matcher'");
   }
 
-  Future<List<IngestMatcher>> createIngestMatchers(List<MatchKeyConfig> matchKeyConfigs,
+  Future<List<IngestMatcher>> createIngestMatchers(List<PoolConfig> poolConfigs,
       Vertx vertx) {
     List<Future<IngestMatcher>> futures = new ArrayList<>();
-    for (int i = 0; i < matchKeyConfigs.size(); i++) {
-      MatchKeyConfig matchKeyConfig = matchKeyConfigs.get(i);
-      String update = matchKeyConfig.getUpdate();
+    for (int i = 0; i < poolConfigs.size(); i++) {
+      PoolConfig poolConfig = poolConfigs.get(i);
+      String update = poolConfig.getUpdate();
       if ("manual".equals(update)) {
         continue;
       }
-      futures.add(createIngestMatcher(matchKeyConfig, vertx));
+      futures.add(createIngestMatcher(poolConfig, vertx));
     }
     return Future.all(futures).map(composite -> {
       List<IngestMatcher> ingestMatchers = new ArrayList<>();
@@ -443,8 +443,8 @@ public class Storage {
   }
 
   Future<List<IngestMatcher>> availableIngestMatchers(Vertx vertx) {
-    return getAvailableMatchConfigs()
-       .compose(matchKeyConfigs -> createIngestMatchers(matchKeyConfigs, vertx));
+    return getAvailablePoolConfigs()
+        .compose(poolConfigs -> createIngestMatchers(poolConfigs, vertx));
   }
 
   Future<Set<UUID>> updateClusterValues(SqlConnection conn, UUID newClusterId,
@@ -452,7 +452,7 @@ public class Storage {
     StringBuilder q = new StringBuilder("SELECT cluster_id, match_value FROM " + clusterValueTable
         + " WHERE match_key_config_id = $1 AND (");
     List<Object> tupleList = new ArrayList<>();
-    tupleList.add(matcherResult.matchKeyId);
+    tupleList.add(matcherResult.poolId);
     Set<UUID> clustersFound = new HashSet<>();
     int no = 2;
     for (String key : matcherResult.keys) {
@@ -513,10 +513,10 @@ public class Storage {
         + " AND cluster_records.match_key_config_id = $2"
         + " AND cluster_records.record_id = $3";
     return conn.preparedQuery(q).execute(Tuple.of(
-        LocalDateTime.now(ZoneOffset.UTC), matcherResult.matchKeyId, globalId))
+        LocalDateTime.now(ZoneOffset.UTC), matcherResult.poolId, globalId))
         .compose(x -> conn.preparedQuery("DELETE FROM " + clusterRecordTable
             + " WHERE record_id = $1 AND match_key_config_id = $2")
-            .execute(Tuple.of(globalId, matcherResult.matchKeyId))
+            .execute(Tuple.of(globalId, matcherResult.poolId))
             .mapEmpty());
   }
 
@@ -530,7 +530,7 @@ public class Storage {
         .compose(clustersFound -> {
           Iterator<UUID> iterator = clustersFound.iterator();
           if (!iterator.hasNext()) {
-            return createMetaEntry(conn, newClusterId, matcherResult.matchKeyId);
+            return createMetaEntry(conn, newClusterId, matcherResult.poolId);
           }
           return updateMetaEntries(conn, clustersFound).compose(c -> {
             UUID clusterId = iterator.next();
@@ -546,7 +546,7 @@ public class Storage {
                     + " (record_id, match_key_config_id, cluster_id) VALUES ($1, $2, $3)"
                     + " ON CONFLICT (record_id, match_key_config_id)"
                     + " DO UPDATE SET record_id = $1, match_key_config_id = $2, cluster_id = $3")
-                .execute(Tuple.of(globalId, matcherResult.matchKeyId, clusterId))
+                .execute(Tuple.of(globalId, matcherResult.poolId, clusterId))
         )
         .mapEmpty();
   }
@@ -559,7 +559,7 @@ public class Storage {
 
     List<Object> tupleList = new ArrayList<>();
     tupleList.add(clusterId);
-    tupleList.add(matcherResult.matchKeyId);
+    tupleList.add(matcherResult.poolId);
     int no = 3;
     for (String key: matcherResult.keys) {
       if (!foundKeys.contains(key)) {
@@ -579,10 +579,10 @@ public class Storage {
         .mapEmpty();
   }
 
-  Future<UUID> createMetaEntry(SqlConnection conn, UUID clusterId, String matchKeyConfigId) {
+  Future<UUID> createMetaEntry(SqlConnection conn, UUID clusterId, String poolConfigId) {
     return conn.preparedQuery("INSERT INTO " + clusterMetaTable
             + " (cluster_id, datestamp, match_key_config_id) VALUES ($1, $2, $3)")
-        .execute(Tuple.of(clusterId, LocalDateTime.now(ZoneOffset.UTC), matchKeyConfigId))
+        .execute(Tuple.of(clusterId, LocalDateTime.now(ZoneOffset.UTC), poolConfigId))
         .map(clusterId);
   }
 
@@ -649,16 +649,16 @@ public class Storage {
   }
 
   /**
-   * Get available match key configurations.
+   * Get available pool configurations.
    * @return async result with list of configurations
    */
-  public Future<List<MatchKeyConfig>> getAvailableMatchConfigs() {
-    return pool.query("SELECT * FROM " + matchKeyConfigTable)
+  public Future<List<PoolConfig>> getAvailablePoolConfigs() {
+    return pool.query("SELECT * FROM " + poolConfigTable)
         .execute()
         .map(res -> {
-          List<MatchKeyConfig> matchKeyConfigs = new ArrayList<>();
-          res.forEach(row -> matchKeyConfigs.add(matchKeyConfigFromRow(row)));
-          return matchKeyConfigs;
+          List<PoolConfig> poolConfigs = new ArrayList<>();
+          res.forEach(row -> poolConfigs.add(poolConfigFromRow(row)));
+          return poolConfigs;
         });
   }
 
@@ -750,10 +750,10 @@ public class Storage {
   /**
    * return all clusters as streaming result.
    * @param ctx routing context
-   * @param matchKeyId match ke config to use
+   * @param poolId pool configuration to use
    * @return async result
    */
-  public Future<Void> getClusters(RoutingContext ctx, String matchKeyId,
+  public Future<Void> getClusters(RoutingContext ctx, String poolId,
       String sqlWhere, String sqlOrderBy) {
     String joinGlobal = "";
     if (sqlWhere != null && sqlWhere.contains("global_records.")) {
@@ -772,7 +772,7 @@ public class Storage {
     if (sqlWhere != null) {
       from = from + " AND (" + sqlWhere + ")";
     }
-    return streamResult(ctx, clusterRecordTable + ".cluster_id", Tuple.of(matchKeyId),
+    return streamResult(ctx, clusterRecordTable + ".cluster_id", Tuple.of(poolId),
         from, sqlOrderBy, "items",
         row -> getClusterById(row.getUUID("cluster_id")));
   }
@@ -796,49 +796,49 @@ public class Storage {
   }
 
   /**
-   * Insert match key config into storage.
-   * @param matchKey match key config
+   * Insert pool configuration into storage.
+   * @param poolConfig pool configuration
    * @return async result
    */
-  public Future<Void> insertMatchKeyConfig(MatchKeyConfig matchKey) {
+  public Future<Void> insertPoolConfig(PoolConfig poolConfig) {
     return pool.preparedQuery(
-        "INSERT INTO " + matchKeyConfigTable + " (id, matcher, method, params, update, args, cql)"
+        "INSERT INTO " + poolConfigTable + " (id, matcher, method, params, update, args, cql)"
             + " VALUES ($1, $2, $3, $4, $5, $6, $7)")
         .execute(Tuple.of(
-          matchKey.getId(),
-          matchKey.getMatcher(),
-          matchKey.getMethod(),
-          matchKey.getParams(),
-          matchKey.getUpdate(),
-          matchKey.getArgs(),
-          matchKey.getCql()))
+          poolConfig.getId(),
+          poolConfig.getMatcher(),
+          poolConfig.getMethod(),
+          poolConfig.getParams(),
+          poolConfig.getUpdate(),
+          poolConfig.getArgs(),
+          poolConfig.getCql()))
         .mapEmpty();
   }
 
   /**
-   * Update match key config into storage.
-   * @param matchKey match key config
+   * Update pool configuration in storage.
+   * @param poolConfig pool configuration
    * @return async result: TRUE if updated, FALSE if not found
    */
-  public Future<Boolean> updateMatchKeyConfig(MatchKeyConfig matchKey) {
+  public Future<Boolean> updatePoolConfig(PoolConfig poolConfig) {
 
     return pool.preparedQuery(
-            "UPDATE " + matchKeyConfigTable
+            "UPDATE " + poolConfigTable
                 + " SET matcher = $2, method = $3, params = $4, update = $5, args = $6, cql = $7"
                 + " WHERE id = $1")
         .execute(Tuple.of(
-          matchKey.getId(),
-          matchKey.getMatcher(),
-          matchKey.getMethod(),
-          matchKey.getParams(),
-          matchKey.getUpdate(),
-          matchKey.getArgs(),
-          matchKey.getCql()))
+          poolConfig.getId(),
+          poolConfig.getMatcher(),
+          poolConfig.getMethod(),
+          poolConfig.getParams(),
+          poolConfig.getUpdate(),
+          poolConfig.getArgs(),
+          poolConfig.getCql()))
         .map(res -> res.rowCount() > 0);
   }
 
-  static MatchKeyConfig matchKeyConfigFromRow(Row row) {
-    return new MatchKeyConfig(
+  static PoolConfig poolConfigFromRow(Row row) {
+    return new PoolConfig(
       row.getString("id"),
       row.getString("args"),
       row.getJsonObject("cql"),
@@ -850,12 +850,12 @@ public class Storage {
   }
 
   /**
-   * Select match key from storage.
-   * @param id match key id; null takes any first config
+   * Select pool configuration from storage.
+   * @param id pool id; null takes any first config
    * @return JSON object if found; null if not found
    */
-  public Future<JsonObject> selectMatchKeyConfig(String id) {
-    String q = "SELECT * FROM " + matchKeyConfigTable;
+  public Future<JsonObject> selectPoolConfig(String id) {
+    String q = "SELECT * FROM " + poolConfigTable;
     List<String> tupleList = new ArrayList<>();
     if (id != null) {
       q = q + " WHERE id = $1";
@@ -869,37 +869,38 @@ public class Storage {
             return null;
           }
           Row row = iterator.next();
-          return matchKeyConfigFromRow(row).toJson();
+          return poolConfigFromRow(row).toJson();
         });
   }
 
   /**
-   * Delete match key.
-   * @param id match key identifier
+   * Delete pool configuration.
+   * @param id pool identifier
    * @return TRUE if deleted; FALSE if not found
    */
-  public Future<Boolean> deleteMatchKeyConfig(String id) {
+  public Future<Boolean> deletePoolConfig(String id) {
     return pool.withConnection(connection ->
         connection.preparedQuery(
-                "DELETE FROM " + matchKeyConfigTable + " WHERE id = $1")
+                "DELETE FROM " + poolConfigTable + " WHERE id = $1")
             .execute(Tuple.of(id))
             .map(res -> res.rowCount() > 0));
   }
 
   /**
-   * Get match keys.
+   * Get pool configurations.
    * @param ctx routing context
    * @param sqlWhere the SQL WHERE clause
    * @param sqlOrderBy the SQL ORDER BY clause
    * @return async result
    */
-  public Future<Void> getMatchKeyConfigs(RoutingContext ctx, String sqlWhere, String sqlOrderBy) {
-    String from = matchKeyConfigTable;
+  public Future<Void> getPoolConfigs(RoutingContext ctx, String sqlWhere, String sqlOrderBy,
+      String resultProperty) {
+    String from = poolConfigTable;
     if (sqlWhere != null) {
       from = from + " WHERE " + sqlWhere;
     }
-    return streamResult(ctx, null, from, sqlOrderBy, "matchKeys",
-        row -> Future.succeededFuture(matchKeyConfigFromRow(row).toJson()));
+    return streamResult(ctx, null, from, sqlOrderBy, resultProperty,
+        row -> Future.succeededFuture(poolConfigFromRow(row).toJson()));
   }
 
   Future<JsonObject> recalculateMatchKeyValueTable(SqlConnection connection,
@@ -937,15 +938,15 @@ public class Storage {
   }
 
   /**
-   * Initialize match key (populate clusters).
+   * Initialize pool (populate clusters).
    * @param vertx Vert.x handle
-   * @param id match key id (user specified)
+   * @param id pool id (user specified)
    * @return statistics
    */
-  public Future<JsonObject> initializeMatchKey(Vertx vertx, String id) {
+  public Future<JsonObject> initializePool(Vertx vertx, String id) {
     return pool.withConnection(connection ->
         connection.preparedQuery(
-                "SELECT * FROM " + matchKeyConfigTable + " WHERE id = $1")
+                "SELECT * FROM " + poolConfigTable + " WHERE id = $1")
             .execute(Tuple.of(id))
             .compose(res -> {
               RowIterator<Row> iterator = res.iterator();
@@ -953,8 +954,8 @@ public class Storage {
                 return Future.succeededFuture();
               }
               Row row = iterator.next();
-              MatchKeyConfig matchKeyConfig = matchKeyConfigFromRow(row);
-              return createIngestMatcher(matchKeyConfig, vertx)
+              PoolConfig poolConfig = poolConfigFromRow(row);
+              return createIngestMatcher(poolConfig, vertx)
                 .compose(matcher -> recalculateMatchKeyValueTable(connection, matcher));
             })
     );
@@ -984,11 +985,11 @@ public class Storage {
   }
 
   /**
-   * get match key statistics.
-   * @param id match key id (user specified)
+   * Get pool statistics.
+   * @param id pool id (user specified)
    * @return statistics
    */
-  public Future<JsonObject> statsMatchKey(String id) {
+  public Future<JsonObject> statsPool(String id) {
     String qry = "SELECT * FROM "
         + clusterRecordTable + " LEFT JOIN " + clusterValueTable + " ON "
         + clusterValueTable + ".cluster_id = " + clusterRecordTable + ".cluster_id"

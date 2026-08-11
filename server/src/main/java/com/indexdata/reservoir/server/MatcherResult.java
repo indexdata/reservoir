@@ -4,5 +4,5 @@ import java.util.Collection;
 
 public class MatcherResult {
   /* package-private */ Collection<String> keys;
-  /* package-private */ String matchKeyId;
+  /* package-private */ String poolId;
 }

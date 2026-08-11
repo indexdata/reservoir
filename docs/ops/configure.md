@@ -1,13 +1,13 @@
 # Reservoir server configuration
 
-This document explains configuration of matchkeys and transformers, and Reservoir installations.
+This document explains configuration of matchers, pools, transformers, and Reservoir installations.
 
 <!-- $GH_FOLIO/okapi/doc/md2toc -l 2 -h 3 configure.md -->
 * [Ensure relevant login, and set some additional environment](#ensure-relevant-login-and-set-some-additional-environment)
-* [Do matchkeys configuration](#do-matchkeys-configuration)
-* [Initialize the matchkeys pool](#initialize-the-matchkeys-pool)
-* [Update matchkeys configuration](#update-matchkeys-configuration)
-* [Pool with multiple matchkeys](#pool-with-multiple-matchkeys)
+* [Configure matchers and pools](#configure-matchers-and-pools)
+* [Initialize the pool](#initialize-the-pool)
+* [Update matcher configuration](#update-matcher-configuration)
+* [Pool with multiple matchers](#pool-with-multiple-matchers)
 * [Do transformers configuration](#do-transformers-configuration)
 * [Reload transformers configuration](#reload-transformers-configuration)
 * [Do OAI-PMH transformer configuration](#do-oai-pmh-transformer-configuration)
@@ -17,22 +17,22 @@ This document explains configuration of matchkeys and transformers, and Reservoi
 
 Follow [Setup workspace and login](workspace.md).
 
-## Do matchkeys configuration
+## Configure matchers and pools
 
 (Refer to detailed notes at Reservoir [Configuring matchers](../../README.md#configuring-matchers).)
 
 Matchkeys utilise some specific elements from MARC bibliographic records to generate a unique string which identifies common records that describe the same instance.
 The various matchkeys implementations are explained at the [indexdata/matchkeys](https://github.com/indexdata/matchkeys) repository.
 
-Show current matchkeys and modules configuration for this particular Reservoir server:
+Show the current pools and modules for this particular Reservoir server:
 
 ```shell
 https GET $host/reservoir/config/modules x-okapi-token:$token \
   | jq -r '.modules[] | [.id, .type, .url] | @tsv'
-https GET $host/reservoir/config/matchkeys x-okapi-token:$token
+https GET $host/reservoir/config/pools x-okapi-token:$token
 ```
 
-POST the initial matchkeys configuration.
+POST the initial matcher module configuration.
 
 > [!WARNING]
 > Note that each example [configuration](https://github.com/indexdata/matchkeys/blob/main/js/matchkeys/goldrush2024/config-matchkeys-goldrush2024.json) refers to its JavaScript implementation via a specific git commit SHA (and might not be current).
@@ -43,26 +43,26 @@ https POST $host/reservoir/config/modules x-okapi-token:$token \
   < $ID_WORKSPACE/matchkeys/js/matchkeys/goldrush2024/config-matchkeys-goldrush2024.json
 ```
 
-POST the matchkeys pool configuration.
+POST the pool configuration.
 
 ```shell
-https POST $host/reservoir/config/matchkeys x-okapi-token:$token \
+https POST $host/reservoir/config/pools x-okapi-token:$token \
   < $ID_WORKSPACE/matchkeys/js/matchkeys/goldrush2024/config-pool-goldrush2024.json
 ```
 
-## Initialize the matchkeys pool
+## Initialize the pool
 
 Initialize the pool.
 
 ```shell
-https PUT "$host/reservoir/config/matchkeys/goldrush2024/initialize" x-okapi-token:$token
+https PUT "$host/reservoir/config/pools/goldrush2024/initialize" x-okapi-token:$token
 ```
 
 Note that if this is being done for a large consortium then this process will take a long time (typical records-per-second=160).
 After 5-minutes there will be an expected NGINX "Gateway timeout".
 
 ```shell
-https PUT "$host/reservoir/config/matchkeys/goldrush2024/initialize" x-okapi-token:$token
+https PUT "$host/reservoir/config/pools/goldrush2024/initialize" x-okapi-token:$token
 ```
 
 Watch the AWS facilities from time-to-time at "CloudWatch > Database insights".
@@ -70,19 +70,19 @@ Watch the AWS facilities from time-to-time at "CloudWatch > Database insights".
 The count and statistics can be done only after the initialisation has completed.
 
 ```shell
-https GET "$host/reservoir/clusters?matchkeyid=goldrush2024&count=exact&limit=0" x-okapi-token:$token
-https GET $host/reservoir/config/matchkeys/goldrush2024/stats x-okapi-token:$token | jq '.'
+https GET "$host/reservoir/clusters?poolId=goldrush2024&count=exact&limit=0" x-okapi-token:$token
+https GET $host/reservoir/config/pools/goldrush2024/stats x-okapi-token:$token | jq '.'
 ```
 
 The statistics operation can take a long time.
 So spin up a [container in the cluster](miscellaneous.md#gateway-timeout) to avoid the ALB/NGINX timeouts.
 
-## Update matchkeys configuration
+## Update matcher configuration
 
-To update existing matchkeys module configuration, e.g. to verify an in-development branch raw url.
+To update an existing matcher module configuration, e.g. to verify an in-development branch raw URL.
 (See [API docs](https://s3.amazonaws.com/indexdata-docs/api/reservoir/reservoir.html#operation/putCodeModule).)
 
-Modify its URL to refer to the new commit SHA of the script modification. Then update the matchkey:
+Modify its URL to refer to the new commit SHA of the script modification. Then update the matcher module:
 
 ```shell
 https PUT $host/reservoir/config/modules/goldrush2024-matcher x-okapi-token:$token \
@@ -91,13 +91,13 @@ https PUT $host/reservoir/config/modules/goldrush2024-matcher x-okapi-token:$tok
 https PUT $host/reservoir/config/modules/goldrush2024-matcher/reload x-okapi-token:$token
 ```
 
-Initialize the pool, as [explained](#initialize-the-matchkeys-pool) above.
+Initialize the pool, as [explained](#initialize-the-pool) above.
 
-## Pool with multiple matchkeys
+## Pool with multiple matchers
 
-A pool can declare multiple matchkeys. See [example](https://github.com/indexdata/matchkeys/blob/main/js/matchkeys/goldrush2024/config-pool-goldrush2024-isxn.json).
+A pool can declare multiple matchers. See [example](https://github.com/indexdata/matchkeys/blob/main/js/matchkeys/goldrush2024/config-pool-goldrush2024-isxn.json).
 
-Reservoir will utilise each and create a union of match values. This avoids duplicating matchkey source-code across multiple JavaScript files.
+Reservoir will utilise each matcher and create a union of match values. This avoids duplicating matcher source code across multiple JavaScript files.
 
 ## Do transformers configuration
 

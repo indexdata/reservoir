@@ -77,14 +77,169 @@ paths:
           $ref: "#/components/responses/trait_400"
         "500":
           $ref: "#/components/responses/trait_500"
-  # Configuration
+  # Pool configuration
+  /reservoir/config/pools:
+    parameters:
+      - $ref: headers/okapi-tenant.yaml
+      - $ref: headers/okapi-token.yaml
+      - $ref: headers/okapi-url.yaml
+    post:
+      description: Create a pool
+      operationId: postPool
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: schemas/pool.yaml
+      responses:
+        "201":
+          description: Pool configuration created
+          content:
+            application/json:
+              schema:
+                $ref: schemas/pool.yaml
+        "400":
+          $ref: "#/components/responses/trait_400"
+        "500":
+          $ref: "#/components/responses/trait_500"
+    get:
+      description: Get pool configurations
+      operationId: getPools
+      parameters:
+        - $ref: parameters/count.yaml
+        - $ref: parameters/limit.yaml
+        - $ref: parameters/query.yaml
+        - $ref: parameters/offset.yaml
+      responses:
+        "200":
+          description: List of pools
+          content:
+            application/json:
+              schema:
+                $ref: schemas/pools.yaml
+        "400":
+          $ref: "#/components/responses/trait_400"
+        "500":
+          $ref: "#/components/responses/trait_500"
+  /reservoir/config/pools/{id}:
+    parameters:
+      - $ref: headers/okapi-tenant.yaml
+      - $ref: headers/okapi-token.yaml
+      - $ref: headers/okapi-url.yaml
+      - in: path
+        name: id
+        required: true
+        description: Pool identifier
+        schema:
+          type: string
+    get:
+      description: Get pool configuration
+      operationId: getPool
+      responses:
+        "200":
+          description: Pool configuration returned
+          content:
+            application/json:
+              schema:
+                $ref: schemas/pool.yaml
+        "400":
+          $ref: "#/components/responses/trait_400"
+        "404":
+          $ref: "#/components/responses/trait_404"
+        "500":
+          $ref: "#/components/responses/trait_500"
+    delete:
+      description: Delete pool configuration
+      operationId: deletePool
+      responses:
+        "204":
+          description: Pool configuration deleted
+        "400":
+          $ref: "#/components/responses/trait_400"
+        "404":
+          $ref: "#/components/responses/trait_404"
+        "500":
+          $ref: "#/components/responses/trait_500"
+    put:
+      description: Update pool configuration
+      operationId: putPool
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: schemas/pool.yaml
+      responses:
+        "204":
+          description: Pool configuration updated
+        "400":
+          $ref: "#/components/responses/trait_400"
+        "404":
+          $ref: "#/components/responses/trait_404"
+        "500":
+          $ref: "#/components/responses/trait_500"
+  /reservoir/config/pools/{id}/initialize:
+    parameters:
+      - $ref: headers/okapi-tenant.yaml
+      - $ref: headers/okapi-token.yaml
+      - $ref: headers/okapi-url.yaml
+      - in: path
+        name: id
+        required: true
+        description: Pool identifier
+        schema:
+          type: string
+    put:
+      description: Recalculate clusters in the pool across all records
+      operationId: initializePool
+      responses:
+        "200":
+          description: Pool statistics
+          content:
+            application/json:
+              schema:
+                $ref: schemas/poolStats.json
+        "400":
+          $ref: "#/components/responses/trait_400"
+        "404":
+          $ref: "#/components/responses/trait_404"
+        "500":
+          $ref: "#/components/responses/trait_500"
+  /reservoir/config/pools/{id}/stats:
+    parameters:
+      - $ref: headers/okapi-tenant.yaml
+      - $ref: headers/okapi-token.yaml
+      - $ref: headers/okapi-url.yaml
+      - in: path
+        name: id
+        required: true
+        description: Pool identifier
+        schema:
+          type: string
+    get:
+      description: Get pool statistics
+      operationId: statsPool
+      responses:
+        "200":
+          description: Pool statistics
+          content:
+            application/json:
+              schema:
+                $ref: schemas/poolStats.json
+        "400":
+          $ref: "#/components/responses/trait_400"
+        "404":
+          $ref: "#/components/responses/trait_404"
+        "500":
+          $ref: "#/components/responses/trait_500"
+  # Deprecated pool API aliases using matchkey names
   /reservoir/config/matchkeys:
     parameters:
       - $ref: headers/okapi-tenant.yaml
       - $ref: headers/okapi-token.yaml
       - $ref: headers/okapi-url.yaml
     post:
-      description: Create match key
+      description: Deprecated; create a pool using /reservoir/config/pools
+      deprecated: true
       operationId: postConfigMatchKey
       requestBody:
         content:
@@ -93,7 +248,7 @@ paths:
               $ref: schemas/matchKey.yaml
       responses:
         "201":
-          description: Match key configuration created
+          description: Pool configuration created
           content:
             application/json:
               schema:
@@ -103,7 +258,8 @@ paths:
         "500":
           $ref: "#/components/responses/trait_500"
     get:
-      description: Get match key configurations
+      description: Deprecated; get pool configurations using /reservoir/config/pools
+      deprecated: true
       operationId: getConfigMatchKeys
       parameters:
         - $ref: parameters/count.yaml
@@ -112,7 +268,7 @@ paths:
         - $ref: parameters/offset.yaml
       responses:
         "200":
-          description: list of match keys.
+          description: List of pools using the deprecated matchKeys response property
           content:
             application/json:
               schema:
@@ -129,15 +285,16 @@ paths:
       - in: path
         name: id
         required: true
-        description: match key identifier
+        description: Pool identifier used by the deprecated endpoint
         schema:
           type: string
     get:
-      description: Get match key configuration
+      description: Deprecated; get the pool using /reservoir/config/pools/{id}
+      deprecated: true
       operationId: getConfigMatchKey
       responses:
         "200":
-          description: Match key configuration returned
+          description: Pool configuration returned
           content:
             application/json:
               schema:
@@ -149,11 +306,12 @@ paths:
         "500":
           $ref: "#/components/responses/trait_500"
     delete:
-      description: Delete match key configuration
+      description: Deprecated; delete the pool using /reservoir/config/pools/{id}
+      deprecated: true
       operationId: deleteConfigMatchKey
       responses:
         "204":
-          description: match key configuration deleted
+          description: Pool configuration deleted
         "400":
           $ref: "#/components/responses/trait_400"
         "404":
@@ -161,7 +319,8 @@ paths:
         "500":
           $ref: "#/components/responses/trait_500"
     put:
-      description: Update match key configuration.
+      description: Deprecated; update the pool using /reservoir/config/pools/{id}
+      deprecated: true
       operationId: putConfigMatchKey
       requestBody:
         content:
@@ -170,7 +329,7 @@ paths:
               $ref: schemas/matchKey.yaml
       responses:
         "204":
-          description: Match Key configuration updated
+          description: Pool configuration updated
         "400":
           $ref: "#/components/responses/trait_400"
         "404":
@@ -185,15 +344,16 @@ paths:
       - in: path
         name: id
         required: true
-        description: match key identifier
+        description: Pool identifier used by the deprecated endpoint
         schema:
           type: string
     put:
-      description: Recalculate match key across all records.
+      description: Deprecated; initialize the pool using /reservoir/config/pools/{id}/initialize
+      deprecated: true
       operationId: initializeMatchKey
       responses:
         "200":
-          description: match key statistics.
+          description: Pool statistics
           content:
             application/json:
               schema:
@@ -212,15 +372,16 @@ paths:
       - in: path
         name: id
         required: true
-        description: match key identifier
+        description: Pool identifier used by the deprecated endpoint
         schema:
           type: string
     get:
-      description: Get statistics for match key configuration
+      description: Deprecated; get pool statistics using /reservoir/config/pools/{id}/stats
+      deprecated: true
       operationId: statsMatchKey
       responses:
         "200":
-          description: match key statistics.
+          description: Pool statistics
           content:
             application/json:
               schema:
@@ -445,12 +606,14 @@ paths:
       - $ref: headers/okapi-url.yaml
       - $ref: parameters/count.yaml
       - $ref: parameters/limit.yaml
+      - $ref: parameters/poolId.yaml
       - $ref: parameters/matchkeyid.yaml
       - $ref: parameters/query.yaml
       - $ref: parameters/offset.yaml
     get:
       description: >
-        Get clusters based on matchkeyid. Query is CQL with the following fields supported:
+        Get clusters in a pool selected by poolId. The deprecated matchkeyid parameter is also
+        accepted. Query is CQL with the following fields supported:
         matchValue, clusterId, globalId, localId, sourceId, sourceVersion.
       operationId: getClusters
       responses:
@@ -473,8 +636,8 @@ paths:
         - $ref: headers/okapi-token.yaml
         - $ref: headers/okapi-url.yaml
         - $ref: parameters/query.yaml
-      description: Update cluster timestamps. CQL must specify at least matchkeyId and sourceId.
-        The sourceVersion and clusterId are optional.
+      description: Update cluster timestamps. CQL must specify at least poolId and sourceId.
+        The deprecated matchkeyId field is also accepted. The sourceVersion and clusterId are optional.
       operationId: touchClusters
       responses:
         "200":

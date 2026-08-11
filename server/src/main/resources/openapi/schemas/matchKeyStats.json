@@ -1,5 +1,5 @@
 {
-  "description": "match key statistics",
+  "description": "Pool statistics returned by the deprecated matchkeys endpoint",
   "type": "object",
   "properties": {
     "totalRecords": {

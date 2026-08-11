@@ -1,0 +1,30 @@
+{
+  "description": "Pool statistics",
+  "type": "object",
+  "properties": {
+    "totalRecords": {
+      "type": "integer",
+      "description": "total records"
+    },
+    "clustersTotal": {
+      "description": "number of clusters",
+      "type": "integer"
+    },
+    "matchValuesPerCluster": {
+      "type": "object",
+      "description": "key is number of match values in cluster; value is number of clusters"
+    },
+    "recordsPerCluster": {
+      "type": "object",
+      "description": "key is number of records in a cluster; value is number of clusters of this size (key)"
+    },
+    "recordsPerClusterSample": {
+      "type": "object",
+      "description": "key is number of records in a cluster; value is array of some cluster identifiers with this size"
+    }
+  },
+  "required": [
+    "totalRecords"
+  ],
+  "additionalProperties": true
+}

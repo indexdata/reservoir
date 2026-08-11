@@ -374,20 +374,23 @@ Post the pool configuration to the server with:
 
 ```
 curl -HX-Okapi-Tenant:$OKAPI_TENANT -HContent-type:application/json \
- $OKAPI_URL/reservoir/config/matchkeys -d @title-pool.json
+ $OKAPI_URL/reservoir/config/pools -d @title-pool.json
 ```
 
 and then initialize the pool for this config:
 
 ```
-curl -HX-Okapi-Tenant:$OKAPI_TENANT -XPUT $OKAPI_URL/reservoir/config/matchkeys/title/initialize
+curl -HX-Okapi-Tenant:$OKAPI_TENANT -XPUT $OKAPI_URL/reservoir/config/pools/title/initialize
 ```
 
 Now, you can retrieve individual record clusters from this pool with:
 
 ```
-curl -HX-Okapi-Tenant:$OKAPI_TENANT $OKAPI_URL/reservoir/clusters?matchkeyid=title
+curl -HX-Okapi-Tenant:$OKAPI_TENANT $OKAPI_URL/reservoir/clusters?poolId=title
 ```
+
+The deprecated `/reservoir/config/matchkeys` endpoint, `matchkeyid` query parameter,
+`matchkeyId` CQL field, and `matchKeys` pool-list response remain supported for compatibility.
 
 Obviously, matcher configuration must be aligned with the format of stored records.
 
@@ -429,7 +432,7 @@ post:
 
 ```
 curl -HX-Okapi-Tenant:$OKAPI_TENANT -HContent-type:application/json \
- $OKAPI_URL/reservoir/config/matchkeys -d @goldrush-pool.json
+ $OKAPI_URL/reservoir/config/pools -d @goldrush-pool.json
 ```
 
 ## OAI-PMH client
@@ -522,8 +525,7 @@ The following OAI-PMH verbs are supported by the server: `ListIdentifiers`, `Lis
 At this stage, only `metadataPrefix` with value `marcxml` is supported. This
 parameter can be omitted, in which case `marcxml` is assumed.
 
-Each Reservoir cluster corresponds to an OAI-PMH record and each matchkey configuration corresponds to
-an OAI `set`.
+Each Reservoir cluster corresponds to an OAI-PMH record and each pool corresponds to an OAI `set`.
 
 For example, to initiate a harvest of "title" clusters:
 
@@ -568,11 +570,10 @@ curl -HX-Okapi-Tenant:$OKAPI_TENANT \
 
 (`%3D` is the encoded `=' part of the query parameter value)
 
-It is not necessary to specify the match key configuration (pool) for this single cluster lookup as the
-cluster ID is unique for all match key configurations.
+It is not necessary to specify the pool for this single cluster lookup because the cluster ID is
+unique across all pools.
 
-The match key value itself can also be made searchable by a custom CQL field. This is done for a
-given match key configuration (pool).
+The match key value itself can also be made searchable by a custom CQL field for a given pool.
 
 For example if the match key value is an ISBN/ISSN number, the following pool could be used:
 
@@ -588,13 +589,13 @@ cat isxn-pool.json
   "update": "ingest"
 }
 curl -HX-Okapi-Tenant:$OKAPI_TENANT -HContent-type:application/json \
-  $OKAPI_URL/reservoir/config/matchkeys -d @isxn-pool.json
+  $OKAPI_URL/reservoir/config/pools -d @isxn-pool.json
 ```
 
 The matcher `matchkey` function returns ISBN/ISSN identifier for a MARC record.
 For an example of an `isxn` matcher module implementation, refer to [js/matchkeys/isxn](https://github.com/indexdata/matchkeys/tree/main/js/matchkeys/isxn/).
 The `cql` section is used purely for searching and lists the two CQL fields as well
-as a search term normalizing function. With this in place and `isxn` match key configuration
+as a search term normalizing function. With this in place and the `isxn` pool
 properly initialized, an SRU search such as the following is supported.
 
 
@@ -667,7 +668,7 @@ This can be achieved with the following call:
 
 ```
 curl -G -HX-Okapi-Tenant:$OKAPI_TENANT $OKAPI_URL/reservoir/clusters/touch \
-  --data-urlencode "query=matchkeyId = title AND sourceId = BIB1" -XPOST
+  --data-urlencode "query=poolId = title AND sourceId = BIB1" -XPOST
 ```
 
 ## Hosting notes
@@ -684,8 +685,8 @@ which are below the default idle timeout values (~300s).
 
 Similarly, certain Reservoir API operations, including:
 
-  * `/config/matchkeys/{name}/initialize`
-  * `/clusters/?matchkeyid={name}&count=exact`
+  * `/config/pools/{name}/initialize`
+  * `/clusters/?poolId={name}&count=exact`
 
 are database heavy and may take a long time. Such requests may be considered idle by the front load-balancer
 or ingress controller and require tuning of the timeout values.

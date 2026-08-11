@@ -1,0 +1,6 @@
+in: query
+name: poolId
+description: Pool identifier
+required: false
+schema:
+  type: string

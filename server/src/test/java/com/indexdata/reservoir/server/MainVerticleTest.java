@@ -78,9 +78,9 @@ public class MainVerticleTest extends TestBase {
         .delete("/reservoir/config/oai")
         .then()
         .statusCode(204);
-    deleteIssnMatchKey();
-    deleteIsbnMatchKey();
-    deleteIssnJsMatchKey();
+    deleteIssnPool();
+    deleteIsbnPool();
+    deleteIssnJsPool();
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
@@ -321,23 +321,23 @@ public class MainVerticleTest extends TestBase {
   }
 
   @Test
-  public void matchKeysNonExistingMatcherModule() {
-      JsonObject matchKey = new JsonObject()
+  public void poolWithNonExistingMatcherModule() {
+      JsonObject poolConfig = new JsonObject()
           .put("id", "xx")
           .put("matcher", "not-exists");
 
       RestAssured.given()
           .header(XOkapiHeaders.TENANT, TENANT_1)
           .header("Content-Type", "application/json")
-          .body(matchKey.encode())
-          .post("/reservoir/config/matchkeys")
+          .body(poolConfig.encode())
+          .post("/reservoir/config/pools")
           .then().statusCode(400)
           .contentType("text/plain")
           .body(Matchers.is("Matcher module 'not-exists' does not exist"));
   }
 
   @Test
-  public void testMatchKeysExistingMatcherModuleWithInvocation() {
+  public void testPoolWithExistingMatcherModuleInvocation() {
       JsonObject module = new JsonObject()
           .put("id", "exists")
           .put("type", "jsonpath")
@@ -352,27 +352,27 @@ public class MainVerticleTest extends TestBase {
           .statusCode(201)
           .contentType("application/json");
 
-      JsonObject matchKey = new JsonObject()
+      JsonObject poolConfig = new JsonObject()
           .put("id", "works")
           .put("matcher", "exists::function,not-exists");
 
       RestAssured.given()
           .header(XOkapiHeaders.TENANT, TENANT_1)
           .header("Content-Type", "application/json")
-          .body(matchKey.encode())
-          .post("/reservoir/config/matchkeys")
+          .body(poolConfig.encode())
+          .post("/reservoir/config/pools")
           .then()
           .statusCode(400)
           .contentType("text/plain")
           .body(Matchers.is("Matcher module 'not-exists' does not exist"));
 
-      matchKey.put("matcher", "exists::function");
+      poolConfig.put("matcher", "exists::function");
 
       RestAssured.given()
           .header(XOkapiHeaders.TENANT, TENANT_1)
           .header("Content-Type", "application/json")
-          .body(matchKey.encode())
-          .post("/reservoir/config/matchkeys")
+          .body(poolConfig.encode())
+          .post("/reservoir/config/pools")
           .then()
           .statusCode(201)
           .contentType("application/json");
@@ -380,7 +380,7 @@ public class MainVerticleTest extends TestBase {
       RestAssured.given()
           .header(XOkapiHeaders.TENANT, TENANT_1)
           .header("Content-Type", "application/json")
-          .delete("/reservoir/config/matchkeys/" + matchKey.getString("id"))
+          .delete("/reservoir/config/pools/" + poolConfig.getString("id"))
           .then().statusCode(204);
 
       RestAssured.given()
@@ -391,7 +391,7 @@ public class MainVerticleTest extends TestBase {
   }
 
   @Test
-  public void testMatchkeyArgs() {
+  public void testPoolArgs() {
     JsonObject module = new JsonObject()
         .put("id", UUID.randomUUID().toString())
         .put("type", "jsonpath")
@@ -408,7 +408,7 @@ public class MainVerticleTest extends TestBase {
         .contentType("application/json")
         .body(Matchers.is(module.encode()));
 
-    JsonObject matchKey = new JsonObject()
+    JsonObject poolConfig = new JsonObject()
         .put("id", UUID.randomUUID().toString())
         .put("args", "bad-args")
         .put("matcher", module.getValue("id"))
@@ -417,68 +417,68 @@ public class MainVerticleTest extends TestBase {
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .body(matchKey.encode())
-        .post("/reservoir/config/matchkeys")
+        .body(poolConfig.encode())
+        .post("/reservoir/config/pools")
         .then()
         .statusCode(400)
         .contentType("text/plain")
         .body(containsString("\"args\""));
 
-    matchKey.put("args", "");
+    poolConfig.put("args", "");
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .body(matchKey.encode())
-        .post("/reservoir/config/matchkeys")
+        .body(poolConfig.encode())
+        .post("/reservoir/config/pools")
         .then()
         .statusCode(400)
         .contentType("text/plain")
         .body(containsString("\"args\""));
 
-    matchKey.put("args", "payload");
+    poolConfig.put("args", "payload");
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .body(matchKey.encode())
-        .post("/reservoir/config/matchkeys")
+        .body(poolConfig.encode())
+        .post("/reservoir/config/pools")
         .then()
         .statusCode(201)
         .contentType("application/json")
-        .body(Matchers.is(matchKey.encode()));
+        .body(Matchers.is(poolConfig.encode()));
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .get("/reservoir/config/matchkeys/" + matchKey.getString("id"))
+        .get("/reservoir/config/pools/" + poolConfig.getString("id"))
         .then().statusCode(200)
         .contentType("application/json")
-        .body(Matchers.is(matchKey.encode()));
+        .body(Matchers.is(poolConfig.encode()));
 
-    matchKey.put("args", "full");
+    poolConfig.put("args", "full");
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .body(matchKey.encode())
-        .put("/reservoir/config/matchkeys/" + matchKey.getString("id"))
+        .body(poolConfig.encode())
+        .put("/reservoir/config/pools/" + poolConfig.getString("id"))
         .then()
         .statusCode(204);
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .get("/reservoir/config/matchkeys/" + matchKey.getString("id"))
+        .get("/reservoir/config/pools/" + poolConfig.getString("id"))
         .then().statusCode(200)
         .contentType("application/json")
-        .body(Matchers.is(matchKey.encode()));
+        .body(Matchers.is(poolConfig.encode()));
 
-    // delete the matchkey
+    // delete the pool
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .delete("/reservoir/config/matchkeys/" + matchKey.getString("id"))
+        .delete("/reservoir/config/pools/" + poolConfig.getString("id"))
         .then().statusCode(204);
 
     //delete the module
@@ -490,20 +490,20 @@ public class MainVerticleTest extends TestBase {
   }
 
   @Test
-  public void testMatchkeyCrudWithMatcher() {
+  public void testPoolsCrudWithMatcher() {
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .param("count", "none")
-        .get("/reservoir/config/matchkeys")
+        .get("/reservoir/config/pools")
         .then().statusCode(200)
         .contentType("application/json")
-        .body("matchKeys", is(empty()))
+        .body("pools", is(empty()))
         .body("resultInfo.totalRecords", is(nullValue()));
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .param("count", "foo")
-        .get("/reservoir/config/matchkeys")
+        .get("/reservoir/config/pools")
         .then().statusCode(400)
         .contentType("text/plain")
         .body(containsString("Instance does not match any of [\"exact\",\"none\"]"));
@@ -511,10 +511,10 @@ public class MainVerticleTest extends TestBase {
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .param("count", "exact")
-        .get("/reservoir/config/matchkeys")
+        .get("/reservoir/config/pools")
         .then().statusCode(200)
         .contentType("application/json")
-        .body("matchKeys", is(empty()))
+        .body("pools", is(empty()))
         .body("resultInfo.totalRecords", is(0));
 
     JsonObject module10a = new JsonObject()
@@ -533,7 +533,7 @@ public class MainVerticleTest extends TestBase {
         .contentType("application/json")
         .body(Matchers.is(module10a.encode()));
 
-    JsonObject matchKey = new JsonObject()
+    JsonObject poolConfig = new JsonObject()
         .put("id", UUID.randomUUID().toString())
         .put("matcher", module10a.getString("id"))
         .put("update", "ingest")
@@ -542,25 +542,25 @@ public class MainVerticleTest extends TestBase {
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .get("/reservoir/config/matchkeys/" + matchKey.getString("id"))
+        .get("/reservoir/config/pools/" + poolConfig.getString("id"))
         .then().statusCode(404)
         .contentType("text/plain")
-        .body(Matchers.is("MatchKey " + matchKey.getString("id") + " not found"));
+        .body(Matchers.is("Pool " + poolConfig.getString("id") + " not found"));
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .body(matchKey.encode())
-        .post("/reservoir/config/matchkeys")
+        .body(poolConfig.encode())
+        .post("/reservoir/config/pools")
         .then().statusCode(201)
         .contentType("application/json")
-        .body(Matchers.is(matchKey.encode()));
+        .body(Matchers.is(poolConfig.encode()));
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .body(matchKey.encode())
-        .post("/reservoir/config/matchkeys")
+        .body(poolConfig.encode())
+        .post("/reservoir/config/pools")
         .then().statusCode(400)
         .contentType("text/plain")
         .body(containsString("duplicate key value violates unique constraint"));
@@ -568,77 +568,77 @@ public class MainVerticleTest extends TestBase {
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .get("/reservoir/config/matchkeys/" + matchKey.getString("id"))
+        .get("/reservoir/config/pools/" + poolConfig.getString("id"))
         .then().statusCode(200)
         .contentType("application/json")
-        .body(Matchers.is(matchKey.encode()));
+        .body(Matchers.is(poolConfig.encode()));
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
-        .get("/reservoir/config/matchkeys")
+        .get("/reservoir/config/pools")
         .then().statusCode(200)
         .contentType("application/json")
-        .body("matchKeys", hasSize(1))
-        .body("matchKeys[0].id", is(matchKey.getString("id")))
-        .body("matchKeys[0].method", is(matchKey.getString("method")))
-        .body("matchKeys[0].update", is(matchKey.getString("update")))
-        .body("matchKeys[0].matcher", is(matchKey.getString("matcher")))
-        .body("matchKeys[0].cql.isbn", is("isbn-matcher"));
+        .body("pools", hasSize(1))
+        .body("pools[0].id", is(poolConfig.getString("id")))
+        .body("pools[0].method", is(poolConfig.getString("method")))
+        .body("pools[0].update", is(poolConfig.getString("update")))
+        .body("pools[0].matcher", is(poolConfig.getString("matcher")))
+        .body("pools[0].cql.isbn", is("isbn-matcher"));
         // should really check that params are same
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
-        .queryParam("query", "matcher=" + matchKey.getString("matcher"))
-        .get("/reservoir/config/matchkeys")
+        .queryParam("query", "matcher=" + poolConfig.getString("matcher"))
+        .get("/reservoir/config/pools")
         .then().statusCode(200)
         .contentType("application/json")
-        .body("matchKeys", hasSize(1))
-        .body("matchKeys[0].id", is(matchKey.getString("id")))
-        .body("matchKeys[0].method", is(matchKey.getString("method")))
-        .body("matchKeys[0].update", is(matchKey.getString("update")));
+        .body("pools", hasSize(1))
+        .body("pools[0].id", is(poolConfig.getString("id")))
+        .body("pools[0].method", is(poolConfig.getString("method")))
+        .body("pools[0].update", is(poolConfig.getString("update")));
 
-    matchKey.put("update", "manual");
-    matchKey.put("cql", new JsonObject().put("isbn", "isbn-matcher-updated"));
+    poolConfig.put("update", "manual");
+    poolConfig.put("cql", new JsonObject().put("isbn", "isbn-matcher-updated"));
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .body(matchKey.encode())
-        .put("/reservoir/config/matchkeys/" + matchKey.getString("id"))
+        .body(poolConfig.encode())
+        .put("/reservoir/config/pools/" + poolConfig.getString("id"))
         .then().statusCode(204);
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .get("/reservoir/config/matchkeys/" + matchKey.getString("id"))
+        .get("/reservoir/config/pools/" + poolConfig.getString("id"))
         .then().statusCode(200)
         .contentType("application/json")
-        .body(Matchers.is(matchKey.encode()));
+        .body(Matchers.is(poolConfig.encode()));
 
-    // delete the matchkey
+    // delete the pool
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .delete("/reservoir/config/matchkeys/" + matchKey.getString("id"))
+        .delete("/reservoir/config/pools/" + poolConfig.getString("id"))
         .then().statusCode(204);
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .delete("/reservoir/config/matchkeys/" + matchKey.getString("id"))
+        .delete("/reservoir/config/pools/" + poolConfig.getString("id"))
         .then().statusCode(404);
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .get("/reservoir/config/matchkeys/" + matchKey.getString("id"))
+        .get("/reservoir/config/pools/" + poolConfig.getString("id"))
         .then().statusCode(404);
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .body(matchKey.encode())
-        .put("/reservoir/config/matchkeys/" + matchKey.getString("id"))
+        .body(poolConfig.encode())
+        .put("/reservoir/config/pools/" + poolConfig.getString("id"))
         .then().statusCode(404);
 
     //delete the module
@@ -646,6 +646,104 @@ public class MainVerticleTest extends TestBase {
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
         .delete("/reservoir/config/modules/" + module10a.getString("id"))
+        .then().statusCode(204);
+  }
+
+  @Test
+  public void testDeprecatedMatchkeysApiAliases() {
+    JsonObject module = new JsonObject()
+        .put("id", UUID.randomUUID().toString())
+        .put("type", "jsonpath")
+        .put("script", "$.marc.fields.010.subfields[*].a");
+    JsonObject poolConfig = new JsonObject()
+        .put("id", UUID.randomUUID().toString())
+        .put("matcher", module.getString("id"))
+        .put("update", "manual");
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .body(module.encode())
+        .post("/reservoir/config/modules")
+        .then().statusCode(201);
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .body(poolConfig.encode())
+        .post("/reservoir/config/matchkeys")
+        .then().statusCode(201)
+        .body(Matchers.is(poolConfig.encode()));
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .queryParam("query", "id=" + poolConfig.getString("id"))
+        .get("/reservoir/config/pools")
+        .then().statusCode(200)
+        .body("pools", hasSize(1))
+        .body("pools[0].id", is(poolConfig.getString("id")));
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .queryParam("query", "id=" + poolConfig.getString("id"))
+        .get("/reservoir/config/matchkeys")
+        .then().statusCode(200)
+        .body("matchKeys", hasSize(1))
+        .body("matchKeys[0].id", is(poolConfig.getString("id")));
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .get("/reservoir/config/matchkeys/" + poolConfig.getString("id"))
+        .then().statusCode(200)
+        .body(Matchers.is(poolConfig.encode()));
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .body(poolConfig.encode())
+        .put("/reservoir/config/matchkeys/" + poolConfig.getString("id"))
+        .then().statusCode(204);
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .get("/reservoir/config/matchkeys/" + poolConfig.getString("id") + "/stats")
+        .then().statusCode(200);
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .put("/reservoir/config/matchkeys/" + poolConfig.getString("id") + "/initialize")
+        .then().statusCode(200);
+
+    JsonObject invalidPoolConfig = new JsonObject().put("id", "invalid'id");
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .body(invalidPoolConfig.encode())
+        .post("/reservoir/config/matchkeys")
+        .then()
+        .statusCode(400)
+        .body(is("MatchKeyConfig id cannot contain quotes"));
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .delete("/reservoir/config/matchkeys/" + poolConfig.getString("id"))
+        .then().statusCode(204);
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .get("/reservoir/config/matchkeys/" + poolConfig.getString("id"))
+        .then().statusCode(404)
+        .body(Matchers.is("MatchKey " + poolConfig.getString("id") + " not found"));
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .get("/reservoir/config/pools/" + poolConfig.getString("id"))
+        .then().statusCode(404)
+        .body(Matchers.is("Pool " + poolConfig.getString("id") + " not found"));
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .delete("/reservoir/config/modules/" + module.getString("id"))
         .then().statusCode(204);
   }
 
@@ -1007,7 +1105,7 @@ public class MainVerticleTest extends TestBase {
 
   @Test
   public void testMatchKeysIngest() {
-    JsonObject matchKey = createIsbnMatchKey();
+    JsonObject poolConfig = createIsbnPool();
 
     JsonArray records1 = new JsonArray()
         .add(new JsonObject()
@@ -1047,7 +1145,7 @@ public class MainVerticleTest extends TestBase {
     String s = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .param("matchkeyid", "isbn")
+        .param("poolId", "isbn")
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .contentType("application/json")
@@ -1061,7 +1159,7 @@ public class MainVerticleTest extends TestBase {
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
         .param("query", "matchValue=3")
-        .param("matchkeyid", "isbn")
+        .param("poolId", "isbn")
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .contentType("application/json")
@@ -1074,7 +1172,7 @@ public class MainVerticleTest extends TestBase {
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
         .param("query", "sourceId=" + SOURCE_ID_1)
-        .param("matchkeyid", "isbn")
+        .param("poolId", "isbn")
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .contentType("application/json")
@@ -1088,7 +1186,7 @@ public class MainVerticleTest extends TestBase {
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
         .param("query", "localId=S101")
-        .param("matchkeyid", "isbn")
+        .param("poolId", "isbn")
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .contentType("application/json")
@@ -1104,7 +1202,7 @@ public class MainVerticleTest extends TestBase {
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
         .param("query", "globalId=" + globalId)
-        .param("matchkeyid", "isbn")
+        .param("poolId", "isbn")
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .contentType("application/json")
@@ -1127,7 +1225,7 @@ public class MainVerticleTest extends TestBase {
     s = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .param("matchkeyid", "isbn")
+        .param("poolId", "isbn")
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .contentType("application/json")
@@ -1146,13 +1244,13 @@ public class MainVerticleTest extends TestBase {
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
-        .delete("/reservoir/config/matchkeys/" + matchKey.getString("id"))
+        .delete("/reservoir/config/pools/" + poolConfig.getString("id"))
         .then().statusCode(204);
   }
 
   @Test
   public void testTouchClusters() {
-    createIsbnMatchKey();
+    createIsbnPool();
 
     JsonArray records1 = new JsonArray()
         .add(new JsonObject()
@@ -1193,7 +1291,7 @@ public class MainVerticleTest extends TestBase {
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
-        .queryParam("query", "matchkeyId=isbn AND sourceId=wrong")
+        .queryParam("query", "poolId=isbn AND sourceId=wrong")
         .post("/reservoir/clusters/touch")
         .then()
         .statusCode(200)
@@ -1217,7 +1315,7 @@ public class MainVerticleTest extends TestBase {
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
-        .queryParam("query", "matchkeyId=not-enough")
+        .queryParam("query", "poolId=not-enough")
         .post("/reservoir/clusters/touch")
         .then()
         .statusCode(400)
@@ -1226,7 +1324,7 @@ public class MainVerticleTest extends TestBase {
     String s = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .param("matchkeyid", "isbn")
+        .param("poolId", "isbn")
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .contentType("application/json")
@@ -1237,6 +1335,7 @@ public class MainVerticleTest extends TestBase {
 
     String datestamp1 = new JsonObject(s).getJsonArray("items").getJsonObject(0).getString("datestamp");
 
+    // Deprecated CQL field remains accepted.
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .queryParam("query", "matchkeyId=isbn AND sourceId=" + SOURCE_ID_1)
@@ -1249,7 +1348,7 @@ public class MainVerticleTest extends TestBase {
     s = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .param("matchkeyid", "isbn")
+        .param("poolId", "isbn")
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .contentType("application/json")
@@ -1264,7 +1363,7 @@ public class MainVerticleTest extends TestBase {
   }
 
   @Test
-  public void testMatchKeyIdMissing() {
+  public void testPoolIdMissing() {
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
@@ -1275,7 +1374,7 @@ public class MainVerticleTest extends TestBase {
   }
 
   @Test
-  public void testMatchKeyIdNotFound() {
+  public void testDeprecatedMatchkeyIdNotFound() {
     String id = UUID.randomUUID().toString();
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
@@ -1287,11 +1386,24 @@ public class MainVerticleTest extends TestBase {
         .body(is("MatchKey " + id + " not found"));
   }
 
-  JsonObject createIssnMatchKey() {
-    return createIssnMatchKey("ingest");
+  @Test
+  public void testPoolIdNotFound() {
+    String id = UUID.randomUUID().toString();
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .param("poolId", id)
+        .header("Content-Type", "application/json")
+        .get("/reservoir/clusters")
+        .then().statusCode(404)
+        .contentType("text/plain")
+        .body(is("Pool " + id + " not found"));
   }
 
-  JsonObject createIssnMatchKey(String update) {
+  JsonObject createIssnPool() {
+    return createIssnPool("ingest");
+  }
+
+  JsonObject createIssnPool(String update) {
     JsonObject issnMatcher = new JsonObject()
         .put("id", "issn-matcher")
         .put("type", "jsonpath")
@@ -1308,7 +1420,7 @@ public class MainVerticleTest extends TestBase {
         .contentType("application/json")
         .body(Matchers.is(issnMatcher.encode()));
 
-    JsonObject matchKey = new JsonObject()
+    JsonObject poolConfig = new JsonObject()
         .put("id", "issn")
         .put("matcher", "issn-matcher")
         .put("args", "full")
@@ -1317,13 +1429,13 @@ public class MainVerticleTest extends TestBase {
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .body(matchKey.encode())
-        .post("/reservoir/config/matchkeys")
+        .body(poolConfig.encode())
+        .post("/reservoir/config/pools")
         .then().statusCode(201)
         .contentType("application/json")
-        .body(Matchers.is(matchKey.encode()));
+        .body(Matchers.is(poolConfig.encode()));
 
-    return matchKey;
+    return poolConfig;
   }
 
   JsonObject createIssnJsMatcher(String update) {
@@ -1342,7 +1454,7 @@ public class MainVerticleTest extends TestBase {
         .statusCode(201)
         .contentType("application/json");
 
-    JsonObject matchKey = new JsonObject()
+    JsonObject poolConfig = new JsonObject()
         .put("id", "issn-js")
         .put("matcher", "issn-matcher-js::matchkey")
         .put("args", "full")
@@ -1351,16 +1463,16 @@ public class MainVerticleTest extends TestBase {
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .body(matchKey.encode())
-        .post("/reservoir/config/matchkeys")
+        .body(poolConfig.encode())
+        .post("/reservoir/config/pools")
         .then().statusCode(201)
         .contentType("application/json")
-        .body(Matchers.is(matchKey.encode()));
+        .body(Matchers.is(poolConfig.encode()));
 
-    return matchKey;
+    return poolConfig;
   }
 
-  void deleteIssnMatchKey() {
+  void deleteIssnPool() {
     RestAssured.given()
       .header(XOkapiHeaders.TENANT, TENANT_1)
       .delete("/reservoir/config/modules/issn-matcher")
@@ -1368,11 +1480,11 @@ public class MainVerticleTest extends TestBase {
 
     RestAssured.given()
       .header(XOkapiHeaders.TENANT, TENANT_1)
-      .delete("/reservoir/config/matchkeys/issn")
+      .delete("/reservoir/config/pools/issn")
       .then().statusCode(anyOf(is(204), is(404)));
   }
 
-  void deleteIssnJsMatchKey() {
+  void deleteIssnJsPool() {
     RestAssured.given()
       .header(XOkapiHeaders.TENANT, TENANT_1)
       .delete("/reservoir/config/modules/issn-matcher-js")
@@ -1380,11 +1492,11 @@ public class MainVerticleTest extends TestBase {
 
     RestAssured.given()
       .header(XOkapiHeaders.TENANT, TENANT_1)
-      .delete("/reservoir/config/matchkeys/issn-js")
+      .delete("/reservoir/config/pools/issn-js")
       .then().statusCode(anyOf(is(204), is(404)));
   }
 
-  void deleteIsbnMatchKey() {
+  void deleteIsbnPool() {
     RestAssured.given()
       .header(XOkapiHeaders.TENANT, TENANT_1)
       .delete("/reservoir/config/modules/isbn-cql")
@@ -1397,15 +1509,15 @@ public class MainVerticleTest extends TestBase {
 
     RestAssured.given()
       .header(XOkapiHeaders.TENANT, TENANT_1)
-      .delete("/reservoir/config/matchkeys/isbn")
+      .delete("/reservoir/config/pools/isbn")
       .then().statusCode(anyOf(is(204), is(404)));
   }
 
-  JsonObject createIsbnMatchKey() {
-    return createIsbnMatchKey(null);
+  JsonObject createIsbnPool() {
+    return createIsbnPool(null);
   }
 
-  JsonObject createIsbnMatchKey(String updateValue) {
+  JsonObject createIsbnPool(String updateValue) {
     JsonObject matchModule = new JsonObject()
         .put("id", "isbn-matcher")
         .put("type", "jsonpath")
@@ -1434,23 +1546,23 @@ public class MainVerticleTest extends TestBase {
         .contentType("application/json")
         .body(Matchers.is(matchCqlIsbn.encode()));
 
-    JsonObject matchKey = new JsonObject()
+    JsonObject poolConfig = new JsonObject()
         .put("id", "isbn")
         .put("matcher", "isbn-matcher")
         .put("cql", new JsonObject().put("isbn", "isbn-cql"));
 
     if (updateValue != null) {
-      matchKey.put("update", updateValue);
+      poolConfig.put("update", updateValue);
     }
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .body(matchKey.encode())
-        .post("/reservoir/config/matchkeys")
+        .body(poolConfig.encode())
+        .post("/reservoir/config/pools")
         .then().statusCode(201)
         .contentType("application/json")
-        .body(Matchers.is(matchKey.encode()));
-    return matchKey;
+        .body(Matchers.is(poolConfig.encode()));
+    return poolConfig;
   }
 
   @Test
@@ -1473,23 +1585,23 @@ public class MainVerticleTest extends TestBase {
           .then().statusCode(201);
     }
 
-    JsonObject matchKey = new JsonObject()
+    JsonObject poolConfig = new JsonObject()
         .put("id", "issn")
         .put("matcher", "issn-matcher,isbn-matcher")
         .put("update", "ingest");
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .body(matchKey.encode())
-        .post("/reservoir/config/matchkeys")
+        .body(poolConfig.encode())
+        .post("/reservoir/config/pools")
         .then().statusCode(201)
-        .body(Matchers.is(matchKey.encode()));
+        .body(Matchers.is(poolConfig.encode()));
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
-        .get("/reservoir/config/matchkeys/issn")
+        .get("/reservoir/config/pools/issn")
         .then().statusCode(200)
-        .body(Matchers.is(matchKey.encode()));
+        .body(Matchers.is(poolConfig.encode()));
 
     JsonArray records = new JsonArray()
         .add(new JsonObject()
@@ -1502,7 +1614,7 @@ public class MainVerticleTest extends TestBase {
 
     String response = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
-        .param("matchkeyid", "issn")
+        .param("poolId", "issn")
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .body("items", hasSize(1))
@@ -1512,7 +1624,7 @@ public class MainVerticleTest extends TestBase {
 
   @Test
   public void testClustersSameKey() {
-    createIssnMatchKey();
+    createIssnPool();
 
     JsonArray records1 = new JsonArray()
         .add(new JsonObject()
@@ -1541,7 +1653,7 @@ public class MainVerticleTest extends TestBase {
     String s = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .param("matchkeyid", "issn")
+        .param("poolId", "issn")
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .contentType("application/json")
@@ -1589,7 +1701,7 @@ public class MainVerticleTest extends TestBase {
     String s = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .param("matchkeyid", "issn-js")
+        .param("poolId", "issn-js")
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .contentType("application/json")
@@ -1607,7 +1719,7 @@ public class MainVerticleTest extends TestBase {
 
   @Test
   public void testClustersLargeKey() {
-    createIssnMatchKey();
+    createIssnPool();
 
     JsonArray records1 = new JsonArray()
         .add(new JsonObject()
@@ -1623,7 +1735,7 @@ public class MainVerticleTest extends TestBase {
     String s = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .param("matchkeyid", "issn")
+        .param("poolId", "issn")
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .contentType("application/json")
@@ -1642,7 +1754,7 @@ public class MainVerticleTest extends TestBase {
 
   @Test
   public void testClustersEmptyKey() {
-    createIsbnMatchKey();
+    createIsbnPool();
 
     JsonArray records1 = new JsonArray()
         .add(new JsonObject()
@@ -1669,7 +1781,7 @@ public class MainVerticleTest extends TestBase {
     String s = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .param("matchkeyid", "isbn")
+        .param("poolId", "isbn")
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .contentType("application/json")
@@ -1693,7 +1805,7 @@ public class MainVerticleTest extends TestBase {
     s = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .param("matchkeyid", "isbn")
+        .param("poolId", "isbn")
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .contentType("application/json")
@@ -1718,7 +1830,7 @@ public class MainVerticleTest extends TestBase {
     s = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .param("matchkeyid", "isbn")
+        .param("poolId", "isbn")
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .contentType("application/json")
@@ -1731,7 +1843,7 @@ public class MainVerticleTest extends TestBase {
 
   @Test
   public void testClustersNoKey() {
-    createIsbnMatchKey();
+    createIsbnPool();
 
     JsonArray records1 = new JsonArray()
         .add(new JsonObject()
@@ -1758,7 +1870,7 @@ public class MainVerticleTest extends TestBase {
     String s = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .param("matchkeyid", "isbn")
+        .param("poolId", "isbn")
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .contentType("application/json")
@@ -1783,7 +1895,7 @@ public class MainVerticleTest extends TestBase {
     s = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .param("matchkeyid", "isbn")
+        .param("poolId", "isbn")
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .contentType("application/json")
@@ -1809,7 +1921,7 @@ public class MainVerticleTest extends TestBase {
     s = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .param("matchkeyid", "isbn")
+        .param("poolId", "isbn")
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .contentType("application/json")
@@ -1828,8 +1940,8 @@ public class MainVerticleTest extends TestBase {
         .get("/reservoir/clusters")
         .then().statusCode(400);
 
-    createIsbnMatchKey();
-    createIssnMatchKey();
+    createIsbnPool();
+    createIssnPool();
 
     JsonArray records1 = new JsonArray()
         .add(new JsonObject()
@@ -1860,7 +1972,7 @@ public class MainVerticleTest extends TestBase {
     String s = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .param("matchkeyid", "issn")
+        .param("poolId", "issn")
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .contentType("application/json")
@@ -1872,7 +1984,7 @@ public class MainVerticleTest extends TestBase {
     s = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .param("matchkeyid", "isbn")
+        .param("poolId", "isbn")
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .contentType("application/json")
@@ -1890,7 +2002,7 @@ public class MainVerticleTest extends TestBase {
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
         .param("query", "clusterId=" + clusterId)
-        .param("matchkeyid", "isbn")
+        .param("poolId", "isbn")
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .contentType("application/json")
@@ -1930,7 +2042,7 @@ public class MainVerticleTest extends TestBase {
     s = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .param("matchkeyid", "issn")
+        .param("poolId", "issn")
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .contentType("application/json")
@@ -1942,7 +2054,7 @@ public class MainVerticleTest extends TestBase {
     s = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .param("matchkeyid", "isbn")
+        .param("poolId", "isbn")
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .contentType("application/json")
@@ -1968,7 +2080,7 @@ public class MainVerticleTest extends TestBase {
     s = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .param("matchkeyid", "isbn")
+        .param("poolId", "isbn")
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .contentType("application/json")
@@ -2001,7 +2113,7 @@ public class MainVerticleTest extends TestBase {
         .contentType("text/plain")
         .body(is("Must specify query for delete records"));
 
-    JsonObject matchKey = createIsbnMatchKey();
+    JsonObject poolConfig = createIsbnPool();
 
     JsonArray records1 = new JsonArray()
         .add(new JsonObject()
@@ -2035,7 +2147,7 @@ public class MainVerticleTest extends TestBase {
     String s = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .param("matchkeyid", "isbn")
+        .param("poolId", "isbn")
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .contentType("application/json")
@@ -2063,7 +2175,7 @@ public class MainVerticleTest extends TestBase {
     s = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .param("matchkeyid", "isbn")
+        .param("poolId", "isbn")
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .contentType("application/json")
@@ -2090,7 +2202,7 @@ public class MainVerticleTest extends TestBase {
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .param("matchkeyid", "isbn")
+        .param("poolId", "isbn")
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .contentType("application/json")
@@ -2098,13 +2210,13 @@ public class MainVerticleTest extends TestBase {
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
-        .delete("/reservoir/config/matchkeys/" + matchKey.getString("id"))
+        .delete("/reservoir/config/pools/" + poolConfig.getString("id"))
         .then().statusCode(204);
   }
 
   @Test
   public void testEmptyMatchKeys() {
-    JsonObject matchKey = createIsbnMatchKey();
+    JsonObject poolConfig = createIsbnPool();
 
     JsonArray records1 = new JsonArray()
         .add(new JsonObject()
@@ -2141,7 +2253,7 @@ public class MainVerticleTest extends TestBase {
     String s = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .param("matchkeyid", "isbn")
+        .param("poolId", "isbn")
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .contentType("application/json")
@@ -2161,7 +2273,7 @@ public class MainVerticleTest extends TestBase {
     s = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .param("matchkeyid", "isbn")
+        .param("poolId", "isbn")
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .contentType("application/json")
@@ -2178,13 +2290,13 @@ public class MainVerticleTest extends TestBase {
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
-        .delete("/reservoir/config/matchkeys/" + matchKey.getString("id"))
+        .delete("/reservoir/config/pools/" + poolConfig.getString("id"))
         .then().statusCode(204);
   }
 
   @Test
-  public void testMatchKeysInitIssn() {
-    JsonObject matchKey = createIssnMatchKey("manual");
+  public void testPoolInitIssn() {
+    JsonObject poolConfig = createIssnPool("manual");
 
     JsonArray records1 = new JsonArray()
         .add(new JsonObject()
@@ -2207,8 +2319,8 @@ public class MainVerticleTest extends TestBase {
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .body(matchKey.encode())
-        .put("/reservoir/config/matchkeys/" + matchKey.getString("id") + "/initialize")
+        .body(poolConfig.encode())
+        .put("/reservoir/config/pools/" + poolConfig.getString("id") + "/initialize")
         .then().statusCode(200)
         .contentType("application/json")
         .body("totalRecords", is(2))
@@ -2226,7 +2338,7 @@ public class MainVerticleTest extends TestBase {
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .param("matchkeyid", matchKey.getString("id"))
+        .param("poolId", poolConfig.getString("id"))
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .contentType("application/json")
@@ -2237,8 +2349,8 @@ public class MainVerticleTest extends TestBase {
   }
 
   @Test
-  public void testMatchKeysManual() {
-    JsonObject matchKey = createIsbnMatchKey("manual");
+  public void testPoolManual() {
+    JsonObject poolConfig = createIsbnPool("manual");
 
     JsonArray records1 = new JsonArray()
         .add(new JsonObject()
@@ -2261,8 +2373,8 @@ public class MainVerticleTest extends TestBase {
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .body(matchKey.encode())
-        .put("/reservoir/config/matchkeys/" + matchKey.getString("id") + "/initialize")
+        .body(poolConfig.encode())
+        .put("/reservoir/config/pools/" + poolConfig.getString("id") + "/initialize")
         .then().statusCode(200)
         .contentType("application/json")
         .body("totalRecords", is(2))
@@ -2280,7 +2392,7 @@ public class MainVerticleTest extends TestBase {
     String s = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .param("matchkeyid", "isbn")
+        .param("poolId", "isbn")
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .contentType("application/json")
@@ -2333,8 +2445,8 @@ public class MainVerticleTest extends TestBase {
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .body(matchKey.encode())
-        .put("/reservoir/config/matchkeys/" + matchKey.getString("id") + "/initialize")
+        .body(poolConfig.encode())
+        .put("/reservoir/config/pools/" + poolConfig.getString("id") + "/initialize")
         .then().statusCode(200)
         .contentType("application/json")
         .body("totalRecords", is(7))
@@ -2343,7 +2455,7 @@ public class MainVerticleTest extends TestBase {
     s = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .param("matchkeyid", "isbn")
+        .param("poolId", "isbn")
         .get("/reservoir/clusters")
         .then().statusCode(200)
         .contentType("application/json")
@@ -2354,7 +2466,7 @@ public class MainVerticleTest extends TestBase {
     s = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .param("matchkeyid", "isbn")
+        .param("poolId", "isbn")
         .param("query", "sourceId=" + SOURCE_ID_1 + " and sourceVersion = 1")
         .get("/reservoir/clusters")
         .then().statusCode(200)
@@ -2383,22 +2495,22 @@ public class MainVerticleTest extends TestBase {
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
-        .delete("/reservoir/config/matchkeys/" + matchKey.getString("id"))
+        .delete("/reservoir/config/pools/" + poolConfig.getString("id"))
         .then().statusCode(204);
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
-        .delete("/reservoir/config/matchkeys/" + matchKey.getString("id"))
+        .delete("/reservoir/config/pools/" + poolConfig.getString("id"))
         .then().statusCode(404);
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .body(matchKey.encode())
-        .put("/reservoir/config/matchkeys/" + matchKey.getString("id") + "/initialize")
+        .body(poolConfig.encode())
+        .put("/reservoir/config/pools/" + poolConfig.getString("id") + "/initialize")
         .then().statusCode(404)
         .contentType("text/plain")
-        .body(is("MatchKey isbn not found"));
+        .body(is("Pool isbn not found"));
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
@@ -2770,8 +2882,8 @@ public class MainVerticleTest extends TestBase {
   @Test
   @java.lang.SuppressWarnings("squid:S5961") // Test methods should not contain too many assertions
   public void testSru() throws XMLStreamException, IOException, SAXException {
-    createIsbnMatchKey();
-    createIssnMatchKey();
+    createIsbnPool();
+    createIssnPool();
     JsonArray ingest1a = new JsonArray()
         .add(new JsonObject()
             .put("localId", "S101")
@@ -3105,7 +3217,7 @@ public class MainVerticleTest extends TestBase {
   @Test
   @java.lang.SuppressWarnings("squid:S5961") // Test methods should not contain too many assertions
   public void testOaiSimple() throws XMLStreamException, IOException, SAXException {
-    createIsbnMatchKey();
+    createIsbnPool();
 
     List<String> identifiers = new LinkedList<>();
     String s = RestAssured.given()
@@ -3119,7 +3231,7 @@ public class MainVerticleTest extends TestBase {
         .extract().body().asString();
     verifyOaiResponse(s, "ListRecords", identifiers, 0, null);
 
-    createIssnMatchKey();
+    createIssnPool();
 
     JsonArray ingest1a = new JsonArray()
         .add(new JsonObject()
@@ -3594,7 +3706,7 @@ public class MainVerticleTest extends TestBase {
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
-        .delete("/reservoir/config/matchkeys/isbn")
+        .delete("/reservoir/config/pools/isbn")
         .then().statusCode(204);
   }
 
@@ -3603,7 +3715,7 @@ public class MainVerticleTest extends TestBase {
     String time0 = Instant.now(Clock.systemUTC()).minusSeconds(1L).truncatedTo(ChronoUnit.SECONDS).toString();
     String time1 = Instant.now(Clock.systemUTC()).truncatedTo(ChronoUnit.SECONDS).toString();
 
-    createIsbnMatchKey();
+    createIsbnPool();
 
     List<String> identifiers = new LinkedList<>();
     String s;
@@ -3749,13 +3861,13 @@ public class MainVerticleTest extends TestBase {
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
-        .delete("/reservoir/config/matchkeys/isbn")
+        .delete("/reservoir/config/pools/isbn")
         .then().statusCode(204);
   }
 
   @Test
   public void testOaiResumptionToken() throws XMLStreamException, IOException, SAXException {
-    createIsbnMatchKey();
+    createIsbnPool();
 
     for (int i = 0; i < 10; i++) {
       JsonArray records1 = new JsonArray()
@@ -3803,7 +3915,7 @@ public class MainVerticleTest extends TestBase {
 
   @Test
   public void testOaiResumptionToken2(TestContext context) {
-    createIsbnMatchKey();
+    createIsbnPool();
 
     for (int i = 0; i < 10; i++) {
       JsonArray records1 = new JsonArray()
@@ -3884,7 +3996,7 @@ public class MainVerticleTest extends TestBase {
     List<String> identifiers = new LinkedList<>();
     String s;
 
-    createIsbnMatchKey();
+    createIsbnPool();
 
     int v1 = 55;
 
@@ -4160,17 +4272,17 @@ public class MainVerticleTest extends TestBase {
   }
 
   @Test
-  public void testMatchKeyStats() {
+  public void testPoolStats() {
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
-        .get("/reservoir/config/matchkeys/isbn/stats")
+        .get("/reservoir/config/pools/isbn/stats")
         .then().statusCode(404);
 
-    createIsbnMatchKey();
+    createIsbnPool();
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
-        .get("/reservoir/config/matchkeys/isbn/stats")
+        .get("/reservoir/config/pools/isbn/stats")
         .then().statusCode(200)
         .contentType("application/json")
         .body("recordsTotal", is(0))
@@ -4233,7 +4345,7 @@ public class MainVerticleTest extends TestBase {
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
-        .get("/reservoir/config/matchkeys/isbn/stats")
+        .get("/reservoir/config/pools/isbn/stats")
         .then().statusCode(200)
         .contentType("application/json")
         .body("recordsTotal", is(4))
@@ -4262,7 +4374,7 @@ public class MainVerticleTest extends TestBase {
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
-        .get("/reservoir/config/matchkeys/isbn/stats")
+        .get("/reservoir/config/pools/isbn/stats")
         .then().statusCode(200)
         .contentType("application/json")
         .body("recordsTotal", is(5))
@@ -4285,7 +4397,7 @@ public class MainVerticleTest extends TestBase {
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
-        .get("/reservoir/config/matchkeys/isbn/stats")
+        .get("/reservoir/config/pools/isbn/stats")
         .then().statusCode(200)
         .contentType("application/json")
         .body("recordsTotal", is(4))
@@ -4306,7 +4418,7 @@ public class MainVerticleTest extends TestBase {
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
-        .delete("/reservoir/config/matchkeys/isbn")
+        .delete("/reservoir/config/pools/isbn")
         .then().statusCode(204);
   }
 
@@ -4621,7 +4733,7 @@ public class MainVerticleTest extends TestBase {
    */
   @Test
   public void oaiPmhClientFetch()  {
-    createIsbnMatchKey();
+    createIsbnPool();
 
     JsonArray records1 = new JsonArray();
     for (int i = 0; i < 10; i++) {
@@ -4740,7 +4852,7 @@ public class MainVerticleTest extends TestBase {
 
   @Test
   public void oaiPmhClientNoServer() {
-    createIsbnMatchKey();
+    createIsbnPool();
 
     JsonObject oaiPmhClient = new JsonObject()
         .put("url", "http://localhost:" + UNUSED_PORT + "/reservoir/oai")
@@ -4782,7 +4894,7 @@ public class MainVerticleTest extends TestBase {
 
   @Test
   public void oaiPmhClientConnectionClosed() {
-    createIsbnMatchKey();
+    createIsbnPool();
 
     JsonObject oaiPmhClient = new JsonObject()
         .put("url", "http://localhost:" + NET_PORT + "/mock/oai")
@@ -4823,7 +4935,7 @@ public class MainVerticleTest extends TestBase {
 
   @Test
   public void oaiPmhClientHttpStatus400() {
-    createIsbnMatchKey();
+    createIsbnPool();
 
     JsonObject oaiPmhClient = new JsonObject()
         .put("url", MOCK_URL + "/mock/oai")
@@ -4868,7 +4980,7 @@ public class MainVerticleTest extends TestBase {
 
   @Test
   public void oaiPmhClientHttpStatus408() {
-    createIsbnMatchKey();
+    createIsbnPool();
 
     JsonObject oaiPmhClient = new JsonObject()
         .put("url", MOCK_URL + "/mock/oai")
@@ -4913,7 +5025,7 @@ public class MainVerticleTest extends TestBase {
 
   @Test
   public void oaiPmhClientHttpBadXml() {
-    createIsbnMatchKey();
+    createIsbnPool();
 
     JsonObject oaiPmhClient = new JsonObject()
         .put("url", MOCK_URL + "/mock/oai")
@@ -4956,7 +5068,7 @@ public class MainVerticleTest extends TestBase {
 
   @Test
   public void oaiPmhClientExceptionInIngest() {
-    createIsbnMatchKey();
+    createIsbnPool();
 
     JsonObject oaiPmhClient = new JsonObject()
         .put("url", MOCK_URL + "/mock/oai")
@@ -5012,7 +5124,7 @@ public class MainVerticleTest extends TestBase {
 
   @Test
   public void oaiPmhClientHttpBadMetadata() {
-    createIsbnMatchKey();
+    createIsbnPool();
 
     JsonObject oaiPmhClient = new JsonObject()
         .put("url", MOCK_URL + "/mock/oai")
@@ -5099,7 +5211,7 @@ public class MainVerticleTest extends TestBase {
 
   @Test
   public void oaiPmhClientSameResumptionToken() {
-    createIsbnMatchKey();
+    createIsbnPool();
 
     JsonObject oaiPmhClient = new JsonObject()
         .put("url", MOCK_URL + "/mock/oai")
@@ -5153,7 +5265,7 @@ public class MainVerticleTest extends TestBase {
 
   @Test
   public void oaiPmhClientStop() {
-    createIsbnMatchKey();
+    createIsbnPool();
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
@@ -5239,7 +5351,7 @@ public class MainVerticleTest extends TestBase {
 
   @Test
   public void oaiPmhClientAll() {
-    createIsbnMatchKey();
+    createIsbnPool();
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
@@ -5316,7 +5428,7 @@ public class MainVerticleTest extends TestBase {
 
   @Test
   public void oaiPmhClientHttpOaiError() {
-    createIsbnMatchKey();
+    createIsbnPool();
 
     JsonObject oaiPmhClient = new JsonObject()
         .put("url", MOCK_URL + "/mock/oai")

@@ -1,7 +1,7 @@
-# deprecated schema name for pool configuration
+# pool configuration
 ---
 type: object
-description: Pool configuration exposed by the deprecated matchkeys endpoints
+description: Pool configuration
 properties:
   id:
     type: string
@@ -18,7 +18,7 @@ properties:
       - full
       - payload
     description: |
-      how arguments are passed to matcher, "full": full record, "payload": only record payload; if omitted , "payload" is used
+      how arguments are passed to matcher, "full": full record, "payload": only record payload; if omitted, "payload" is used
   cql:
     type: object
     description: |
@@ -34,6 +34,6 @@ properties:
       - manual
     description: |
       "ingest": update when records are ingested, "manual": update only when initialize is called
-additionalProperties: false
 required:
   - id
+additionalProperties: false

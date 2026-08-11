@@ -3,7 +3,7 @@ package com.indexdata.reservoir.server;
 import com.indexdata.reservoir.module.ModuleCache;
 import com.indexdata.reservoir.module.ModuleInvocation;
 import com.indexdata.reservoir.server.entity.CodeModuleEntity;
-import com.indexdata.reservoir.server.entity.MatchKeyConfig;
+import com.indexdata.reservoir.server.entity.PoolConfig;
 import com.indexdata.reservoir.util.readstream.LargeJsonReadStream;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -54,6 +54,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     String baseUrl = ctx.request().absoluteURI().replaceAll("/reservoir$", "");
     JsonObject links = new JsonObject()
         .put("clusters", baseUrl + "/reservoir/clusters")
+        .put("configPools", baseUrl + "/reservoir/config/pools")
         .put("configMatchKeys", baseUrl + "/reservoir/config/matchkeys")
         .put("configModules", baseUrl + "/reservoir/config/modules")
         .put("configOai", baseUrl + "/reservoir/config/oai")
@@ -178,8 +179,20 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
         });
   }
 
-  Future<Void> matchKeyNotFound(RoutingContext ctx, String id) {
-    HttpResponse.responseError(ctx, 404, "MatchKey " + id + " not found");
+  private static boolean isLegacyPoolRequest(RoutingContext ctx) {
+    if (ctx.request().path().contains("/config/matchkeys")) {
+      return true;
+    }
+    if (ctx.request().path().contains("/config/pools")) {
+      return false;
+    }
+    return Util.getQueryParameter(ctx, "poolId") == null
+        && Util.getQueryParameter(ctx, "matchkeyid") != null;
+  }
+
+  Future<Void> poolNotFound(RoutingContext ctx, String id) {
+    String resource = isLegacyPoolRequest(ctx) ? "MatchKey" : "Pool";
+    HttpResponse.responseError(ctx, 404, resource + " " + id + " not found");
     return Future.succeededFuture();
   }
 
@@ -199,23 +212,29 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
         new PgCqlFieldNumber().withColumn(CqlFields.SOURCE_VERSION.getQualifiedSqlName()));
 
     PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameterQuery(ctx));
-    String matchKeyId = Util.getQueryParameter(ctx, "matchkeyid");
-    if (matchKeyId == null) {
+    String requestedPoolId = Util.getQueryParameter(ctx, "poolId");
+    if (requestedPoolId == null) {
+      requestedPoolId = Util.getQueryParameter(ctx, "matchkeyid");
+    }
+    if (requestedPoolId == null) {
       failHandler(400, ctx, "Missing required query parameter: matchkeyid");
       return Future.succeededFuture();
     }
+    final String poolId = requestedPoolId;
     Storage storage = new Storage(ctx);
-    return storage.selectMatchKeyConfig(matchKeyId).compose(conf -> {
+    return storage.selectPoolConfig(poolId).compose(conf -> {
       if (conf == null) {
-        return matchKeyNotFound(ctx, matchKeyId);
+        return poolNotFound(ctx, poolId);
       }
-      return storage.getClusters(ctx, matchKeyId,
+      return storage.getClusters(ctx, poolId,
           pgCqlQuery.getWhereClause(), pgCqlQuery.getOrderByClause());
     });
   }
 
   Future<Void> touchClusters(RoutingContext ctx) {
     PgCqlDefinition definition = createDefinitionBase();
+    definition.addField(CqlFields.POOL_ID.getCqlName(),
+      new PgCqlFieldText().withExact().withColumn(CqlFields.POOL_ID.getQualifiedSqlName()));
     definition.addField(CqlFields.MATCHKEY_ID.getCqlName(),
       new PgCqlFieldText().withExact().withColumn(CqlFields.MATCHKEY_ID.getQualifiedSqlName()));
     definition.addField(CqlFields.CLUSTER_ID.getCqlName(),
@@ -255,8 +274,8 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     return method;
   }
 
-  static Future<String> checkMatcher(Storage storage, MatchKeyConfig matchKeyConfig) {
-    String[] matcherInvocations = matchKeyConfig.getMatcherInvocations();
+  static Future<String> checkMatcher(Storage storage, PoolConfig poolConfig) {
+    String[] matcherInvocations = poolConfig.getMatcherInvocations();
     if (matcherInvocations.length == 0) {
       return Future.succeededFuture(null);
     }
@@ -272,65 +291,77 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
             return Future.succeededFuture();
           }));
     }
-    return Future.all(futures).map(matchKeyConfig.getMatcher());
+    return Future.all(futures).map(poolConfig.getMatcher());
   }
 
-  Future<Void> postConfigMatchKey(RoutingContext ctx) {
+  private static PoolConfig createPoolConfig(RoutingContext ctx, JsonObject request) {
+    try {
+      return new PoolConfig(request);
+    } catch (IllegalArgumentException e) {
+      if (isLegacyPoolRequest(ctx) && e.getMessage() != null) {
+        throw new IllegalArgumentException(
+            e.getMessage().replace("PoolConfig", "MatchKeyConfig"), e);
+      }
+      throw e;
+    }
+  }
+
+  Future<Void> postPool(RoutingContext ctx) {
     Storage storage = new Storage(ctx);
     ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
     JsonObject request = validatedRequest.getBody().getJsonObject();
 
-    MatchKeyConfig matchKey = new MatchKeyConfig(request);
-    return checkMatcher(storage, matchKey)
-        .compose(matcher -> storage.insertMatchKeyConfig(matchKey))
+    PoolConfig poolConfig = createPoolConfig(ctx, request);
+    return checkMatcher(storage, poolConfig)
+        .compose(matcher -> storage.insertPoolConfig(poolConfig))
         .compose(res ->
           HttpResponse.responseJson(ctx, 201)
-            .putHeader("Location", ctx.request().absoluteURI() + "/" + matchKey.getId())
+            .putHeader("Location", ctx.request().absoluteURI() + "/" + poolConfig.getId())
             .end(request.encode())
         );
   }
 
-  Future<Void> getConfigMatchKey(RoutingContext ctx) {
+  Future<Void> getPool(RoutingContext ctx) {
     ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
     String id = validatedRequest.getPathParameters().get("id").getString();
     Storage storage = new Storage(ctx);
-    return storage.selectMatchKeyConfig(id)
+    return storage.selectPoolConfig(id)
         .compose(res -> {
           if (res == null) {
-            return matchKeyNotFound(ctx, id);
+            return poolNotFound(ctx, id);
           }
           return HttpResponse.responseJson(ctx, 200).end(res.encode());
         });
   }
 
-  Future<Void> putConfigMatchKey(RoutingContext ctx) {
+  Future<Void> putPool(RoutingContext ctx) {
     Storage storage = new Storage(ctx);
     ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
     JsonObject request = validatedRequest.getBody().getJsonObject();
-    MatchKeyConfig matchKey = new MatchKeyConfig(request);
-    return checkMatcher(storage, matchKey)
-        .compose(matcher -> storage.updateMatchKeyConfig(matchKey))
+    PoolConfig poolConfig = createPoolConfig(ctx, request);
+    return checkMatcher(storage, poolConfig)
+        .compose(matcher -> storage.updatePoolConfig(poolConfig))
         .compose(res -> {
           if (Boolean.FALSE.equals(res)) {
-            return matchKeyNotFound(ctx, matchKey.getId());
+            return poolNotFound(ctx, poolConfig.getId());
           }
           return ctx.response().setStatusCode(204).end();
         });
   }
 
-  Future<Void> deleteConfigMatchKey(RoutingContext ctx) {
+  Future<Void> deletePool(RoutingContext ctx) {
     String id = Util.getPathParameter(ctx, "id");
     Storage storage = new Storage(ctx);
-    return storage.deleteMatchKeyConfig(id)
+    return storage.deletePoolConfig(id)
         .compose(res -> {
           if (Boolean.FALSE.equals(res)) {
-            return matchKeyNotFound(ctx, id);
+            return poolNotFound(ctx, id);
           }
           return ctx.response().setStatusCode(204).end();
         });
   }
 
-  Future<Void> getConfigMatchKeys(RoutingContext ctx) {
+  Future<Void> getPools(RoutingContext ctx) {
     PgCqlDefinition definition = createDefinitionBase();
     definition.addField(CqlFields.ID.getCqlName(), new PgCqlFieldText().withExact());
     definition.addField(CqlFields.METHOD.getCqlName(), new PgCqlFieldText().withExact());
@@ -339,31 +370,32 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameterQuery(ctx));
 
     Storage storage = new Storage(ctx);
-    return storage.getMatchKeyConfigs(ctx, pgCqlQuery.getWhereClause(),
-        pgCqlQuery.getOrderByClause());
+    String resultProperty = isLegacyPoolRequest(ctx) ? "matchKeys" : "pools";
+    return storage.getPoolConfigs(ctx, pgCqlQuery.getWhereClause(),
+        pgCqlQuery.getOrderByClause(), resultProperty);
   }
 
-  Future<Void> initializeMatchKey(RoutingContext ctx) {
+  Future<Void> initializePool(RoutingContext ctx) {
     String id = Util.getPathParameter(ctx, "id");
     Storage storage = new Storage(ctx);
-    return storage.initializeMatchKey(ctx.vertx(), id)
+    return storage.initializePool(ctx.vertx(), id)
         .compose(res -> {
           if (res == null) {
-            return matchKeyNotFound(ctx, id);
+            return poolNotFound(ctx, id);
           }
           return HttpResponse.responseJson(ctx, 200).end(res.encode());
         });
   }
 
-  Future<Void> statsMatchKey(RoutingContext ctx) {
+  Future<Void> statsPool(RoutingContext ctx) {
     String id = Util.getPathParameter(ctx, "id");
     Storage storage = new Storage(ctx);
-    return storage.selectMatchKeyConfig(id)
+    return storage.selectPoolConfig(id)
         .compose(conf -> {
           if (conf == null) {
-            return matchKeyNotFound(ctx, id);
+            return poolNotFound(ctx, id);
           }
-          return storage.statsMatchKey(id)
+          return storage.statsPool(id)
               .compose(res -> HttpResponse.responseJson(ctx, 200).end(res.encode()));
         });
   }
@@ -545,13 +577,20 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
           add(routerBuilder, "getGlobalRecords", this::getGlobalRecords, false);
           add(routerBuilder, "deleteGlobalRecords", this::deleteGlobalRecords, false);
           add(routerBuilder, "getGlobalRecord", this::getGlobalRecord);
-          add(routerBuilder, "postConfigMatchKey", this::postConfigMatchKey);
-          add(routerBuilder, "getConfigMatchKey", this::getConfigMatchKey);
-          add(routerBuilder, "putConfigMatchKey", this::putConfigMatchKey);
-          add(routerBuilder, "deleteConfigMatchKey", this::deleteConfigMatchKey);
-          add(routerBuilder, "getConfigMatchKeys", this::getConfigMatchKeys);
-          add(routerBuilder, "initializeMatchKey", this::initializeMatchKey);
-          add(routerBuilder, "statsMatchKey", this::statsMatchKey);
+          add(routerBuilder, "postPool", this::postPool);
+          add(routerBuilder, "getPool", this::getPool);
+          add(routerBuilder, "putPool", this::putPool);
+          add(routerBuilder, "deletePool", this::deletePool);
+          add(routerBuilder, "getPools", this::getPools);
+          add(routerBuilder, "initializePool", this::initializePool);
+          add(routerBuilder, "statsPool", this::statsPool);
+          add(routerBuilder, "postConfigMatchKey", this::postPool);
+          add(routerBuilder, "getConfigMatchKey", this::getPool);
+          add(routerBuilder, "putConfigMatchKey", this::putPool);
+          add(routerBuilder, "deleteConfigMatchKey", this::deletePool);
+          add(routerBuilder, "getConfigMatchKeys", this::getPools);
+          add(routerBuilder, "initializeMatchKey", this::initializePool);
+          add(routerBuilder, "statsMatchKey", this::statsPool);
           add(routerBuilder, "getClusters", this::getClusters, false);
           add(routerBuilder, "touchClusters", this::touchClusters, false);
           add(routerBuilder, "getCluster", this::getCluster);
