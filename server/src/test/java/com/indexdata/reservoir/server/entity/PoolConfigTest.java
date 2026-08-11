@@ -38,4 +38,14 @@ public class PoolConfigTest {
 
     assertThat(exception.getMessage(), is("Matcher module invocation cannot be empty"));
   }
+
+  @Test
+  public void matcherIsRequired() {
+    JsonObject json = new JsonObject().put("id", "invalid");
+
+    IllegalArgumentException exception = assertThrows(
+        IllegalArgumentException.class, () -> new PoolConfig(json));
+
+    assertThat(exception.getMessage(), is("PoolConfig matcher is required"));
+  }
 }

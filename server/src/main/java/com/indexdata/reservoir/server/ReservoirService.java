@@ -217,7 +217,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
       requestedPoolId = Util.getQueryParameter(ctx, "matchkeyid");
     }
     if (requestedPoolId == null) {
-      failHandler(400, ctx, "Missing required query parameter: matchkeyid");
+      failHandler(400, ctx, "Missing required query parameter: poolId");
       return Future.succeededFuture();
     }
     final String poolId = requestedPoolId;

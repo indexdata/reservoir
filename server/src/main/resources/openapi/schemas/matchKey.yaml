@@ -37,3 +37,4 @@ properties:
 additionalProperties: false
 required:
   - id
+  - matcher

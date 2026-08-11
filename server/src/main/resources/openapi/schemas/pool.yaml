@@ -36,4 +36,5 @@ properties:
       "ingest": update when records are ingested, "manual": update only when initialize is called
 required:
   - id
+  - matcher
 additionalProperties: false

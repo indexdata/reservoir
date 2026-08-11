@@ -84,7 +84,7 @@ public class PoolConfig {
    */
   public String[] getMatcherInvocations() {
     if (matcher == null) {
-      return new String[0];
+      throw new IllegalArgumentException("PoolConfig matcher is required");
     }
     String[] invocations = matcher.split(",", -1);
     for (int i = 0; i < invocations.length; i++) {

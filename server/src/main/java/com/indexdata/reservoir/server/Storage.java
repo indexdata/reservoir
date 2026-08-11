@@ -492,7 +492,7 @@ public class Storage {
         || !where.contains("global_records.source_id")
         || !where.contains("cluster_meta.match_key_config_id")) {
       return Future.failedFuture(
-        "query too broad, must at least contain 'matchkeyId' and 'sourceId'");
+        "query too broad, must at least contain 'poolId' and 'sourceId'");
     }
     String q = "UPDATE " + clusterMetaTable
         + " SET datestamp = $1"

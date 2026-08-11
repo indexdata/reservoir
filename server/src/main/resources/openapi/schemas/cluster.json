@@ -10,18 +10,17 @@
     "datestamp": {
       "type": "string",
       "description": "date time of modification",
-      "format" : "date"
+      "format" : "date-time"
     },
     "records": {
       "description": "List of records",
       "type": "array",
       "items": {
-        "type": "object",
         "$ref": "globalRecord.json"
       }
     },
-    "matchKeys": {
-      "description" : "Match keys values",
+    "matchValues": {
+      "description" : "Values used to match records in the cluster",
       "type" : "array",
       "items": {
         "type" : "string"

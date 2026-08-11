@@ -321,6 +321,27 @@ public class MainVerticleTest extends TestBase {
   }
 
   @Test
+  public void poolRequiresMatcher() {
+    JsonObject poolConfig = new JsonObject().put("id", "missing-matcher");
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .body(poolConfig.encode())
+        .post("/reservoir/config/pools")
+        .then().statusCode(400)
+        .body(containsString("matcher"));
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .body(poolConfig.encode())
+        .post("/reservoir/config/matchkeys")
+        .then().statusCode(400)
+        .body(containsString("matcher"));
+  }
+
+  @Test
   public void poolWithNonExistingMatcherModule() {
       JsonObject poolConfig = new JsonObject()
           .put("id", "xx")
@@ -714,7 +735,9 @@ public class MainVerticleTest extends TestBase {
         .put("/reservoir/config/matchkeys/" + poolConfig.getString("id") + "/initialize")
         .then().statusCode(200);
 
-    JsonObject invalidPoolConfig = new JsonObject().put("id", "invalid'id");
+    JsonObject invalidPoolConfig = new JsonObject()
+        .put("id", "invalid'id")
+        .put("matcher", module.getString("id"));
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
@@ -1303,7 +1326,7 @@ public class MainVerticleTest extends TestBase {
         .post("/reservoir/clusters/touch")
         .then()
         .statusCode(400)
-        .body(is("query too broad, must at least contain 'matchkeyId' and 'sourceId'"));
+        .body(is("query too broad, must at least contain 'poolId' and 'sourceId'"));
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
@@ -1311,7 +1334,7 @@ public class MainVerticleTest extends TestBase {
         .post("/reservoir/clusters/touch")
         .then()
         .statusCode(400)
-        .body(is("query too broad, must at least contain 'matchkeyId' and 'sourceId'"));
+        .body(is("query too broad, must at least contain 'poolId' and 'sourceId'"));
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
@@ -1319,7 +1342,7 @@ public class MainVerticleTest extends TestBase {
         .post("/reservoir/clusters/touch")
         .then()
         .statusCode(400)
-        .body(is("query too broad, must at least contain 'matchkeyId' and 'sourceId'"));
+        .body(is("query too broad, must at least contain 'poolId' and 'sourceId'"));
 
     String s = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
@@ -1370,7 +1393,7 @@ public class MainVerticleTest extends TestBase {
         .get("/reservoir/clusters")
         .then().statusCode(400)
         .contentType("text/plain")
-        .body(containsString("Missing required query parameter: matchkeyid"));
+        .body(containsString("Missing required query parameter: poolId"));
   }
 
   @Test
