@@ -33,7 +33,7 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <graalvm.version>25.0.4</graalvm.version>
-    <graalvm-maven-plugin.version>1.1.4</graalvm-maven-plugin.version>
+    <graalvm-maven-plugin.version>1.1.8</graalvm-maven-plugin.version>
     <log4j2.version>3.0.0-beta3</log4j2.version>
     <snakeyaml.version>2.6</snakeyaml.version>
     <slf4j-api.version>2.0.18</slf4j-api.version>
@@ -374,7 +374,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-jar-plugin</artifactId>
-          <version>3.5.0</version>
+          <version>3.5.1</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
