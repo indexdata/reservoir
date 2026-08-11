@@ -5,11 +5,8 @@ properties:
     description: List of pool configurations
     type: array
     items:
-      type: object
       $ref: pool.yaml
   resultInfo:
-    description: Common result set information
-    type: object
     $ref: resultInfo.json
 additionalProperties: false
 required:

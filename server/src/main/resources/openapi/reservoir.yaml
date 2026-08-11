@@ -193,11 +193,11 @@ paths:
       operationId: initializePool
       responses:
         "200":
-          description: Pool statistics
+          description: Pool initialization result
           content:
             application/json:
               schema:
-                $ref: schemas/poolStats.json
+                $ref: schemas/poolInitialization.json
         "400":
           $ref: "#/components/responses/trait_400"
         "404":
@@ -353,11 +353,11 @@ paths:
       operationId: initializeMatchKey
       responses:
         "200":
-          description: Pool statistics
+          description: Pool initialization result
           content:
             application/json:
               schema:
-                $ref: schemas/matchKeyStats.json
+                $ref: schemas/poolInitialization.json
         "400":
           $ref: "#/components/responses/trait_400"
         "404":

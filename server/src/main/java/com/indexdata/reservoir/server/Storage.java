@@ -903,7 +903,7 @@ public class Storage {
         row -> Future.succeededFuture(poolConfigFromRow(row).toJson()));
   }
 
-  Future<JsonObject> recalculateMatchKeyValueTable(SqlConnection connection,
+  Future<Integer> recalculateMatchKeyValueTable(SqlConnection connection,
       IngestMatcher ingestMatcher) {
     String query = "SELECT * FROM " + globalRecordTable;
     AtomicInteger totalRecords = new AtomicInteger();
@@ -911,7 +911,7 @@ public class Storage {
     return connection.prepare(query).compose(pq ->
         connection.begin().compose(tx -> {
           RowStream<Row> stream = pq.createStream(sqlStreamFetchSize);
-          Promise<JsonObject> promise = Promise.promise();
+          Promise<Integer> promise = Promise.promise();
           stream.handler(row -> {
             stream.pause();
             totalRecords.incrementAndGet();
@@ -925,7 +925,7 @@ public class Storage {
           });
           stream.endHandler(end -> {
             tx.commit();
-            promise.complete(new JsonObject().put("totalRecords", totalRecords.get()));
+            promise.complete(totalRecords.get());
           });
           stream.exceptionHandler(e -> {
             log.error(e.getMessage(), e);
@@ -941,9 +941,9 @@ public class Storage {
    * Initialize pool (populate clusters).
    * @param vertx Vert.x handle
    * @param id pool id (user specified)
-   * @return statistics
+   * @return number of records processed
    */
-  public Future<JsonObject> initializePool(Vertx vertx, String id) {
+  public Future<Integer> initializePool(Vertx vertx, String id) {
     return pool.withConnection(connection ->
         connection.preparedQuery(
                 "SELECT * FROM " + poolConfigTable + " WHERE id = $1")

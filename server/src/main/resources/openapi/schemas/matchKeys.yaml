@@ -9,8 +9,6 @@ properties:
     items:
       $ref: matchKey.yaml
   resultInfo:
-    description: Common result set information
-    type: object
     $ref: resultInfo.json
 additionalProperties: false
 required:

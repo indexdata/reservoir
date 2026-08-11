@@ -379,11 +379,12 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     String id = Util.getPathParameter(ctx, "id");
     Storage storage = new Storage(ctx);
     return storage.initializePool(ctx.vertx(), id)
-        .compose(res -> {
-          if (res == null) {
+        .compose(totalRecords -> {
+          if (totalRecords == null) {
             return poolNotFound(ctx, id);
           }
-          return HttpResponse.responseJson(ctx, 200).end(res.encode());
+          JsonObject response = new JsonObject().put("totalRecords", totalRecords);
+          return HttpResponse.responseJson(ctx, 200).end(response.encode());
         });
   }
 
