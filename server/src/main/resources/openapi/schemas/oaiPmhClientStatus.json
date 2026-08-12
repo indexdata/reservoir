@@ -9,6 +9,7 @@
         "type": "object",
         "properties": {
           "config" : {
+            "description" : "configuration",
             "$ref" : "oaiPmhClient.json"
           },
           "error" : {

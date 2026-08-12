@@ -951,7 +951,7 @@ public class Storage {
             .compose(res -> {
               RowIterator<Row> iterator = res.iterator();
               if (!iterator.hasNext()) {
-                return Future.succeededFuture();
+                return Future.succeededFuture(null);
               }
               Row row = iterator.next();
               PoolConfig poolConfig = poolConfigFromRow(row);

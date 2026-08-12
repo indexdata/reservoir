@@ -11,6 +11,7 @@
       "description": "Source version"
     },
     "records": {
+      "description" : "Records",
       "$ref" : "ingestRecordChunk.json"
     }
   },
