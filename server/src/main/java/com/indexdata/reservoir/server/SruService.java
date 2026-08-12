@@ -1,6 +1,6 @@
 package com.indexdata.reservoir.server;
 
-import com.indexdata.reservoir.server.entity.MatchKeyConfig;
+import com.indexdata.reservoir.server.entity.PoolConfig;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
@@ -60,7 +60,7 @@ public class SruService {
   }
 
   static Future<Void> addMatchValueField(PgCqlDefinition definition, Storage storage,
-      RoutingContext ctx, String matcherProp, String key, MatchKeyConfig matchConfig) {
+      RoutingContext ctx, String matcherProp, String key, PoolConfig poolConfig) {
     return storage.getTransformer(ctx, matcherProp)
       .map(module -> {
         PgCqlFieldType field = new PgCqlFieldText()
@@ -80,15 +80,15 @@ public class SruService {
           return terms.iterator().next();
         }, sql ->
             "(" + sql + " AND " + Storage.CLUSTER_VALUES_TABLE + ".match_key_config_id = '"
-            + matchConfig.getId() + "')"
+            + poolConfig.getId() + "')"
         ));
         return null;
       });
   }
 
   static Future<PgCqlDefinition> createDefinition(RoutingContext ctx, Storage storage) {
-    return storage.getAvailableMatchConfigs()
-      .compose(matchConfigs -> {
+    return storage.getAvailablePoolConfigs()
+      .compose(poolConfigs -> {
         PgCqlDefinition definition = PgCqlDefinition.create();
         definition.addField(CqlFields.CQL_ALL_RECORDS.getCqlName(), new PgCqlFieldAlwaysMatches());
         // id instead of clusterId in CqlFields.CLUSTER_ID
@@ -97,8 +97,8 @@ public class SruService {
             Storage.CLUSTER_META_TABLE + "." + CqlFields.CLUSTER_ID.getSqlName()
           ));
         Future<Void> future = Future.succeededFuture();
-        for (MatchKeyConfig matchConfig : matchConfigs) {
-          JsonObject cql = matchConfig.getCql();
+        for (PoolConfig poolConfig : poolConfigs) {
+          JsonObject cql = poolConfig.getCql();
           if (cql == null) {
             continue;
           }
@@ -108,7 +108,7 @@ public class SruService {
               continue;
             }
             future = future.compose(x ->
-              addMatchValueField(definition, storage, ctx, matcherProp, key, matchConfig)
+              addMatchValueField(definition, storage, ctx, matcherProp, key, poolConfig)
             );
           }
         }

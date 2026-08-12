@@ -8,10 +8,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import io.vertx.core.json.JsonObject;
 import org.junit.jupiter.api.Test;
 
-public class MatchKeyConfigTest {
+public class PoolConfigTest {
   @Test
   public void matcherInvocations() {
-    MatchKeyConfig config = new MatchKeyConfig(new JsonObject()
+    PoolConfig config = new PoolConfig(new JsonObject()
         .put("id", "multi")
         .put("matcher", "first, second::matchkey"));
 
@@ -22,7 +22,7 @@ public class MatchKeyConfigTest {
 
   @Test
   public void singleMatcherInvocation() {
-    MatchKeyConfig config = new MatchKeyConfig(new JsonObject()
+    PoolConfig config = new PoolConfig(new JsonObject()
         .put("id", "single")
         .put("matcher", "first::matchkey"));
 
@@ -34,8 +34,18 @@ public class MatchKeyConfigTest {
     JsonObject json = new JsonObject().put("id", "invalid").put("matcher", "first, ,second");
 
     IllegalArgumentException exception = assertThrows(
-        IllegalArgumentException.class, () -> new MatchKeyConfig(json));
+        IllegalArgumentException.class, () -> new PoolConfig(json));
 
     assertThat(exception.getMessage(), is("Matcher module invocation cannot be empty"));
+  }
+
+  @Test
+  public void matcherIsRequired() {
+    JsonObject json = new JsonObject().put("id", "invalid");
+
+    IllegalArgumentException exception = assertThrows(
+        IllegalArgumentException.class, () -> new PoolConfig(json));
+
+    assertThat(exception.getMessage(), is("PoolConfig matcher is required"));
   }
 }

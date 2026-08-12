@@ -1,0 +1,14 @@
+{
+  "description": "Pool initialization result",
+  "type": "object",
+  "properties": {
+    "totalRecords": {
+      "type": "integer",
+      "description": "Total records processed during pool initialization"
+    }
+  },
+  "required": [
+    "totalRecords"
+  ],
+  "additionalProperties": false
+}

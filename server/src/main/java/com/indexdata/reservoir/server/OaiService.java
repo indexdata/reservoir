@@ -147,7 +147,7 @@ public final class OaiService {
         ? token.getUntil() : Util.getQueryParameter(ctx, "until");
     Integer limit = Integer.parseInt(Util.getQueryParameter(ctx, "limit", "1000"));
     Storage storage = new Storage(ctx);
-    return storage.selectMatchKeyConfig(set).compose(conf -> {
+    return storage.selectPoolConfig(set).compose(conf -> {
       if (conf == null) {
         throw OaiException.badArgument("set \"" + set + "\" not found");
       }

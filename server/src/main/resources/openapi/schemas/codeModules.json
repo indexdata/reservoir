@@ -6,13 +6,10 @@
       "description": "List of code modules",
       "type": "array",
       "items": {
-        "type": "object",
         "$ref": "codeModule.json"
       }
     },
     "resultInfo": {
-      "description": "Common result set information",
-      "type": "object",
       "$ref" : "resultInfo.json"
     }
   },

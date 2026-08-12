@@ -69,6 +69,75 @@
       ]
     },
     {
+      "id": "reservoir-config-pools",
+      "version": "1.0",
+      "handlers": [
+        {
+          "methods": [
+            "POST"
+          ],
+          "pathPattern": "/reservoir/config/pools",
+          "permissionsRequired": [
+            "reservoir-config-pools.item.post"
+          ]
+        },
+        {
+          "methods": [
+            "GET"
+          ],
+          "pathPattern": "/reservoir/config/pools",
+          "permissionsRequired": [
+            "reservoir-config-pools.collection.get"
+          ]
+        },
+        {
+          "methods": [
+            "GET"
+          ],
+          "pathPattern": "/reservoir/config/pools/{id}",
+          "permissionsRequired": [
+            "reservoir-config-pools.item.get"
+          ]
+        },
+        {
+          "methods": [
+            "PUT"
+          ],
+          "pathPattern": "/reservoir/config/pools/{id}",
+          "permissionsRequired": [
+            "reservoir-config-pools.item.put"
+          ]
+        },
+        {
+          "methods": [
+            "DELETE"
+          ],
+          "pathPattern": "/reservoir/config/pools/{id}",
+          "permissionsRequired": [
+            "reservoir-config-pools.item.delete"
+          ]
+        },
+        {
+          "methods": [
+            "PUT"
+          ],
+          "pathPattern": "/reservoir/config/pools/{id}/initialize",
+          "permissionsRequired": [
+            "reservoir-config-pools.item.initialize"
+          ]
+        },
+        {
+          "methods": [
+            "GET"
+          ],
+          "pathPattern": "/reservoir/config/pools/{id}/stats",
+          "permissionsRequired": [
+            "reservoir-config-pools.item.stats"
+          ]
+        }
+      ]
+    },
+    {
       "id": "reservoir-config-matchkeys",
       "version": "1.0",
       "handlers": [
@@ -439,44 +508,117 @@
       ]
     },
     {
+      "permissionName": "reservoir-config-pools.item.post",
+      "displayName": "reservoir - create pool",
+      "description": "Create pool configuration",
+      "replaces": [
+        "reservoir-config-matchkeys.item.post"
+      ]
+    },
+    {
+      "permissionName": "reservoir-config-pools.collection.get",
+      "displayName": "reservoir - get pools",
+      "description": "Get pool configurations",
+      "replaces": [
+        "reservoir-config-matchkeys.collection.get"
+      ]
+    },
+    {
+      "permissionName": "reservoir-config-pools.item.get",
+      "displayName": "reservoir - get pool",
+      "description": "Get pool configuration",
+      "replaces": [
+        "reservoir-config-matchkeys.item.get"
+      ]
+    },
+    {
+      "permissionName": "reservoir-config-pools.item.put",
+      "displayName": "reservoir - update pool",
+      "description": "Update pool configuration",
+      "replaces": [
+        "reservoir-config-matchkeys.item.put"
+      ]
+    },
+    {
+      "permissionName": "reservoir-config-pools.item.delete",
+      "displayName": "reservoir - delete pool",
+      "description": "Delete pool configuration",
+      "replaces": [
+        "reservoir-config-matchkeys.item.delete"
+      ]
+    },
+    {
+      "permissionName": "reservoir-config-pools.item.initialize",
+      "displayName": "reservoir - initialize pool",
+      "description": "Initialize pool",
+      "replaces": [
+        "reservoir-config-matchkeys.item.initialize"
+      ]
+    },
+    {
+      "permissionName": "reservoir-config-pools.item.stats",
+      "displayName": "reservoir - get pool statistics",
+      "description": "Get pool statistics",
+      "replaces": [
+        "reservoir-config-matchkeys.item.stats"
+      ]
+    },
+    {
+      "permissionName": "reservoir-config-pools.all",
+      "displayName": "reservoir - all pool configuration permissions",
+      "description": "All pool configuration permissions",
+      "replaces": [
+        "reservoir-config-matchkeys.all"
+      ],
+      "subPermissions": [
+        "reservoir-config-pools.item.post",
+        "reservoir-config-pools.collection.get",
+        "reservoir-config-pools.item.get",
+        "reservoir-config-pools.item.put",
+        "reservoir-config-pools.item.delete",
+        "reservoir-config-pools.item.initialize",
+        "reservoir-config-pools.item.stats"
+      ]
+    },
+    {
       "permissionName": "reservoir-config-matchkeys.item.post",
-      "displayName": "reservoir - create match key configuration",
-      "description": "Create match key configuration"
+      "displayName": "reservoir - create pool using deprecated endpoint",
+      "description": "Create pool using deprecated matchkeys endpoint"
     },
     {
       "permissionName": "reservoir-config-matchkeys.collection.get",
-      "displayName": "reservoir - get match key configurations",
-      "description": "Get match key configurations"
+      "displayName": "reservoir - get pools using deprecated endpoint",
+      "description": "Get pools using deprecated matchkeys endpoint"
     },
     {
       "permissionName": "reservoir-config-matchkeys.item.get",
-      "displayName": "reservoir - get match key configuration",
-      "description": "Get match key configuration"
+      "displayName": "reservoir - get pool using deprecated endpoint",
+      "description": "Get pool using deprecated matchkeys endpoint"
     },
     {
       "permissionName": "reservoir-config-matchkeys.item.put",
-      "displayName": "reservoir - update match key configuration",
-      "description": "Update match key configuration"
+      "displayName": "reservoir - update pool using deprecated endpoint",
+      "description": "Update pool using deprecated matchkeys endpoint"
     },
     {
       "permissionName": "reservoir-config-matchkeys.item.delete",
-      "displayName": "reservoir - delete match key configuration",
-      "description": "Delete match key configuration"
+      "displayName": "reservoir - delete pool using deprecated endpoint",
+      "description": "Delete pool using deprecated matchkeys endpoint"
     },
     {
       "permissionName": "reservoir-config-matchkeys.item.initialize",
-      "displayName": "reservoir - initialize match key configuration",
-      "description": "Initialize match key configuration"
+      "displayName": "reservoir - initialize pool using deprecated endpoint",
+      "description": "Initialize pool using deprecated matchkeys endpoint"
     },
     {
       "permissionName": "reservoir-config-matchkeys.item.stats",
-      "displayName": "reservoir - get match key statistics",
-      "description": "Get match key statistics"
+      "displayName": "reservoir - get pool statistics using deprecated endpoint",
+      "description": "Get pool statistics using deprecated matchkeys endpoint"
     },
     {
       "permissionName": "reservoir-config-matchkeys.all",
-      "displayName": "reservoir - all match key configuration",
-      "description": "All match key configuration",
+      "displayName": "reservoir - all deprecated matchkeys endpoint permissions",
+      "description": "All deprecated matchkeys endpoint permissions",
       "subPermissions": [
         "reservoir-config-matchkeys.item.post",
         "reservoir-config-matchkeys.collection.get",
@@ -661,6 +803,7 @@
       "description": "All permissions",
       "subPermissions": [
         "reservoir-clusters.all",
+        "reservoir-config-pools.all",
         "reservoir-config-matchkeys.all",
         "reservoir-config-modules.all",
         "reservoir-config-oai.all",

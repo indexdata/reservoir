@@ -2,7 +2,7 @@ package com.indexdata.reservoir.server.entity;
 
 import io.vertx.core.json.JsonObject;
 
-public class MatchKeyConfig {
+public class PoolConfig {
   private final String id;
   private final String args;
   private final String matcher;
@@ -21,7 +21,7 @@ public class MatchKeyConfig {
 
   /**
    * Constructor.
-   * @param id match key id
+   * @param id pool id
    * @param args kind of args to be passed to the matcher
    * @param cql CQL query as json object
    * @param matcher matcher code module id
@@ -29,7 +29,7 @@ public class MatchKeyConfig {
    * @param params OAI-PMH parameters as json object
    * @param update "manual" or "ingest"
    */
-  public MatchKeyConfig(String id, String args, JsonObject cql, String matcher, String method,
+  public PoolConfig(String id, String args, JsonObject cql, String matcher, String method,
       JsonObject params, String update) {
     this.id = id;
     this.args = args;
@@ -43,9 +43,9 @@ public class MatchKeyConfig {
 
   /**
    * Constructor from JsonObject.
-   * @param json object with match key config data
+   * @param json object with pool configuration data
    */
-  public MatchKeyConfig(JsonObject json) {
+  public PoolConfig(JsonObject json) {
     this.id = json.getString(ID_LABEL);
     this.args = json.getString(ARGS_LABEL);
     this.matcher = json.getString(MATCHER_LABEL);
@@ -58,10 +58,10 @@ public class MatchKeyConfig {
 
   private void validate() {
     if (id == null) {
-      throw new IllegalArgumentException("MatchKeyConfig id is required");
+      throw new IllegalArgumentException("PoolConfig id is required");
     }
     if (id.contains("'") || id.contains("\"")) {
-      throw new IllegalArgumentException("MatchKeyConfig id cannot contain quotes");
+      throw new IllegalArgumentException("PoolConfig id cannot contain quotes");
     }
     getMatcherInvocations();
   }
@@ -79,12 +79,12 @@ public class MatchKeyConfig {
   }
 
   /**
-   * Get the individual module invocations configured for this match key.
+   * Get the individual module invocations configured for this pool.
    * @return module invocation strings
    */
   public String[] getMatcherInvocations() {
     if (matcher == null) {
-      return new String[0];
+      throw new IllegalArgumentException("PoolConfig matcher is required");
     }
     String[] invocations = matcher.split(",", -1);
     for (int i = 0; i < invocations.length; i++) {

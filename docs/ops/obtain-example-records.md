@@ -77,7 +77,7 @@ jq -r '.globalId' records/[1-3].json
 Get each cluster record using their `globalId`:
 
 ```
-https GET "$host/reservoir/clusters?matchkeyid=goldrush&query=globalId=32fdb07c-b1fa-462c-a56e-9962434b7a2a" \
+https GET "$host/reservoir/clusters?poolId=goldrush&query=globalId=32fdb07c-b1fa-462c-a56e-9962434b7a2a" \
   x-okapi-token:$token | gojq -r '.items[]' \
   > records/cluster-goldrush-1.json
 ```
@@ -131,7 +131,7 @@ Then get the actual Reservoir records using their globalId.
 
 ## Harvest into VuFind from Reservoir
 
-The OAI-PMH "set" is the matchkeys pool identifier.
+The OAI-PMH "set" is the pool identifier.
 
 ```
 https GET "$host/_/invoke/tenant/${tenant}/reservoir/oai?verb=ListRecords&set=${pool_id}"
@@ -142,4 +142,3 @@ This will also utilise a [Transformer](configure.md#do-transformers-configuratio
 ## Follow other docs
 
 See [README](README.md).
-

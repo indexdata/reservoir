@@ -1,6 +1,7 @@
 in: query
 name: matchkeyid
-description: Match key configuration identifier
-required: true
+description: Deprecated pool identifier; use poolId instead
+deprecated: true
+required: false
 schema:
   type: string

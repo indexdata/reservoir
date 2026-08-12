@@ -1,10 +1,10 @@
 {
-  "description": "match key statistics",
+  "description": "Pool statistics returned by the deprecated matchkeys endpoint",
   "type": "object",
   "properties": {
-    "totalRecords": {
+    "recordsTotal": {
       "type": "integer",
-      "description" : "total records"
+      "description": "Total records assigned to the pool"
     },
     "clustersTotal": {
       "type": "integer",
@@ -23,8 +23,8 @@
       "description" : "key is number of records in a cluster; value is array of some cluster identifiers with this size"
     }
   },
-  "additionalProperties": true,
   "required": [
-    "totalRecords"
-  ]
+    "recordsTotal"
+  ],
+  "additionalProperties": true
 }

@@ -6,7 +6,6 @@
       "description": "List of errors",
       "type": "array",
       "items": {
-        "type": "object",
         "$ref": "error.json"
       }
     },

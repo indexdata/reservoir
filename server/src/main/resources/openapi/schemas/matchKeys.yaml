@@ -1,16 +1,14 @@
-# match keys
+# deprecated pool collection response
 ---
-description: match key configurations
+description: Pool configurations returned by the deprecated matchkeys endpoint
 type: object
 properties:
   matchKeys:
-    description: List of match key configurations
+    description: Deprecated response property containing pool configurations
     type: array
     items:
       $ref: matchKey.yaml
   resultInfo:
-    description: Common result set information
-    type: object
     $ref: resultInfo.json
 additionalProperties: false
 required:

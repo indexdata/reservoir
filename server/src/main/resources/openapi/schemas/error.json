@@ -15,7 +15,6 @@
       "description": "Error message code"
     },
     "parameters": {
-      "type": "object",
       "description": "Error message parameters",
       "$ref": "parameters.json"
     }

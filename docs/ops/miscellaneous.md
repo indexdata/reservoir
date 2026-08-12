@@ -8,13 +8,13 @@
 
 ## Gateway timeout
 
-Some operations, such as matchkeys statistics, can take a long time and so might encounter an NGINX gateway timeout.
+Some operations, such as pool statistics, can take a long time and so might encounter an NGINX gateway timeout.
 So spin up a container in the AWS cluster to avoid the ALB/NGINX timeout.
 
 ```shell
 kubectl -n test-prod run --rm -it --restart=Never debug --image=alpine:latest sh
 apk add httpie gojq jq bash curl
-http GET "http://reservoir:80/reservoir/config/matchkeys/goldrush2024/stats" x-okapi-tenant:test_reservoir
+http GET "http://reservoir:80/reservoir/config/pools/goldrush2024/stats" x-okapi-tenant:test_reservoir
 # Do copy-and-paste output to local file.
 ```
 
@@ -26,10 +26,10 @@ When records are added or updated (via ingest to Reservoir) then some clusters w
 
 When the Transformer is modified for a particular tenant, then we need to trigger the Reservoir OAI-PMH feed to re-deliver all clusters that pertain to that tenant (i.e. sourceId).
 Or for some reason we want VuFind to completely refresh.
-So "touch" will modify the dates of all cluster records for that MatchKey (e.g. goldrush2024).
+So "touch" will modify the dates of all cluster records for that pool (e.g. goldrush2024).
 
 ```shell
-https POST "$host/reservoir/clusters/touch?count=exact&limit=0&query=matchkeyId==goldrush2024 AND sourceId==US-PPLAS" x-okapi-token:$token
+https POST "$host/reservoir/clusters/touch?count=exact&limit=0&query=poolId==goldrush2024 AND sourceId==US-PPLAS" x-okapi-token:$token
 ```
 
 NOTE: Whenever the Transformer script for a particular consortium
@@ -46,10 +46,10 @@ https DELETE "$host/reservoir/records?query=sourceId=US-NNU and sourceVersion=1"
 
 Wait a while.
 
-There will eventually be a message in the mod-reservoir logs about the number of matchkey records that were modified (i.e. `Number of meta records updated =`).
+There will eventually be a message in the mod-reservoir logs about the number of cluster metadata records that were modified (i.e. `Number of meta records updated =`).
 For small collections wait for that, then wait a bit longer before doing the counts.
 
-Or watch the activity via AWS CloudWatch Database Insights. Reservoir deletes the records and adjusts the matchkeys thingy.
+Or watch the activity via AWS CloudWatch Database Insights. Reservoir deletes the records and adjusts the affected pools.
 When charts for SQL DELETE have settled, count sourceVersion=1 which should become zero:
 
 ```shell

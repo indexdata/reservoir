@@ -1,0 +1,13 @@
+description: Pool configurations
+type: object
+properties:
+  pools:
+    description: List of pool configurations
+    type: array
+    items:
+      $ref: pool.yaml
+  resultInfo:
+    $ref: resultInfo.json
+additionalProperties: false
+required:
+  - pools

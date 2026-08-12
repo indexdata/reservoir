@@ -4,6 +4,6 @@ import com.indexdata.reservoir.module.ModuleExecutable;
 
 public class IngestMatcher {
   boolean onlyPayload;
-  String matchKeyId;
+  String poolId;
   ModuleExecutable[] moduleExecutables;
 }
