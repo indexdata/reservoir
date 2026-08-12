@@ -22,6 +22,7 @@ import io.vertx.openapi.validation.ValidatedRequest;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
@@ -234,7 +235,8 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
   }
 
   static boolean usesCqlIndex(String query, String index) {
-    if (query == null) {
+    if (query == null
+        || !query.toLowerCase(Locale.ROOT).contains(index.toLowerCase(Locale.ROOT))) {
       return false;
     }
     AtomicBoolean found = new AtomicBoolean();

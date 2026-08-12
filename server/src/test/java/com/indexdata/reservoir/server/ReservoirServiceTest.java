@@ -16,6 +16,8 @@ class ReservoirServiceTest {
         "sourceId=source sortby matchkeyId", "matchkeyId"));
     assertTrue(ReservoirService.usesCqlIndex(
         "poolId=isbn AND matchkeyId=legacy", "matchkeyId"));
+    assertTrue(ReservoirService.usesCqlIndex(
+        "MATCHKEYID=isbn", "matchkeyId"));
   }
 
   @Test
