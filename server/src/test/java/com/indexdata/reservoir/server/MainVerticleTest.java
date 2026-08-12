@@ -184,7 +184,9 @@ public class MainVerticleTest extends TestBase {
         .then().statusCode(200)
         .header("Content-Type", is("application/json"))
         .body("revision", is(m.getCommitId()))
-        .body("links.clusters", endsWith("/reservoir/clusters"));
+        .body("links.clusters", endsWith("/reservoir/clusters"))
+        .body("links.configPools", endsWith("/reservoir/config/pools"))
+        .body("links.configMatchKeys", nullValue());
   }
 
   @Test
@@ -694,6 +696,7 @@ public class MainVerticleTest extends TestBase {
         .body(poolConfig.encode())
         .post("/reservoir/config/matchkeys")
         .then().statusCode(201)
+        .header("Deprecation", is("@1786520473"))
         .body(Matchers.is(poolConfig.encode()));
 
     RestAssured.given()
@@ -701,6 +704,7 @@ public class MainVerticleTest extends TestBase {
         .queryParam("query", "id=" + poolConfig.getString("id"))
         .get("/reservoir/config/pools")
         .then().statusCode(200)
+        .header("Deprecation", nullValue())
         .body("pools", hasSize(1))
         .body("pools[0].id", is(poolConfig.getString("id")));
 
@@ -1407,6 +1411,20 @@ public class MainVerticleTest extends TestBase {
         .then().statusCode(404)
         .contentType("text/plain")
         .body(is("MatchKey " + id + " not found"));
+  }
+
+  @Test
+  public void testPoolIdPreferredOverDeprecatedMatchkeyId() {
+    String poolId = UUID.randomUUID().toString();
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .param("poolId", poolId)
+        .param("matchkeyid", UUID.randomUUID().toString())
+        .header("Content-Type", "application/json")
+        .get("/reservoir/clusters")
+        .then().statusCode(404)
+        .contentType("text/plain")
+        .body(is("Pool " + poolId + " not found"));
   }
 
   @Test

@@ -19,9 +19,12 @@ import io.vertx.ext.web.openapi.router.RouterBuilder;
 import io.vertx.openapi.contract.OpenAPIContract;
 import io.vertx.openapi.validation.RequestParameter;
 import io.vertx.openapi.validation.ValidatedRequest;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -35,11 +38,17 @@ import org.folio.tlib.postgres.cqlfield.PgCqlFieldAlwaysMatches;
 import org.folio.tlib.postgres.cqlfield.PgCqlFieldNumber;
 import org.folio.tlib.postgres.cqlfield.PgCqlFieldText;
 import org.folio.tlib.postgres.cqlfield.PgCqlFieldUuid;
+import org.z3950.zing.cql.CQLDefaultNodeVisitor;
+import org.z3950.zing.cql.CQLParseException;
+import org.z3950.zing.cql.CQLParser;
+import org.z3950.zing.cql.CQLSortNode;
+import org.z3950.zing.cql.CQLTermNode;
 
 public class ReservoirService implements RouterCreator, TenantInitHooks {
 
   private static final String ENTITY_ID_NOT_FOUND_PATTERN = "%s %s not found";
   private static final String MODULE_LABEL = "Module";
+  private static final String DEPRECATION_DATE = "@1786520473";
   private static final Logger log = LogManager.getLogger(ReservoirService.class);
 
   private final ModuleVersionReporter moduleVersionReporter;
@@ -55,7 +64,6 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     JsonObject links = new JsonObject()
         .put("clusters", baseUrl + "/reservoir/clusters")
         .put("configPools", baseUrl + "/reservoir/config/pools")
-        .put("configMatchKeys", baseUrl + "/reservoir/config/matchkeys")
         .put("configModules", baseUrl + "/reservoir/config/modules")
         .put("configOai", baseUrl + "/reservoir/config/oai")
         .put("oai", baseUrl + "/reservoir/oai")
@@ -190,6 +198,71 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
         && Util.getQueryParameter(ctx, "matchkeyid") != null;
   }
 
+  private static void warnDeprecatedEndpoint(RoutingContext ctx) {
+    String path = ctx.request().path();
+    String replacement = path.replace("/config/matchkeys", "/config/pools");
+    log.warn("Deprecated endpoint used: tenant={} method={} path={} userAgent=\"{}\"; "
+            + "use {} instead",
+        Tenant.get(ctx), ctx.request().method(), path, userAgent(ctx), replacement);
+  }
+
+  private static void warnDeprecatedQueryParameter(RoutingContext ctx, String parameter,
+      String replacement) {
+    log.warn("Deprecated query parameter used: tenant={} method={} path={} parameter={} "
+            + "userAgent=\"{}\"; use {} instead",
+        Tenant.get(ctx), ctx.request().method(), ctx.request().path(), parameter, userAgent(ctx),
+        replacement);
+  }
+
+  private static void warnDeprecatedCqlIndex(RoutingContext ctx, String index,
+      String replacement) {
+    log.warn("Deprecated CQL index used: tenant={} method={} path={} index={} userAgent=\"{}\"; "
+            + "use {} instead",
+        Tenant.get(ctx), ctx.request().method(), ctx.request().path(), index, userAgent(ctx),
+        replacement);
+  }
+
+  private static String userAgent(RoutingContext ctx) {
+    return sanitizeUserAgent(ctx.request().getHeader("User-Agent"));
+  }
+
+  static String sanitizeUserAgent(String value) {
+    if (value == null || value.isBlank()) {
+      return "-";
+    }
+    String sanitized = value.replace('\r', ' ').replace('\n', ' ');
+    return sanitized.length() <= 256 ? sanitized : sanitized.substring(0, 256);
+  }
+
+  static boolean usesCqlIndex(String query, String index) {
+    if (query == null
+        || !query.toLowerCase(Locale.ROOT).contains(index.toLowerCase(Locale.ROOT))) {
+      return false;
+    }
+    AtomicBoolean found = new AtomicBoolean();
+    try {
+      new CQLParser().parse(query).traverse(new CQLDefaultNodeVisitor() {
+        @Override
+        public void onTermNode(CQLTermNode node) {
+          if (index.equalsIgnoreCase(node.getIndex())) {
+            found.set(true);
+          }
+        }
+
+        @Override
+        public void onSortNode(CQLSortNode node) {
+          if (node.getSortIndexes().stream()
+              .anyMatch(sortIndex -> index.equalsIgnoreCase(sortIndex.getBase()))) {
+            found.set(true);
+          }
+        }
+      });
+    } catch (CQLParseException | IOException e) {
+      return false;
+    }
+    return found.get();
+  }
+
   Future<Void> poolNotFound(RoutingContext ctx, String id) {
     String resource = isLegacyPoolRequest(ctx) ? "MatchKey" : "Pool";
     HttpResponse.responseError(ctx, 404, resource + " " + id + " not found");
@@ -214,7 +287,11 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameterQuery(ctx));
     String requestedPoolId = Util.getQueryParameter(ctx, "poolId");
     if (requestedPoolId == null) {
-      requestedPoolId = Util.getQueryParameter(ctx, "matchkeyid");
+      String legacyPoolId = Util.getQueryParameter(ctx, "matchkeyid");
+      if (legacyPoolId != null) {
+        warnDeprecatedQueryParameter(ctx, "matchkeyid", "poolId");
+        requestedPoolId = legacyPoolId;
+      }
     }
     if (requestedPoolId == null) {
       failHandler(400, ctx, "Missing required query parameter: poolId");
@@ -244,7 +321,12 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     definition.addField(CqlFields.SOURCE_VERSION.getCqlName(),
         new PgCqlFieldNumber().withColumn(CqlFields.SOURCE_VERSION.getQualifiedSqlName()));
 
-    PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameterQuery(ctx));
+    String query = Util.getQueryParameterQuery(ctx);
+    PgCqlQuery pgCqlQuery = definition.parse(query);
+    if (usesCqlIndex(query, CqlFields.MATCHKEY_ID.getCqlName())) {
+      warnDeprecatedCqlIndex(ctx, CqlFields.MATCHKEY_ID.getCqlName(),
+          CqlFields.POOL_ID.getCqlName());
+    }
     Storage storage = new Storage(ctx);
     return storage.touchClusters(pgCqlQuery)
         .map(count -> new JsonObject().put("count", count))
@@ -565,6 +647,15 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
         .addFailureHandler(ReservoirService::failHandler);
   }
 
+  private void addDeprecatedPoolRoute(RouterBuilder routerBuilder, String operationId,
+      Function<RoutingContext, Future<Void>> function) {
+    add(routerBuilder, operationId, ctx -> {
+      ctx.response().putHeader("Deprecation", DEPRECATION_DATE);
+      warnDeprecatedEndpoint(ctx);
+      return function.apply(ctx);
+    });
+  }
+
   @Override
   public Future<Router> createRouter(Vertx vertx) {
     OaiPmhClientService oaiPmhClient = new OaiPmhClientService(vertx);
@@ -585,13 +676,13 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
           add(routerBuilder, "getPools", this::getPools);
           add(routerBuilder, "initializePool", this::initializePool);
           add(routerBuilder, "statsPool", this::statsPool);
-          add(routerBuilder, "postConfigMatchKey", this::postPool);
-          add(routerBuilder, "getConfigMatchKey", this::getPool);
-          add(routerBuilder, "putConfigMatchKey", this::putPool);
-          add(routerBuilder, "deleteConfigMatchKey", this::deletePool);
-          add(routerBuilder, "getConfigMatchKeys", this::getPools);
-          add(routerBuilder, "initializeMatchKey", this::initializePool);
-          add(routerBuilder, "statsMatchKey", this::statsPool);
+          addDeprecatedPoolRoute(routerBuilder, "postConfigMatchKey", this::postPool);
+          addDeprecatedPoolRoute(routerBuilder, "getConfigMatchKey", this::getPool);
+          addDeprecatedPoolRoute(routerBuilder, "putConfigMatchKey", this::putPool);
+          addDeprecatedPoolRoute(routerBuilder, "deleteConfigMatchKey", this::deletePool);
+          addDeprecatedPoolRoute(routerBuilder, "getConfigMatchKeys", this::getPools);
+          addDeprecatedPoolRoute(routerBuilder, "initializeMatchKey", this::initializePool);
+          addDeprecatedPoolRoute(routerBuilder, "statsMatchKey", this::statsPool);
           add(routerBuilder, "getClusters", this::getClusters, false);
           add(routerBuilder, "touchClusters", this::touchClusters, false);
           add(routerBuilder, "getCluster", this::getCluster);
