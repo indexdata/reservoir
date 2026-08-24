@@ -4,6 +4,13 @@
 * [Gateway timeout](#gateway-timeout)
 * [Touch](#touch)
 * [Finalise and delete old sourceVersion](#finalise-and-delete-old-sourceversion)
+* [Investigate issues with records ingest](#investigate-issues-with-records-ingest)
+    * [Follow Reservoir logs with kubectl](#follow-reservoir-logs-with-kubectl)
+    * [Ensure configure localIdPath when ingest record files](#ensure-configure-localidpath-when-ingest-record-files)
+    * [Use xmlFixing parameter](#use-xmlfixing-parameter)
+    * [Investigate the MARC data](#investigate-the-marc-data)
+    * [Structural problems with MARC records](#structural-problems-with-marc-records)
+    * [Split input files to isolate errors](#split-input-files-to-isolate-errors)
 * [Follow other docs](#follow-other-docs)
 
 ## Gateway timeout
@@ -61,6 +68,49 @@ Now count without specifying the sourceVersion (which will equate to the count o
 ```shell
 https GET "$host/reservoir/records?limit=0&count=exact&query=sourceId=US-NNU" x-okapi-token:$token
 ```
+
+## Investigate issues with records ingest
+
+Most problems arise due to issues with the actual MARC records.
+
+Some tips ...
+
+### Follow Reservoir logs with kubectl
+
+As [explained](ingest-oai-pmh.md#follow-reservoir-logs).
+
+### Ensure configure localIdPath when ingest record files
+
+See advice at [Ingest record files](/#ingest-record-files) about `localIdPath` parameter. Different ILSs use a different field for the `localId` in the MARC records. The default is `001`.
+
+For example Koha uses `999$c` and Horizon uses `999$a` (mostly! some are `001`).
+
+When Reservoir commences the ingest of a file, it will report to logs for the first ~10 records "found ID ...".
+If not, then there is a configuration problem or a data problem.
+
+### Use xmlFixing parameter
+
+Sometimes there are content issues with MARC records. Invalid characters are one such issue.
+Configure the optional parameter `xmlFixing`: if `true` then an attempt is made to remove invalid characters (e.g. control chars) from the XML input (`false` by default).
+
+### Investigate the MARC data
+
+There are many potential MARC content issues. Two particular tools can assist with investigation:
+
+* [yaz_marcdump](https://software.indexdata.com/yaz/doc/yaz-marcdump.html) -- part of the [YAZ](https://www.indexdata.com/resources/software/yaz/) toolkit.
+* [MarcEdit](https://marcedit.reeset.net/).
+
+### Structural problems with MARC records
+
+Refer to the very helpful article: \
+https://bibwild.wordpress.com/2010/02/02/structural-marc-problems-you-may-encounter/
+
+### Split input files to isolate errors
+
+Sometimes [Ingest record files](/#ingest-record-files) will fail with no clues.
+One laborious technique is to split the ingest file into smaller chunks, ingest again, split again, etc.
+
+The "yaz_marcdump" and "MarcEdit" tools can assist.
 
 ## Follow other docs
 
