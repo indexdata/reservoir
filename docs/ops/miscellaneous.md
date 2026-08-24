@@ -81,7 +81,7 @@ As [explained](ingest-oai-pmh.md#follow-reservoir-logs).
 
 ### Ensure configure localIdPath when ingest record files
 
-See advice at [Ingest record files](/#ingest-record-files) about `localIdPath` parameter. Different ILSs use a different field for the `localId` in the MARC records. The default is `001`.
+See advice at [Ingest record files](../../README.md#ingest-record-files) about `localIdPath` parameter. Different ILSs use a different field for the `localId` in the MARC records. The default is `001`.
 
 For example Koha uses `999$c` and Horizon uses `999$a` (mostly! some are `001`).
 
@@ -91,13 +91,13 @@ If not, then there is a configuration problem or a data problem.
 ### Use xmlFixing parameter
 
 Sometimes there are content issues with MARC records. Invalid characters are one such issue.
-Configure the optional parameter `xmlFixing`: if `true` then an attempt is made to remove invalid characters (e.g. control chars) from the XML input (`false` by default).
+Configure the optional parameter `xmlFixing` -- If `true` then an attempt is made to remove invalid characters (e.g. control chars) from the XML input (`false` by default).
 
 ### Investigate the MARC data
 
 There are many potential MARC content issues. Two particular tools can assist with investigation:
 
-* [yaz_marcdump](https://software.indexdata.com/yaz/doc/yaz-marcdump.html) -- part of the [YAZ](https://www.indexdata.com/resources/software/yaz/) toolkit.
+* [yaz-marcdump](https://software.indexdata.com/yaz/doc/yaz-marcdump.html) -- part of the [YAZ](https://www.indexdata.com/resources/software/yaz/) toolkit.
 * [MarcEdit](https://marcedit.reeset.net/).
 
 ### Structural problems with MARC records
@@ -107,10 +107,10 @@ https://bibwild.wordpress.com/2010/02/02/structural-marc-problems-you-may-encoun
 
 ### Split input files to isolate errors
 
-Sometimes [Ingest record files](/#ingest-record-files) will fail with no clues.
+Sometimes [Ingest record files](../../README.md#ingest-record-files) will fail with no clues.
 One laborious technique is to split the ingest file into smaller chunks, ingest again, split again, etc.
 
-The "yaz_marcdump" and "MarcEdit" tools can assist.
+The "yaz-marcdump" and "MarcEdit" tools can assist.
 
 ## Follow other docs
 
