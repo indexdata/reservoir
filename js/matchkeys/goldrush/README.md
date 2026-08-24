@@ -1,8 +1,8 @@
 # Matchkeys - goldrush2021
 
 > [!IMPORTANT]
-> Deprecated: All matchkeys facilities have moved to a new repository at:
-> https://github.com/indexdata/matchkeys
+> Deprecated: All matchers facilities have moved to a new repository at:
+> https://github.com/indexdata/reservoir-scripts
 > These facilities still remain at reservoir because they are still used in some deployments.
 > Ongoing development happens at the new repository.
 
