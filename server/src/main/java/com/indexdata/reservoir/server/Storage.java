@@ -56,6 +56,7 @@ public class Storage {
   public static final String MODULE_TABLE = "module";
   public static final String OAI_CONFIG_TABLE = "oai_config";
   public static final String OAI_PMH_CLIENTS_TABLE = "oai_pmh_clients";
+  public static final String POOL_INITIALIZATION_JOBS_TABLE = "pool_initialization_jobs";
 
   private static final Logger log = LogManager.getLogger(Storage.class);
   private static final String CREATE_IF_NO_EXISTS = "CREATE TABLE IF NOT EXISTS ";
@@ -70,6 +71,7 @@ public class Storage {
   final String moduleTable;
   final String oaiConfigTable;
   final String oaiPmhClientTable;
+  final String poolInitializationJobTable;
   final Vertx vertx;
   private final String tenant;
   static int sqlStreamFetchSize = 50;
@@ -93,6 +95,7 @@ public class Storage {
     this.moduleTable = pool.getSchema() + "." + MODULE_TABLE;
     this.oaiConfigTable = pool.getSchema() + "." + OAI_CONFIG_TABLE;
     this.oaiPmhClientTable = pool.getSchema() + "." + OAI_PMH_CLIENTS_TABLE;
+    this.poolInitializationJobTable = pool.getSchema() + "." + POOL_INITIALIZATION_JOBS_TABLE;
   }
 
   static String getPoolKey(HttpMethod method) {
@@ -217,7 +220,23 @@ public class Storage {
                 + " config JSONB NOT NULL)",
             CREATE_IF_NO_EXISTS + oaiPmhClientTable
                 + "(id VARCHAR NOT NULL PRIMARY KEY,"
-                + " config JSONB, job JSONB, stop BOOLEAN, owner UUID)"
+                + " config JSONB, job JSONB, stop BOOLEAN, owner UUID)",
+            CREATE_IF_NO_EXISTS + poolInitializationJobTable
+                + "(id UUID NOT NULL PRIMARY KEY,"
+                + " pool_id VARCHAR NOT NULL,"
+                + " status VARCHAR NOT NULL CHECK (status IN ('running', 'idle')),"
+                + " claim_token UUID,"
+                + " lease_until TIMESTAMP,"
+                + " cancel_requested BOOLEAN NOT NULL DEFAULT FALSE,"
+                + " checkpoint UUID,"
+                + " total_records BIGINT NOT NULL DEFAULT 0,"
+                + " started_at TIMESTAMP NOT NULL,"
+                + " completed_at TIMESTAMP,"
+                + " error TEXT,"
+                + " FOREIGN KEY(pool_id) REFERENCES " + poolConfigTable
+                + " ON DELETE CASCADE)",
+            "CREATE UNIQUE INDEX IF NOT EXISTS pool_initialization_one_running_idx ON "
+                + poolInitializationJobTable + "(status) WHERE status = 'running'"
         )
       )
       .mapEmpty()

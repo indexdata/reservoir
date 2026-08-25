@@ -13,14 +13,25 @@ properties:
     enum:
       - running
       - idle
+  totalRecords:
+    description: Number of records committed by the job
+    type: integer
+    format: int64
   startedAt:
-    description: time when job was started
+    description: Time when the job was started
     type: string
+    format: date-time
   completedAt:
-    description: time when job was finished
+    description: Time when the job finished
+    type: string
+    format: date-time
+  error:
+    description: Error that stopped the job
     type: string
 required:
   - id
   - poolId
   - status
+  - totalRecords
+  - startedAt
 additionalProperties: false

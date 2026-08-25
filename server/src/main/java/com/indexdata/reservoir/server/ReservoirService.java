@@ -659,6 +659,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
   @Override
   public Future<Router> createRouter(Vertx vertx) {
     OaiPmhClientService oaiPmhClient = new OaiPmhClientService(vertx);
+    PoolInitializationService poolInitialization = new PoolInitializationService();
     UploadService uploadService = new UploadService();
     return OpenAPIContract.from(vertx, "openapi/reservoir.yaml")
         .map(contract -> {
@@ -675,6 +676,9 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
           add(routerBuilder, "deletePool", this::deletePool);
           add(routerBuilder, "getPools", this::getPools);
           add(routerBuilder, "initializePool", this::initializePool);
+          add(routerBuilder, "initializationsPoolPost", poolInitialization::post);
+          add(routerBuilder, "initializationsPoolGet", poolInitialization::get);
+          add(routerBuilder, "initializationsPoolDelete", poolInitialization::delete);
           add(routerBuilder, "statsPool", this::statsPool);
           addDeprecatedPoolRoute(routerBuilder, "postConfigMatchKey", this::postPool);
           addDeprecatedPoolRoute(routerBuilder, "getConfigMatchKey", this::getPool);
