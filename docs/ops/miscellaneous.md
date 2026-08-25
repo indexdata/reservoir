@@ -14,6 +14,8 @@
 * [Management tasks](#management-tasks)
     * [Know the set of source identifiers](#know-the-set-of-source-identifiers)
     * [Keep track of source versions](#keep-track-of-source-versions)
+    * [Assess ongoing OAI-PMH ingests](#assess-ongoing-oai-pmh-ingests)
+    * [Count records regularly](#count-records-regularly)
     * [Deleting records](#deleting-records)
         * [Delete a complete source version](#delete-a-complete-source-version)
         * [Delete specific records](#delete-specific-records)
@@ -132,6 +134,19 @@ Not so easy for the file-based ingest jobs, so do keep track.
 ### Keep track of source versions
 
 Note the current `sourceVersion` of each ingest source.
+
+### Assess ongoing OAI-PMH ingests
+
+Use a daily process to assess the [Show all jobs status](ingest-oai-pmh.md#show-all-jobs-status) operation.
+After daily ingests have completed, jobs should be in "idle" state.
+
+If any have an "error" or have been running for an unusually long time or lost their resumptionToken, then will need investigation.
+
+However some OAI-PMH servers present an "error" message when they reach idle state, but is not actually an error. It is just their strange way of indicating that there are no more records to deliver.
+
+### Count records regularly
+
+Regularly count the records held for each `sourceId` to ensure no unexpected activity.
 
 ### Deleting records
 
