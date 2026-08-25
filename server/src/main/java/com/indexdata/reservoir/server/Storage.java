@@ -415,30 +415,30 @@ public class Storage {
 
     ingestMatcher.poolId = poolConfig.getId();
     String[] matcherInvocations = poolConfig.getMatcherInvocations();
-    if (matcherInvocations.length > 0) {
-      List<Future<ModuleExecutable>> futures = new ArrayList<>();
-      for (String matcherInvocation : matcherInvocations) {
-        ModuleInvocation invocation = new ModuleInvocation(matcherInvocation);
-        futures.add(selectCodeModuleEntity(invocation.getModuleName())
-            .compose(entity -> {
-              if (entity == null) {
-                return Future.failedFuture(
-                    "Module '" + invocation.getModuleName()
-                        + "' does not exist for '" + invocation + "'");
-              }
-              return ModuleCache.getInstance().lookup(tenant, entity)
-                  .map(module -> new ModuleExecutable(module, invocation, vertx));
-            }));
-      }
-      return Future.all(futures).map(results -> {
-        ingestMatcher.moduleExecutables = new ModuleExecutable[results.size()];
-        for (int i = 0; i < results.size(); i++) {
-          ingestMatcher.moduleExecutables[i] = results.resultAt(i);
-        }
-        return ingestMatcher;
-      });
+    if (matcherInvocations.length == 0) {
+      return Future.failedFuture("pool config must include 'matcher'");
     }
-    return Future.failedFuture("pool config must include 'matcher'");
+    List<Future<ModuleExecutable>> futures = new ArrayList<>();
+    for (String matcherInvocation : matcherInvocations) {
+      ModuleInvocation invocation = new ModuleInvocation(matcherInvocation);
+      futures.add(selectCodeModuleEntity(invocation.getModuleName())
+          .compose(entity -> {
+            if (entity == null) {
+              return Future.failedFuture(
+                  "Module '" + invocation.getModuleName()
+                      + "' does not exist for '" + invocation + "'");
+            }
+            return ModuleCache.getInstance().lookup(tenant, entity)
+                .map(module -> new ModuleExecutable(module, invocation, vertx));
+          }));
+    }
+    return Future.all(futures).map(results -> {
+      ingestMatcher.moduleExecutables = new ModuleExecutable[results.size()];
+      for (int i = 0; i < results.size(); i++) {
+        ingestMatcher.moduleExecutables[i] = results.resultAt(i);
+      }
+      return ingestMatcher;
+    });
   }
 
   Future<List<IngestMatcher>> createIngestMatchers(List<PoolConfig> poolConfigs,
