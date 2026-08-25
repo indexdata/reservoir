@@ -75,6 +75,12 @@ COPY --from=slim /graalvm-license /graalvm-license
 # Switch to non-root user
 USER reservoir
 
+ENV DEFAULT_JAVA_OPTS="\
+-XX:+UseCompactObjectHeaders \
+-XX:MaxRAMPercentage=70.0 \
+-XX:+ExitOnOutOfMemoryError \
+-XX:+UseStringDeduplication \
+-Dsun.net.inetaddr.ttl=30"
 ENV JAVA_OPTS=""
 ENV JAVA_HOME=/opt/graalvm-slim
 ENV PATH="$JAVA_HOME/bin:${PATH}"
@@ -85,4 +91,4 @@ ENV GRAAL_OPTS="\
 ENV HTTP_PORT=8081
 EXPOSE $HTTP_PORT
 
-ENTRYPOINT ["sh", "-c", "$JAVA_HOME/bin/java -Dport=$HTTP_PORT $JAVA_OPTS $GRAAL_OPTS -jar /reservoir.jar"]
+ENTRYPOINT ["sh", "-c", "exec $JAVA_HOME/bin/java -Dport=$HTTP_PORT $DEFAULT_JAVA_OPTS $GRAAL_OPTS $JAVA_OPTS -jar /reservoir.jar"]
