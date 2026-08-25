@@ -2391,6 +2391,53 @@ public class MainVerticleTest extends TestBase {
   }
 
   @Test
+  public void testGetPoolInitializations() throws Exception {
+    JsonObject poolConfig = createIsbnPool("manual");
+    String poolId = poolConfig.getString("id");
+    String jobsPath = "/reservoir/config/pools/" + poolId + "/initializations";
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .get(jobsPath)
+        .then().statusCode(200)
+        .contentType("application/json")
+        .body("", hasSize(0));
+
+    Storage storage = new Storage(vertx, TENANT_1, HttpMethod.POST);
+    UUID olderJobId = UUID.randomUUID();
+    UUID newerJobId = UUID.randomUUID();
+    String sql = "INSERT INTO " + storage.poolInitializationJobTable
+        + " (id, pool_id, status, total_records, started_at, completed_at) VALUES"
+        + " ($1, $3, 'idle', 2, "
+        + " (CURRENT_TIMESTAMP AT TIME ZONE 'UTC') - INTERVAL '1 minute',"
+        + " (CURRENT_TIMESTAMP AT TIME ZONE 'UTC') - INTERVAL '1 minute'),"
+        + " ($2, $3, 'idle', 5, CURRENT_TIMESTAMP AT TIME ZONE 'UTC',"
+        + " CURRENT_TIMESTAMP AT TIME ZONE 'UTC')";
+    storage.getPool().preparedQuery(sql)
+        .execute(Tuple.of(olderJobId, newerJobId, poolId))
+        .toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .get(jobsPath)
+        .then().statusCode(200)
+        .contentType("application/json")
+        .body("", hasSize(2))
+        .body("[0].id", is(newerJobId.toString()))
+        .body("[0].poolId", is(poolId))
+        .body("[0].status", is("idle"))
+        .body("[0].totalRecords", is(5))
+        .body("[0].startedAt", is(Matchers.notNullValue()))
+        .body("[0].completedAt", is(Matchers.notNullValue()))
+        .body("[1].id", is(olderJobId.toString()));
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .get("/reservoir/config/pools/missing/initializations")
+        .then().statusCode(404);
+  }
+
+  @Test
   public void testAsyncPoolInitialization() {
     JsonObject poolConfig = createIsbnPool("manual");
     JsonArray records = new JsonArray()

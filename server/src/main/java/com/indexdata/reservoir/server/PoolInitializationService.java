@@ -7,6 +7,7 @@ import com.indexdata.reservoir.server.metrics.IngestMetricsNop;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.sqlclient.Row;
@@ -88,6 +89,20 @@ class PoolInitializationService {
         });
   }
 
+  Future<Void> getAll(RoutingContext ctx) {
+    Storage storage = writeStorage(ctx);
+    String poolId = Util.getPathParameter(ctx, "id");
+    return storage.selectPoolConfig(poolId)
+        .compose(pool -> {
+          if (pool == null) {
+            HttpResponse.responseError(ctx, 404, "Pool " + poolId + " not found");
+            return Future.succeededFuture();
+          }
+          return getJobs(storage, poolId)
+              .compose(jobs -> HttpResponse.responseJson(ctx, 200).end(jobs.encode()));
+        });
+  }
+
   Future<Void> delete(RoutingContext ctx) {
     Storage storage = writeStorage(ctx);
     String poolId = Util.getPathParameter(ctx, "id");
@@ -130,6 +145,18 @@ class PoolInitializationService {
         .map(rows -> {
           RowIterator<Row> iterator = rows.iterator();
           return iterator.hasNext() ? jobToJson(iterator.next()) : null;
+        });
+  }
+
+  private Future<JsonArray> getJobs(Storage storage, String poolId) {
+    String sql = "SELECT * FROM " + storage.poolInitializationJobTable
+        + " WHERE pool_id = $1 ORDER BY started_at DESC, id DESC";
+    return storage.pool.preparedQuery(sql)
+        .execute(Tuple.of(poolId))
+        .map(rows -> {
+          JsonArray jobs = new JsonArray();
+          rows.forEach(row -> jobs.add(jobToJson(row)));
+          return jobs;
         });
   }
 

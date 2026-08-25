@@ -676,6 +676,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
           add(routerBuilder, "deletePool", this::deletePool);
           add(routerBuilder, "getPools", this::getPools);
           add(routerBuilder, "initializePool", this::initializePool);
+          add(routerBuilder, "initializationsPoolGetAll", poolInitialization::getAll);
           add(routerBuilder, "initializationsPoolPost", poolInitialization::post);
           add(routerBuilder, "initializationsPoolGet", poolInitialization::get);
           add(routerBuilder, "initializationsPoolDelete", poolInitialization::delete);

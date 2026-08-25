@@ -188,6 +188,24 @@ paths:
         description: Pool identifier
         schema:
           type: string
+    get:
+      description: Get all initialization jobs for the pool
+      operationId: initializationsPoolGetAll
+      responses:
+        "200":
+          description: Pool initialization jobs returned
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: schemas/poolInitializationJob.yaml
+        "400":
+          $ref: "#/components/responses/trait_400"
+        "404":
+          $ref: "#/components/responses/trait_404"
+        "500":
+          $ref: "#/components/responses/trait_500"
     post:
       description: Start job that recalculates clusters in the pool across all records
       operationId: initializationsPoolPost
