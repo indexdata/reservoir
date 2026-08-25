@@ -99,7 +99,11 @@ class PoolInitializationService {
             HttpResponse.responseError(ctx, 404, "Pool " + poolId + " not found");
             return Future.succeededFuture();
           }
-          return getJobs(storage, poolId)
+          return claimExpired(storage, poolId)
+              .compose(claim -> {
+                claim.ifPresent(value -> startClaim(ctx.vertx(), storage, value));
+                return getJobs(storage, poolId);
+              })
               .compose(jobs -> HttpResponse.responseJson(ctx, 200).end(jobs.encode()));
         });
   }
@@ -172,6 +176,26 @@ class PoolInitializationService {
         .execute(Tuple.of(jobId, poolId, token))
         .map(rows -> rows.iterator().hasNext()
             ? Optional.<Claim>of(new Claim(jobId, poolId, token)) : Optional.empty());
+  }
+
+  private Future<Optional<Claim>> claimExpired(Storage storage, String poolId) {
+    UUID token = UUID.randomUUID();
+    String sql = "UPDATE " + storage.poolInitializationJobTable
+        + " SET claim_token = $2, lease_until = " + NEW_LEASE
+        + " WHERE id = (SELECT id FROM " + storage.poolInitializationJobTable
+        + " WHERE pool_id = $1 AND status = 'running'"
+        + " AND cancel_requested = FALSE"
+        + " AND (lease_until IS NULL OR lease_until < " + DB_NOW + ")"
+        + " ORDER BY started_at LIMIT 1 FOR UPDATE SKIP LOCKED)"
+        + " RETURNING id";
+    return storage.pool.preparedQuery(sql)
+        .execute(Tuple.of(poolId, token))
+        .map(rows -> {
+          RowIterator<Row> iterator = rows.iterator();
+          return iterator.hasNext()
+              ? Optional.<Claim>of(new Claim(iterator.next().getUUID("id"), poolId, token))
+              : Optional.empty();
+        });
   }
 
   private Future<Boolean> cancelOrDelete(Storage storage, String poolId, UUID jobId) {

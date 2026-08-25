@@ -189,7 +189,9 @@ paths:
         schema:
           type: string
     get:
-      description: Get all initialization jobs for the pool
+      description: >
+        Get all initialization jobs for the pool. If the pool has a running job
+        with an expired lease, this request atomically claims and resumes that job.
       operationId: initializationsPoolGetAll
       responses:
         "200":
@@ -250,7 +252,9 @@ paths:
           type: string
           format: uuid
     get:
-      description: Get pool initialization job status
+      description: >
+        Get pool initialization job status. If the job is running with an expired
+        lease, this request atomically claims and resumes it.
       operationId: initializationsPoolGet
       responses:
         "200":

@@ -2438,6 +2438,45 @@ public class MainVerticleTest extends TestBase {
   }
 
   @Test
+  public void testGetPoolInitializationsResumesExpiredJob() throws Exception {
+    JsonObject poolConfig = createIsbnPool("manual");
+    String poolId = poolConfig.getString("id");
+    UUID jobId = UUID.randomUUID();
+    Storage storage = new Storage(vertx, TENANT_1, HttpMethod.POST);
+    String sql = "INSERT INTO " + storage.poolInitializationJobTable
+        + " (id, pool_id, status, claim_token, lease_until, started_at)"
+        + " VALUES ($1, $2, 'running', $3,"
+        + " (CURRENT_TIMESTAMP AT TIME ZONE 'UTC') - INTERVAL '1 minute',"
+        + " CURRENT_TIMESTAMP AT TIME ZONE 'UTC')";
+    storage.getPool().preparedQuery(sql)
+        .execute(Tuple.of(jobId, poolId, UUID.randomUUID()))
+        .toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
+
+    String jobsPath = "/reservoir/config/pools/" + poolId + "/initializations";
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .get(jobsPath)
+        .then().statusCode(200)
+        .body("[0].id", is(jobId.toString()));
+
+    Awaitility.await().atMost(Duration.ofSeconds(5)).until(() -> {
+      var response = RestAssured.given()
+          .header(XOkapiHeaders.TENANT, TENANT_1)
+          .get(jobsPath);
+      return response.statusCode() == 200
+          && "idle".equals(response.jsonPath().getString("[0].status"));
+    });
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .get(jobsPath)
+        .then().statusCode(200)
+        .body("[0].id", is(jobId.toString()))
+        .body("[0].status", is("idle"))
+        .body("[0].totalRecords", is(0));
+  }
+
+  @Test
   public void testAsyncPoolInitialization() {
     JsonObject poolConfig = createIsbnPool("manual");
     JsonArray records = new JsonArray()
