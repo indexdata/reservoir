@@ -418,7 +418,7 @@ public class Storage {
     if (matcherInvocations.length == 0) {
       return Future.failedFuture("pool config must include 'matcher'");
     }
-    List<Future<ModuleExecutable>> futures = new ArrayList<>();
+    List<Future<?>> futures = new ArrayList<>();
     for (String matcherInvocation : matcherInvocations) {
       ModuleInvocation invocation = new ModuleInvocation(matcherInvocation);
       futures.add(selectCodeModuleEntity(invocation.getModuleName())
@@ -521,7 +521,7 @@ public class Storage {
         + " AND " + where;
     return pool.preparedQuery(q)
         .execute(Tuple.of(LocalDateTime.now(ZoneOffset.UTC)))
-        .map(RowSet<Row>::rowCount);
+        .map(rows -> rows.rowCount());
   }
 
   Future<Void> removeClusterRecord(SqlConnection conn, UUID globalId, MatcherResult matcherResult) {
@@ -763,7 +763,7 @@ public class Storage {
               + " WHERE cluster_id = $1")
             .execute(Tuple.of(clusterId))
             .map(cb::matchValues))
-        .map(ClusterBuilder::build);
+        .map(clusterBuilder -> clusterBuilder.build());
   }
 
   /**

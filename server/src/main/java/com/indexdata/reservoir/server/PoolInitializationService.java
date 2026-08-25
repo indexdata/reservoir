@@ -17,6 +17,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -74,9 +75,7 @@ class PoolInitializationService {
     UUID jobId = UUID.fromString(Util.getPathParameter(ctx, "jobId"));
     return claimExpired(storage, poolId, jobId)
         .compose(claim -> {
-          if (claim != null) {
-            startClaim(ctx.vertx(), storage, claim);
-          }
+          claim.ifPresent(value -> startClaim(ctx.vertx(), storage, value));
           return getJob(storage, poolId, jobId);
         })
         .compose(job -> {
@@ -134,7 +133,7 @@ class PoolInitializationService {
         });
   }
 
-  private Future<Claim> claimExpired(Storage storage, String poolId, UUID jobId) {
+  private Future<Optional<Claim>> claimExpired(Storage storage, String poolId, UUID jobId) {
     UUID token = UUID.randomUUID();
     String sql = "UPDATE " + storage.poolInitializationJobTable
         + " SET claim_token = $3, lease_until = " + NEW_LEASE
@@ -144,7 +143,8 @@ class PoolInitializationService {
         + " RETURNING id";
     return storage.pool.preparedQuery(sql)
         .execute(Tuple.of(jobId, poolId, token))
-        .map(rows -> rows.iterator().hasNext() ? new Claim(jobId, poolId, token) : null);
+        .map(rows -> rows.iterator().hasNext()
+            ? Optional.of(new Claim(jobId, poolId, token)) : Optional.empty());
   }
 
   private Future<Boolean> cancelOrDelete(Storage storage, String poolId, UUID jobId) {
