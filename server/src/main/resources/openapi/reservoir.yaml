@@ -177,6 +177,85 @@ paths:
           $ref: "#/components/responses/trait_404"
         "500":
           $ref: "#/components/responses/trait_500"
+  /reservoir/config/pools/{id}/initializations:
+    parameters:
+      - $ref: headers/okapi-tenant.yaml
+      - $ref: headers/okapi-token.yaml
+      - $ref: headers/okapi-url.yaml
+      - in: path
+        name: id
+        required: true
+        description: Pool identifier
+        schema:
+          type: string
+    post:
+      description: Start job that recalculates clusters in the pool across all records
+      operationId: initializationsPoolPost
+      responses:
+        "201":
+          description: Job created
+          headers:
+            Location:
+              description: URL of the newly created pool initialization job
+              required: true
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: schemas/poolInitializationJob.yaml
+        "400":
+          $ref: "#/components/responses/trait_400"
+        "404":
+          $ref: "#/components/responses/trait_404"
+        "500":
+          $ref: "#/components/responses/trait_500"
+  /reservoir/config/pools/{id}/initializations/{jobId}:
+    parameters:
+      - $ref: headers/okapi-tenant.yaml
+      - $ref: headers/okapi-token.yaml
+      - $ref: headers/okapi-url.yaml
+      - in: path
+        name: id
+        required: true
+        description: Pool identifier
+        schema:
+          type: string
+      - in: path
+        name: jobId
+        required: true
+        description: Pool job identifier
+        schema:
+          type: string
+    get:
+      description: Get pool initialization job status
+      operationId: initializationsPoolGet
+      responses:
+        "200":
+          description: Job status returned
+          content:
+            application/json:
+              schema:
+                $ref: schemas/poolInitializationJob.yaml
+        "400":
+          $ref: "#/components/responses/trait_400"
+        "404":
+          $ref: "#/components/responses/trait_404"
+        "500":
+          $ref: "#/components/responses/trait_500"
+    delete:
+      description: Delete and possibly cancel pool initialization job
+      operationId: initializationsPoolDelete
+      responses:
+        "204":
+          description: Job deleted or cancellation requested
+        "400":
+          $ref: "#/components/responses/trait_400"
+        "404":
+          $ref: "#/components/responses/trait_404"
+        "500":
+          $ref: "#/components/responses/trait_500"
   /reservoir/config/pools/{id}/initialize:
     parameters:
       - $ref: headers/okapi-tenant.yaml

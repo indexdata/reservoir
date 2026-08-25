@@ -1,0 +1,26 @@
+description: Pool initialization job
+type: object
+properties:
+  id:
+    type: string
+    description: Pool initialization job identifier
+  poolId:
+    type: string
+    description: Pool identifier
+  status:
+    description: Job status
+    type: string
+    enum:
+      - running
+      - idle
+  startedAt:
+    description: time when job was started
+    type: string
+  completedAt:
+    description: time when job was finished
+    type: string
+required:
+  - id
+  - poolId
+  - status
+additionalProperties: false
