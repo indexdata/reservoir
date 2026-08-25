@@ -56,16 +56,17 @@ class PoolInitializationService {
           }
           return createJob(storage, poolId)
               .compose(created -> {
-                if (created == null) {
+                if (created.isEmpty()) {
                   HttpResponse.responseError(ctx, 409,
                       "A pool initialization job is already running for this tenant");
                   return Future.succeededFuture();
                 }
-                startClaim(ctx.vertx(), storage, created.claim());
-                String location = ctx.request().absoluteURI() + "/" + created.claim().jobId();
+                CreatedJob job = created.get();
+                startClaim(ctx.vertx(), storage, job.claim());
+                String location = ctx.request().absoluteURI() + "/" + job.claim().jobId();
                 return HttpResponse.responseJson(ctx, 201)
                     .putHeader("Location", location)
-                    .end(created.json().encode());
+                    .end(job.json().encode());
               });
         });
   }
@@ -118,7 +119,7 @@ class PoolInitializationService {
         });
   }
 
-  private Future<CreatedJob> createJob(Storage storage, String poolId) {
+  private Future<Optional<CreatedJob>> createJob(Storage storage, String poolId) {
     UUID jobId = UUID.randomUUID();
     UUID token = UUID.randomUUID();
     String sql = "INSERT INTO " + storage.poolInitializationJobTable
@@ -129,11 +130,10 @@ class PoolInitializationService {
         .execute(Tuple.of(jobId, poolId, token))
         .map(rows -> {
           RowIterator<Row> iterator = rows.iterator();
-          if (!iterator.hasNext()) {
-            return null;
-          }
-          Row row = iterator.next();
-          return new CreatedJob(jobToJson(row), new Claim(jobId, poolId, token));
+          return iterator.hasNext()
+              ? Optional.<CreatedJob>of(new CreatedJob(jobToJson(iterator.next()),
+                  new Claim(jobId, poolId, token)))
+              : Optional.empty();
         });
   }
 
@@ -171,7 +171,7 @@ class PoolInitializationService {
     return storage.pool.preparedQuery(sql)
         .execute(Tuple.of(jobId, poolId, token))
         .map(rows -> rows.iterator().hasNext()
-            ? Optional.of(new Claim(jobId, poolId, token)) : Optional.empty());
+            ? Optional.<Claim>of(new Claim(jobId, poolId, token)) : Optional.empty());
   }
 
   private Future<Boolean> cancelOrDelete(Storage storage, String poolId, UUID jobId) {
