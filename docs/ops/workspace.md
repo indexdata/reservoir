@@ -31,7 +31,7 @@ Clone these repositories:
 mkdir ~/id-workspace
 export ID_WORKSPACE=~/id-workspace
 git clone https://github.com/indexdata/reservoir
-git clone https://github.com/indexdata/matchkeys
+git clone https://github.com/indexdata/reservoir-scripts
 ```
 
 ## Create a workspace
