@@ -924,13 +924,15 @@ public class Storage {
                 .onComplete(e -> stream.resume());
           });
           stream.endHandler(end -> {
-            tx.commit();
-            promise.complete(totalRecords.get());
+            tx.commit()
+                .map(totalRecords.get())
+                .onComplete(promise);
           });
           stream.exceptionHandler(e -> {
             log.error(e.getMessage(), e);
-            tx.commit();
-            promise.fail(e);
+            tx.rollback()
+                .compose(x -> Future.<Integer>failedFuture(e))
+                .onComplete(promise);
           });
           return promise.future();
         })
