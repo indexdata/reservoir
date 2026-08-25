@@ -22,7 +22,7 @@ Follow [Setup workspace and login](workspace.md).
 (Refer to detailed notes at Reservoir [Configuring matchers](../../README.md#configuring-matchers).)
 
 Matchkeys utilise some specific elements from MARC bibliographic records to generate a unique string which identifies common records that describe the same instance.
-The various matchkeys implementations are explained at the [indexdata/matchkeys](https://github.com/indexdata/matchkeys) repository.
+The various matchers implementations are explained at the [indexdata/reservoir-scripts](https://github.com/indexdata/reservoir-scripts) repository.
 
 Show the current pools and modules for this particular Reservoir server:
 
@@ -35,19 +35,19 @@ https GET $host/reservoir/config/pools x-okapi-token:$token
 POST the initial matcher module configuration.
 
 > [!WARNING]
-> Note that each example [configuration](https://github.com/indexdata/matchkeys/blob/main/js/matchkeys/goldrush2024/config-matchkeys-goldrush2024.json) refers to its JavaScript implementation via a specific git commit SHA (and might not be current).
+> Note that each example [configuration](https://github.com/indexdata/reservoir-scripts/blob/main/js/matchers/goldrush2024/config-matcher-goldrush2024.json) refers to its JavaScript implementation via a specific git commit SHA (and might not be current).
 > Operators should manage their own configuration files and not use these examples directly.
 
 ```shell
 https POST $host/reservoir/config/modules x-okapi-token:$token \
-  < $ID_WORKSPACE/matchkeys/js/matchkeys/goldrush2024/config-matchkeys-goldrush2024.json
+  < $ID_WORKSPACE/reservoir-scripts/js/matchers/goldrush2024/config-matcher-goldrush2024.json
 ```
 
 POST the pool configuration.
 
 ```shell
 https POST $host/reservoir/config/pools x-okapi-token:$token \
-  < $ID_WORKSPACE/matchkeys/js/matchkeys/goldrush2024/config-pool-goldrush2024.json
+  < $ID_WORKSPACE/reservoir-scripts/js/matchers/goldrush2024/config-pool-goldrush2024.json
 ```
 
 ## Initialize the pool
@@ -86,16 +86,14 @@ Modify its URL to refer to the new commit SHA of the script modification. Then u
 
 ```shell
 https PUT $host/reservoir/config/modules/goldrush2024-matcher x-okapi-token:$token \
-  < $ID_WORKSPACE/matchkeys/js/matchkeys/goldrush2024/config-matchkeys-goldrush2024.json
-
-https PUT $host/reservoir/config/modules/goldrush2024-matcher/reload x-okapi-token:$token
+  < $ID_WORKSPACE/reservoir-scripts/js/matchers/goldrush2024/config-matcher-goldrush2024.json
 ```
 
 Initialize the pool, as [explained](#initialize-the-pool) above.
 
 ## Pool with multiple matchers
 
-A pool can declare multiple matchers. See [example](https://github.com/indexdata/matchkeys/blob/main/js/matchkeys/goldrush2024/config-pool-goldrush2024-isxn.json).
+A pool can declare multiple matchers. See [example](https://github.com/indexdata/reservoir-scripts/blob/main/js/matchers/goldrush2024/config-pool-goldrush2024-isxn.json).
 
 Reservoir will utilise each matcher and create a union of match values. This avoids duplicating matcher source code across multiple JavaScript files.
 
@@ -109,7 +107,7 @@ POST the initial transformers configuration:
 
 ```shell
 https POST $host/reservoir/config/modules x-okapi-token:$token \
-  < $ID_WORKSPACE/matchkeys/js/transformers/marc-transformer.json
+  < $ID_WORKSPACE/reservoir-scripts/js/transformers/marc-transformer.json
 ```
 
 ## Reload transformers configuration
@@ -133,7 +131,7 @@ Of course if that function name is later changed, then modify and PUT again.
 
 ```shell
 https PUT $host/reservoir/config/oai x-okapi-token:$token \
-  < $ID_WORKSPACE/matchkeys/js/transformers/config-transformer-oai.json
+  < $ID_WORKSPACE/reservoir-scripts/js/transformers/config-transformer-oai.json
 ```
 
 ## Follow other docs
