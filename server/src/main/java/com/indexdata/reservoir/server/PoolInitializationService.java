@@ -29,7 +29,11 @@ class PoolInitializationService {
   private static final Logger log = LogManager.getLogger(PoolInitializationService.class);
   private static final String STATUS_IDLE = "idle";
   private static final String DB_NOW = "(CURRENT_TIMESTAMP AT TIME ZONE 'UTC')";
+
+  // 5 minutes makes plenty of room for one batch, which should only take a fraction of a second
   private static final String NEW_LEASE = DB_NOW + " + INTERVAL '5 minutes'";
+
+  // could be configurable. So far, increasing this value does not seem to improve performance
   static int batchSize = 50;
 
   private record Claim(UUID jobId, String poolId, UUID token) { }
