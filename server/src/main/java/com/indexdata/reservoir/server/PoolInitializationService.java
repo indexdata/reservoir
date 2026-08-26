@@ -172,7 +172,6 @@ class PoolInitializationService {
     String sql = "UPDATE " + storage.poolInitializationJobTable
         + " SET claim_token = $3, lease_until = " + NEW_LEASE
         + " WHERE id = $1 AND pool_id = $2 AND status = 'running'"
-        + " AND cancel_requested = FALSE"
         + " AND (lease_until IS NULL OR lease_until < " + DB_NOW + ")"
         + " RETURNING id";
     return storage.pool.preparedQuery(sql)
@@ -187,7 +186,6 @@ class PoolInitializationService {
         + " SET claim_token = $2, lease_until = " + NEW_LEASE
         + " WHERE id = (SELECT id FROM " + storage.poolInitializationJobTable
         + " WHERE pool_id = $1 AND status = 'running'"
-        + " AND cancel_requested = FALSE"
         + " AND (lease_until IS NULL OR lease_until < " + DB_NOW + ")"
         + " ORDER BY started_at LIMIT 1 FOR UPDATE SKIP LOCKED)"
         + " RETURNING id";
@@ -240,7 +238,7 @@ class PoolInitializationService {
   private Future<BatchResult> processBatch(Storage storage, Claim claim, IngestMatcher matcher,
       IngestMetrics ingestMetrics) {
     return storage.pool.withTransaction(connection ->
-        connection.preparedQuery("SELECT claim_token, cancel_requested, checkpoint FROM "
+        connection.preparedQuery("SELECT claim_token, checkpoint FROM "
                 + storage.poolInitializationJobTable + " WHERE id = $1 AND status = 'running'"
                 + " FOR UPDATE")
             .execute(Tuple.of(claim.jobId()))
@@ -252,12 +250,6 @@ class PoolInitializationService {
               Row job = iterator.next();
               if (!claim.token().equals(job.getUUID("claim_token"))) {
                 return Future.succeededFuture(BatchResult.STOP);
-              }
-              if (Boolean.TRUE.equals(job.getBoolean("cancel_requested"))) {
-                return connection.preparedQuery("DELETE FROM " + storage.poolInitializationJobTable
-                        + " WHERE id = $1")
-                    .execute(Tuple.of(claim.jobId()))
-                    .map(BatchResult.STOP);
               }
               return selectBatch(storage, connection, job.getUUID("checkpoint"))
                   .compose(records -> processRecords(storage, connection, claim, matcher,

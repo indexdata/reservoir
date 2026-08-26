@@ -227,7 +227,6 @@ public class Storage {
                 + " status VARCHAR NOT NULL CHECK (status IN ('running', 'idle')),"
                 + " claim_token UUID,"
                 + " lease_until TIMESTAMP,"
-                + " cancel_requested BOOLEAN NOT NULL DEFAULT FALSE,"
                 + " checkpoint UUID,"
                 + " total_records BIGINT NOT NULL DEFAULT 0,"
                 + " started_at TIMESTAMP NOT NULL,"
