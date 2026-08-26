@@ -178,6 +178,12 @@ If it is not defined you can specify it by passing `--add-host=host.docker.inter
 
 **Note**: Those docker build and run commands do work as-is with [Colima](https://github.com/abiosoft/colima).
 
+The JIT image configures container-optimized JVM options by default (`DEFAULT_JAVA_OPTS`):
+Java 25 compact object headers (`-XX:+UseCompactObjectHeaders`), cgroup memory awareness (`-XX:MaxRAMPercentage=70.0`),
+fail-fast on OOM (`-XX:+ExitOnOutOfMemoryError`), G1 string deduplication (`-XX:+UseStringDeduplication`),
+and DNS cache TTL (`-Dsun.net.inetaddr.ttl=30`).
+Options passed in `JAVA_OPTS` take precedence over image defaults (e.g. `JAVA_OPTS=-XX:-UseCompactObjectHeaders`).
+
 **Note on image licensing**: The default JIT Docker image published from this repository uses _Oracle GraalVM_
 and therefore includes components licensed under Oracle's
 [GraalVM Free Terms and Conditions (GFTC)](https://www.oracle.com/downloads/licenses/graal-free-license.html)
