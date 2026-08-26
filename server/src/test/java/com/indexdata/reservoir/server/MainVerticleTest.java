@@ -2545,18 +2545,48 @@ public class MainVerticleTest extends TestBase {
         .add(new JsonObject()
             .put("localId", "S101")
             .put("payload", new JsonObject()
-                .put("inventory", new JsonObject().put("isbn", new JsonArray().add("1")))));
+                .put("inventory", new JsonObject().put("isbn", new JsonArray().add("1")))))
+        .add(new JsonObject()
+            .put("localId", "S102")
+            .put("payload", new JsonObject()
+                .put("inventory", new JsonObject().put("isbn", new JsonArray().add("2")))))
+        .add(new JsonObject()
+            .put("localId", "S103")
+            .put("payload", new JsonObject()
+                .put("inventory", new JsonObject().put("isbn", new JsonArray().add("3")))));
+
     ingestRecords(records, SOURCE_ID_1);
 
+    String res = RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .param("count", "exact")
+        .get("/reservoir/records")
+        .then().statusCode(200)
+        .contentType("application/json")
+        .body("resultInfo.totalRecords", is(3))
+        .extract().body().asString();
+    JsonObject jsonResponse = new JsonObject(res);
+    // Batches are sorted by globalId. Get the minimal so we can make a table
+    // with first record already "processed"
+    String minimalId = null;
+    JsonArray items = jsonResponse.getJsonArray("items");
+    for (int i = 0; i < items.size(); i++) {
+        JsonObject rec = items.getJsonObject(i);
+        String id = rec.getString("globalId");
+        if (minimalId == null || id.compareTo(minimalId) < 0) {
+            minimalId = id;
+        }
+    }
     Storage storage = new Storage(vertx, TENANT_1, HttpMethod.POST);
     UUID jobId = UUID.randomUUID();
     String sql = "INSERT INTO " + storage.poolInitializationJobTable
-        + " (id, pool_id, status, claim_token, lease_until, started_at)"
+        + " (id, pool_id, status, claim_token, lease_until, checkpoint, total_records, started_at)"
         + " VALUES ($1, $2, 'running', $3,"
         + " (CURRENT_TIMESTAMP AT TIME ZONE 'UTC') - INTERVAL '1 minute',"
+        + " $4, 1, "
         + " CURRENT_TIMESTAMP AT TIME ZONE 'UTC')";
     storage.getPool().preparedQuery(sql)
-        .execute(Tuple.of(jobId, poolConfig.getString("id"), UUID.randomUUID()))
+        .execute(Tuple.of(jobId, poolConfig.getString("id"), UUID.randomUUID(), UUID.fromString(minimalId)))
         .toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
 
     String jobPath = "/reservoir/config/pools/" + poolConfig.getString("id")
@@ -2575,7 +2605,7 @@ public class MainVerticleTest extends TestBase {
         .get(jobPath)
         .then().statusCode(200)
         .body("status", is("idle"))
-        .body("totalRecords", is(1));
+        .body("totalRecords", is(3));
   }
 
   @Test
