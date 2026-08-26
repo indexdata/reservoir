@@ -211,6 +211,12 @@ paths:
     post:
       description: Start job that recalculates clusters in the pool across all records
       operationId: initializationsPoolPost
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: schemas/poolInitializationRequest.yaml
       responses:
         "201":
           description: Job created

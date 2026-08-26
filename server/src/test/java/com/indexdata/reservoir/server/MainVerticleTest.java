@@ -2490,9 +2490,19 @@ public class MainVerticleTest extends TestBase {
                 .put("inventory", new JsonObject().put("isbn", new JsonArray().add("2")))));
     ingestRecords(records, SOURCE_ID_1);
 
+    String initializationsPath = "/reservoir/config/pools/" + poolConfig.getString("id")
+        + "/initializations";
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .post(initializationsPath)
+        .then().statusCode(400);
+
     var response = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
-        .post("/reservoir/config/pools/" + poolConfig.getString("id") + "/initializations")
+        .contentType("application/json")
+        .body("{}")
+        .post(initializationsPath)
         .then().statusCode(201)
         .contentType("application/json")
         .body("poolId", is(poolConfig.getString("id")))
@@ -2584,6 +2594,8 @@ public class MainVerticleTest extends TestBase {
 
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
+        .contentType("application/json")
+        .body("{}")
         .post("/reservoir/config/pools/" + poolConfig.getString("id") + "/initializations")
         .then().statusCode(409)
         .body(is("A pool initialization job is already running for this tenant"));
