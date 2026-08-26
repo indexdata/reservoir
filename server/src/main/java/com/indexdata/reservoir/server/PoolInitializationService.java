@@ -27,7 +27,6 @@ import org.folio.okapi.common.HttpResponse;
 /** Asynchronous, resumable pool initialization jobs. */
 class PoolInitializationService {
   private static final Logger log = LogManager.getLogger(PoolInitializationService.class);
-  private static final String STATUS_IDLE = "idle";
   private static final String DB_NOW = "(CURRENT_TIMESTAMP AT TIME ZONE 'UTC')";
 
   // 5 minutes makes plenty of room for one batch, which should only take a fraction of a second
@@ -204,26 +203,15 @@ class PoolInitializationService {
 
   private Future<Boolean> cancelOrDelete(Storage storage, String poolId, UUID jobId) {
     return storage.pool.withTransaction(connection ->
-        connection.preparedQuery("SELECT status, (lease_until IS NULL OR lease_until < "
-                + DB_NOW + ") AS expired FROM "
-                + storage.poolInitializationJobTable
+        connection.preparedQuery("SELECT id FROM " + storage.poolInitializationJobTable
                 + " WHERE id = $1 AND pool_id = $2 FOR UPDATE")
             .execute(Tuple.of(jobId, poolId))
             .compose(rows -> {
-              RowIterator<Row> iterator = rows.iterator();
-              if (!iterator.hasNext()) {
+              if (!rows.iterator().hasNext()) {
                 return Future.succeededFuture(false);
               }
-              Row row = iterator.next();
-              boolean expired = Boolean.TRUE.equals(row.getBoolean("expired"));
-              if (STATUS_IDLE.equals(row.getString("status")) || expired) {
-                return connection.preparedQuery("DELETE FROM " + storage.poolInitializationJobTable
-                        + " WHERE id = $1")
-                    .execute(Tuple.of(jobId))
-                    .map(true);
-              }
-              return connection.preparedQuery("UPDATE " + storage.poolInitializationJobTable
-                      + " SET cancel_requested = TRUE WHERE id = $1")
+              return connection.preparedQuery("DELETE FROM " + storage.poolInitializationJobTable
+                      + " WHERE id = $1")
                   .execute(Tuple.of(jobId))
                   .map(true);
             }));

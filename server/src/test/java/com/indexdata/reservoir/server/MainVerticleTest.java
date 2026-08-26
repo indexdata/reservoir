@@ -2600,11 +2600,6 @@ public class MainVerticleTest extends TestBase {
         .then().statusCode(409)
         .body(is("A pool initialization job is already running for this tenant"));
 
-    storage.getPool().preparedQuery("UPDATE " + storage.poolInitializationJobTable
-            + " SET lease_until = (CURRENT_TIMESTAMP AT TIME ZONE 'UTC') - INTERVAL '1 minute'"
-            + " WHERE id = $1")
-        .execute(Tuple.of(jobId))
-        .toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
     String jobPath = "/reservoir/config/pools/" + poolConfig.getString("id")
         + "/initializations/" + jobId;
     RestAssured.given()
@@ -2615,6 +2610,13 @@ public class MainVerticleTest extends TestBase {
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .get(jobPath)
         .then().statusCode(404);
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .contentType("application/json")
+        .body("{}")
+        .post("/reservoir/config/pools/" + poolConfig.getString("id") + "/initializations")
+        .then().statusCode(201);
   }
 
   private boolean poolInitializationCompleted(String jobPath) {
