@@ -26,8 +26,10 @@ import io.vertx.core.http.RequestOptions;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.HttpException;
 import io.vertx.ext.web.openapi.router.RouterBuilder;
 import io.vertx.openapi.validation.ValidatedRequest;
+import io.vertx.pgclient.PgException;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.RowIterator;
 import io.vertx.sqlclient.RowSet;
@@ -48,6 +50,8 @@ import org.apache.logging.log4j.Logger;
 import org.folio.okapi.common.HttpResponse;
 
 public class OaiPmhClientService {
+
+  private static final String UNIQUE_VIOLATION = "23505";
 
   Vertx vertx;
 
@@ -92,16 +96,23 @@ public class OaiPmhClientService {
 
     String id = config.getString("id");
     if (CLIENT_ID_ALL.equals(id)) {
-      return Future.failedFuture("Invalid value for OAI PMH client identifier: " + id);
+      HttpResponse.responseError(ctx, 400,
+          "Invalid value for OAI PMH client identifier: " + id);
+      return Future.succeededFuture();
     }
     config.remove("id");
     return storage.getPool().preparedQuery("INSERT INTO " + storage.getOaiPmhClientTable()
             + " (id, config)"
             + " VALUES ($1, $2)")
         .execute(Tuple.of(id, config))
-        .map(x -> {
-          HttpResponse.responseJson(ctx, 201).end(config.put("id", id).encode());
-          return null;
+        .compose(x -> HttpResponse.responseJson(ctx, 201)
+            .end(config.put("id", id).encode()))
+        .recover(cause -> {
+          if (cause instanceof PgException pgException
+              && UNIQUE_VIOLATION.equals(pgException.getSqlState())) {
+            return Future.failedFuture(new HttpException(400, cause));
+          }
+          return Future.failedFuture(cause);
         });
   }
 

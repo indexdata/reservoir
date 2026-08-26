@@ -14,11 +14,13 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.HttpException;
 import io.vertx.ext.web.handler.StaticHandler;
 import io.vertx.ext.web.openapi.router.RouterBuilder;
 import io.vertx.openapi.contract.OpenAPIContract;
 import io.vertx.openapi.validation.RequestParameter;
 import io.vertx.openapi.validation.ValidatedRequest;
+import io.vertx.pgclient.PgException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,6 +35,7 @@ import org.folio.okapi.common.ModuleVersionReporter;
 import org.folio.tlib.RouterCreator;
 import org.folio.tlib.TenantInitHooks;
 import org.folio.tlib.postgres.PgCqlDefinition;
+import org.folio.tlib.postgres.PgCqlException;
 import org.folio.tlib.postgres.PgCqlQuery;
 import org.folio.tlib.postgres.cqlfield.PgCqlFieldAlwaysMatches;
 import org.folio.tlib.postgres.cqlfield.PgCqlFieldNumber;
@@ -49,6 +52,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
   private static final String ENTITY_ID_NOT_FOUND_PATTERN = "%s %s not found";
   private static final String MODULE_LABEL = "Module";
   private static final String DEPRECATION_DATE = "@1786520473";
+  private static final String UNIQUE_VIOLATION = "23505";
   private static final Logger log = LogManager.getLogger(ReservoirService.class);
 
   private final ModuleVersionReporter moduleVersionReporter;
@@ -154,24 +158,32 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
   }
 
   Future<Void> deleteGlobalRecords(RoutingContext ctx) {
-    PgCqlDefinition definition = createDefinitionGlobalRecords();
-    String query = Util.getQueryParameterQuery(ctx);
-    if (query == null) {
-      failHandler(400, ctx, "Must specify query for delete records");
-      return Future.succeededFuture();
+    try {
+      PgCqlDefinition definition = createDefinitionGlobalRecords();
+      String query = Util.getQueryParameterQuery(ctx);
+      if (query == null) {
+        failHandler(400, ctx, "Must specify query for delete records");
+        return Future.succeededFuture();
+      }
+      PgCqlQuery pgCqlQuery = definition.parse(query);
+      Storage storage = new Storage(ctx);
+      return storage.deleteGlobalRecords(pgCqlQuery.getWhereClause())
+          .compose(x -> ctx.response().setStatusCode(204).end());
+    } catch (PgCqlException e) {
+      throw badRequest(e);
     }
-    PgCqlQuery pgCqlQuery = definition.parse(query);
-    Storage storage = new Storage(ctx);
-    return storage.deleteGlobalRecords(pgCqlQuery.getWhereClause())
-        .compose(x -> ctx.response().setStatusCode(204).end());
   }
 
   Future<Void> getGlobalRecords(RoutingContext ctx) {
-    PgCqlDefinition definition = createDefinitionGlobalRecords();
-    PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameterQuery(ctx));
-    Storage storage = new Storage(ctx);
-    return storage.getGlobalRecords(ctx, pgCqlQuery.getWhereClause(),
-        pgCqlQuery.getOrderByClause());
+    try {
+      PgCqlDefinition definition = createDefinitionGlobalRecords();
+      PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameterQuery(ctx));
+      Storage storage = new Storage(ctx);
+      return storage.getGlobalRecords(ctx, pgCqlQuery.getWhereClause(),
+          pgCqlQuery.getOrderByClause());
+    } catch (PgCqlException e) {
+      throw badRequest(e);
+    }
   }
 
   Future<Void> getGlobalRecord(RoutingContext ctx) {
@@ -284,7 +296,14 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     definition.addField(CqlFields.SOURCE_VERSION.getCqlName(),
         new PgCqlFieldNumber().withColumn(CqlFields.SOURCE_VERSION.getQualifiedSqlName()));
 
-    PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameterQuery(ctx));
+    PgCqlQuery pgCqlQuery;
+    try {
+      pgCqlQuery = definition.parse(Util.getQueryParameterQuery(ctx));
+      pgCqlQuery.getWhereClause();
+      pgCqlQuery.getOrderByClause();
+    } catch (PgCqlException e) {
+      throw badRequest(e);
+    }
     String requestedPoolId = Util.getQueryParameter(ctx, "poolId");
     if (requestedPoolId == null) {
       String legacyPoolId = Util.getQueryParameter(ctx, "matchkeyid");
@@ -322,7 +341,20 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
         new PgCqlFieldNumber().withColumn(CqlFields.SOURCE_VERSION.getQualifiedSqlName()));
 
     String query = Util.getQueryParameterQuery(ctx);
-    PgCqlQuery pgCqlQuery = definition.parse(query);
+    PgCqlQuery pgCqlQuery;
+    String where;
+    try {
+      pgCqlQuery = definition.parse(query);
+      where = pgCqlQuery.getWhereClause();
+    } catch (PgCqlException e) {
+      throw badRequest(e);
+    }
+    if (where == null
+        || !where.contains("global_records.source_id")
+        || !where.contains("cluster_meta.match_key_config_id")) {
+      failHandler(400, ctx, "query too broad, must at least contain 'poolId' and 'sourceId'");
+      return Future.succeededFuture();
+    }
     if (usesCqlIndex(query, CqlFields.MATCHKEY_ID.getCqlName())) {
       warnDeprecatedCqlIndex(ctx, CqlFields.MATCHKEY_ID.getCqlName(),
           CqlFields.POOL_ID.getCqlName());
@@ -367,8 +399,8 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
       futures.add(storage.selectCodeModuleEntity(invocation.getModuleName())
           .compose(entity -> {
             if (entity == null) {
-              return Future.failedFuture("Matcher module '" + invocation.getModuleName()
-                  + "' does not exist");
+              return Future.failedFuture(badRequest(
+                  "Matcher module '" + invocation.getModuleName() + "' does not exist"));
             }
             return Future.succeededFuture();
           }));
@@ -381,10 +413,10 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
       return new PoolConfig(request);
     } catch (IllegalArgumentException e) {
       if (isLegacyPoolRequest(ctx) && e.getMessage() != null) {
-        throw new IllegalArgumentException(
-            e.getMessage().replace("PoolConfig", "MatchKeyConfig"), e);
+        throw badRequest(new IllegalArgumentException(
+            e.getMessage().replace("PoolConfig", "MatchKeyConfig"), e));
       }
-      throw e;
+      throw badRequest(e);
     }
   }
 
@@ -400,7 +432,8 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
           HttpResponse.responseJson(ctx, 201)
             .putHeader("Location", ctx.request().absoluteURI() + "/" + poolConfig.getId())
             .end(request.encode())
-        );
+        )
+        .recover(ReservoirService::mapUniqueViolation);
   }
 
   Future<Void> getPool(RoutingContext ctx) {
@@ -449,7 +482,14 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     definition.addField(CqlFields.METHOD.getCqlName(), new PgCqlFieldText().withExact());
     definition.addField(CqlFields.MATCHER.getCqlName(), new PgCqlFieldText().withExact());
 
-    PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameterQuery(ctx));
+    PgCqlQuery pgCqlQuery;
+    try {
+      pgCqlQuery = definition.parse(Util.getQueryParameterQuery(ctx));
+      pgCqlQuery.getWhereClause();
+      pgCqlQuery.getOrderByClause();
+    } catch (PgCqlException e) {
+      throw badRequest(e);
+    }
 
     Storage storage = new Storage(ctx);
     String resultProperty = isLegacyPoolRequest(ctx) ? "matchKeys" : "pools";
@@ -489,16 +529,25 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     Storage storage = new Storage(ctx);
     ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
     JsonObject request = validatedRequest.getBody().getJsonObject();
-    return new CodeModuleEntity.CodeModuleBuilder(request)
-      .resolve(ctx.vertx())
+    Future<CodeModuleEntity> resolved;
+    try {
+      resolved = new CodeModuleEntity.CodeModuleBuilder(request).resolve(ctx.vertx());
+    } catch (RuntimeException e) {
+      throw badRequest(e);
+    }
+    return resolved
       .compose(cm -> ModuleCache.getInstance().lookup(Tenant.get(ctx), cm)
-        .compose(module -> storage.insertCodeModuleEntity(cm))
+        .map(module -> cm)
+      )
+      .recover(cause -> Future.failedFuture(badRequest(cause)))
+      .compose(cm -> storage.insertCodeModuleEntity(cm)
+        .recover(ReservoirService::mapUniqueViolation)
         .compose(res ->
           HttpResponse.responseJson(ctx, 201)
               .putHeader("Location", ctx.request().absoluteURI() + "/" + cm.getId())
               .end(cm.asJson(true).encode())
         )
-    );
+      );
   }
 
   Future<Void> getCodeModule(RoutingContext ctx) {
@@ -519,10 +568,18 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     Storage storage = new Storage(ctx);
     ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
     JsonObject request = validatedRequest.getBody().getJsonObject();
-    return new CodeModuleEntity.CodeModuleBuilder(request)
-      .resolve(ctx.vertx())
+    Future<CodeModuleEntity> resolved;
+    try {
+      resolved = new CodeModuleEntity.CodeModuleBuilder(request).resolve(ctx.vertx());
+    } catch (RuntimeException e) {
+      throw badRequest(e);
+    }
+    return resolved
       .compose(cm -> ModuleCache.getInstance().lookup(Tenant.get(ctx), cm)
-        .compose(module -> storage.updateCodeModuleEntity(cm))
+        .map(module -> cm)
+      )
+      .recover(cause -> Future.failedFuture(badRequest(cause)))
+      .compose(cm -> storage.updateCodeModuleEntity(cm)
         .compose(res -> {
           if (Boolean.FALSE.equals(res)) {
             HttpResponse.responseError(ctx, 404,
@@ -530,9 +587,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
             return Future.succeededFuture();
           }
           return ctx.response().setStatusCode(204).end();
-        }
-      )
-    );
+        }));
   }
 
   Future<Void> getCodeModules(RoutingContext ctx) {
@@ -540,7 +595,14 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     definition.addField(CqlFields.ID.getCqlName(), new PgCqlFieldText().withExact());
     definition.addField(CqlFields.FUNCTION.getCqlName(), new PgCqlFieldText().withExact());
 
-    PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameterQuery(ctx));
+    PgCqlQuery pgCqlQuery;
+    try {
+      pgCqlQuery = definition.parse(Util.getQueryParameterQuery(ctx));
+      pgCqlQuery.getWhereClause();
+      pgCqlQuery.getOrderByClause();
+    } catch (PgCqlException e) {
+      throw badRequest(e);
+    }
 
     Storage storage = new Storage(ctx);
     return storage.selectCodeModuleEntities(ctx, pgCqlQuery.getWhereClause(),
@@ -586,10 +648,25 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
 
   //end oai config
 
+  private static HttpException badRequest(String message) {
+    return badRequest(new IllegalArgumentException(message));
+  }
+
+  private static HttpException badRequest(Throwable cause) {
+    return new HttpException(400, cause);
+  }
+
+  private static <T> Future<T> mapUniqueViolation(Throwable cause) {
+    if (cause instanceof PgException pgException
+        && UNIQUE_VIOLATION.equals(pgException.getSqlState())) {
+      return Future.failedFuture(badRequest(cause));
+    }
+    return Future.failedFuture(cause);
+  }
+
   static void failHandler(RoutingContext ctx) {
     Throwable t = ctx.failure();
-    if (t instanceof io.vertx.ext.web.handler.HttpException) {
-      io.vertx.ext.web.handler.HttpException he = (io.vertx.ext.web.handler.HttpException) t;
+    if (t instanceof HttpException he) {
       failHandler(he.getStatusCode(), ctx, he.getCause());
       return;
     }
@@ -636,14 +713,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     routerBuilder
         .getRoute(operationId)
         .setDoValidation(doValidation)
-        .addHandler(ctx -> {
-          try {
-            function.apply(ctx)
-                .onFailure(cause -> failHandler(400, ctx, cause));
-          } catch (Exception t) {
-            failHandler(400, ctx, t);
-          }
-        })
+        .addHandler(ctx -> function.apply(ctx).onFailure(ctx::fail))
         .addFailureHandler(ReservoirService::failHandler);
   }
 

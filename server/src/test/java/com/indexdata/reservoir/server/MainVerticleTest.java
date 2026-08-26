@@ -248,7 +248,7 @@ public class MainVerticleTest extends TestBase {
         .baseUri(MODULE_URL)
         .header(XOkapiHeaders.TENANT, tenant)
         .get("/reservoir/records")
-        .then().statusCode(400)
+        .then().statusCode(500)
         .header("Content-Type", is("text/plain"))
         .body(is("ERROR: relation \"unknowntenant_mod_reservoir.global_records\" does not exist (42P01)"));
   }
