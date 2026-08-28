@@ -563,7 +563,9 @@ public class Storage {
             conn.preparedQuery("INSERT INTO " + clusterRecordTable
                     + " (record_id, match_key_config_id, cluster_id) VALUES ($1, $2, $3)"
                     + " ON CONFLICT (record_id, match_key_config_id)"
-                    + " DO UPDATE SET record_id = $1, match_key_config_id = $2, cluster_id = $3")
+                    + " DO UPDATE SET cluster_id = EXCLUDED.cluster_id"
+                    + " WHERE " + clusterRecordTable
+                    + ".cluster_id IS DISTINCT FROM EXCLUDED.cluster_id")
                 .execute(Tuple.of(globalId, matcherResult.poolId, clusterId))
         )
         .mapEmpty();
