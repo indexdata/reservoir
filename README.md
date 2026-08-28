@@ -383,11 +383,21 @@ curl -HX-Okapi-Tenant:$OKAPI_TENANT -HContent-type:application/json \
  $OKAPI_URL/reservoir/config/pools -d @title-pool.json
 ```
 
-and then initialize the pool for this config:
+and start initializing the pool (background job) for this config:
 
 ```
-curl -HX-Okapi-Tenant:$OKAPI_TENANT -XPUT $OKAPI_URL/reservoir/config/pools/title/initialize
+job=$(curl -fsS -HX-Okapi-Tenant:$OKAPI_TENANT -HContent-Type:application/json -d'{}' \
+  $OKAPI_URL/reservoir/config/pools/title/initializations | jq -r '.id')
 ```
+
+Inspect job status:
+
+```
+curl -HX-Okapi-Tenant:$OKAPI_TENANT $OKAPI_URL/reservoir/config/pools/title/initializations/$job
+```
+
+If `status` is `idle` the job is finished. If an `error` property is present, an error
+occurred during the initialization of the pool.
 
 Now, you can retrieve individual record clusters from this pool with:
 
