@@ -56,6 +56,7 @@ public class Storage {
   public static final String MODULE_TABLE = "module";
   public static final String OAI_CONFIG_TABLE = "oai_config";
   public static final String OAI_PMH_CLIENTS_TABLE = "oai_pmh_clients";
+  public static final String POOL_INITIALIZATION_JOBS_TABLE = "pool_initialization_jobs";
 
   private static final Logger log = LogManager.getLogger(Storage.class);
   private static final String CREATE_IF_NO_EXISTS = "CREATE TABLE IF NOT EXISTS ";
@@ -70,6 +71,7 @@ public class Storage {
   final String moduleTable;
   final String oaiConfigTable;
   final String oaiPmhClientTable;
+  final String poolInitializationJobTable;
   final Vertx vertx;
   private final String tenant;
   static int sqlStreamFetchSize = 50;
@@ -93,6 +95,7 @@ public class Storage {
     this.moduleTable = pool.getSchema() + "." + MODULE_TABLE;
     this.oaiConfigTable = pool.getSchema() + "." + OAI_CONFIG_TABLE;
     this.oaiPmhClientTable = pool.getSchema() + "." + OAI_PMH_CLIENTS_TABLE;
+    this.poolInitializationJobTable = pool.getSchema() + "." + POOL_INITIALIZATION_JOBS_TABLE;
   }
 
   static String getPoolKey(HttpMethod method) {
@@ -217,7 +220,22 @@ public class Storage {
                 + " config JSONB NOT NULL)",
             CREATE_IF_NO_EXISTS + oaiPmhClientTable
                 + "(id VARCHAR NOT NULL PRIMARY KEY,"
-                + " config JSONB, job JSONB, stop BOOLEAN, owner UUID)"
+                + " config JSONB, job JSONB, stop BOOLEAN, owner UUID)",
+            CREATE_IF_NO_EXISTS + poolInitializationJobTable
+                + "(id UUID NOT NULL PRIMARY KEY,"
+                + " pool_id VARCHAR NOT NULL,"
+                + " status VARCHAR NOT NULL CHECK (status IN ('running', 'idle')),"
+                + " claim_token UUID,"
+                + " lease_until TIMESTAMP,"
+                + " checkpoint UUID,"
+                + " total_records BIGINT NOT NULL DEFAULT 0,"
+                + " started_at TIMESTAMP NOT NULL,"
+                + " completed_at TIMESTAMP,"
+                + " error TEXT,"
+                + " FOREIGN KEY(pool_id) REFERENCES " + poolConfigTable
+                + " ON DELETE CASCADE)",
+            "CREATE UNIQUE INDEX IF NOT EXISTS pool_initialization_one_running_idx ON "
+                + poolInitializationJobTable + "(status) WHERE status = 'running'"
         )
       )
       .mapEmpty()
@@ -396,30 +414,30 @@ public class Storage {
 
     ingestMatcher.poolId = poolConfig.getId();
     String[] matcherInvocations = poolConfig.getMatcherInvocations();
-    if (matcherInvocations.length > 0) {
-      List<Future<ModuleExecutable>> futures = new ArrayList<>();
-      for (String matcherInvocation : matcherInvocations) {
-        ModuleInvocation invocation = new ModuleInvocation(matcherInvocation);
-        futures.add(selectCodeModuleEntity(invocation.getModuleName())
-            .compose(entity -> {
-              if (entity == null) {
-                return Future.failedFuture(
-                    "Module '" + invocation.getModuleName()
-                        + "' does not exist for '" + invocation + "'");
-              }
-              return ModuleCache.getInstance().lookup(tenant, entity)
-                  .map(module -> new ModuleExecutable(module, invocation, vertx));
-            }));
-      }
-      return Future.all(futures).map(results -> {
-        ingestMatcher.moduleExecutables = new ModuleExecutable[results.size()];
-        for (int i = 0; i < results.size(); i++) {
-          ingestMatcher.moduleExecutables[i] = results.resultAt(i);
-        }
-        return ingestMatcher;
-      });
+    if (matcherInvocations.length == 0) {
+      return Future.failedFuture("pool config must include 'matcher'");
     }
-    return Future.failedFuture("pool config must include 'matcher'");
+    List<Future<?>> futures = new ArrayList<>();
+    for (String matcherInvocation : matcherInvocations) {
+      ModuleInvocation invocation = new ModuleInvocation(matcherInvocation);
+      futures.add(selectCodeModuleEntity(invocation.getModuleName())
+          .compose(entity -> {
+            if (entity == null) {
+              return Future.failedFuture(
+                  "Module '" + invocation.getModuleName()
+                      + "' does not exist for '" + invocation + "'");
+            }
+            return ModuleCache.getInstance().lookup(tenant, entity)
+                .map(module -> new ModuleExecutable(module, invocation, vertx));
+          }));
+    }
+    return Future.all(futures).map(results -> {
+      ingestMatcher.moduleExecutables = new ModuleExecutable[results.size()];
+      for (int i = 0; i < results.size(); i++) {
+        ingestMatcher.moduleExecutables[i] = results.resultAt(i);
+      }
+      return ingestMatcher;
+    });
   }
 
   Future<List<IngestMatcher>> createIngestMatchers(List<PoolConfig> poolConfigs,
@@ -502,7 +520,7 @@ public class Storage {
         + " AND " + where;
     return pool.preparedQuery(q)
         .execute(Tuple.of(LocalDateTime.now(ZoneOffset.UTC)))
-        .map(RowSet<Row>::rowCount);
+        .map(rows -> rows.rowCount());
   }
 
   Future<Void> removeClusterRecord(SqlConnection conn, UUID globalId, MatcherResult matcherResult) {
@@ -744,7 +762,7 @@ public class Storage {
               + " WHERE cluster_id = $1")
             .execute(Tuple.of(clusterId))
             .map(cb::matchValues))
-        .map(ClusterBuilder::build);
+        .map(clusterBuilder -> clusterBuilder.build());
   }
 
   /**
@@ -924,13 +942,15 @@ public class Storage {
                 .onComplete(e -> stream.resume());
           });
           stream.endHandler(end -> {
-            tx.commit();
-            promise.complete(totalRecords.get());
+            tx.commit()
+                .map(totalRecords.get())
+                .onComplete(promise);
           });
           stream.exceptionHandler(e -> {
             log.error(e.getMessage(), e);
-            tx.commit();
-            promise.fail(e);
+            tx.rollback()
+                .compose(x -> Future.<Integer>failedFuture(e))
+                .onComplete(promise);
           });
           return promise.future();
         })

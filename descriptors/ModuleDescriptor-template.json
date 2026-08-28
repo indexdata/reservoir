@@ -128,6 +128,26 @@
         },
         {
           "methods": [
+            "GET",
+            "POST"
+          ],
+          "pathPattern": "/reservoir/config/pools/{id}/initializations",
+          "permissionsRequired": [
+            "reservoir-config-pools.item.initialize"
+          ]
+        },
+        {
+          "methods": [
+            "GET",
+            "DELETE"
+          ],
+          "pathPattern": "/reservoir/config/pools/{id}/initializations/{jobId}",
+          "permissionsRequired": [
+            "reservoir-config-pools.item.initialize"
+          ]
+        },
+        {
+          "methods": [
             "GET"
           ],
           "pathPattern": "/reservoir/config/pools/{id}/stats",

@@ -27,6 +27,7 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
@@ -247,7 +248,7 @@ public class MainVerticleTest extends TestBase {
         .baseUri(MODULE_URL)
         .header(XOkapiHeaders.TENANT, tenant)
         .get("/reservoir/records")
-        .then().statusCode(400)
+        .then().statusCode(500)
         .header("Content-Type", is("text/plain"))
         .body(is("ERROR: relation \"unknowntenant_mod_reservoir.global_records\" does not exist (42P01)"));
   }
@@ -2387,6 +2388,273 @@ public class MainVerticleTest extends TestBase {
         .body("items[0].records", hasSize(1))
         .body("items[1].records", hasSize(1))
         .extract().body().asString();
+  }
+
+  @Test
+  public void testGetPoolInitializations() throws Exception {
+    JsonObject poolConfig = createIsbnPool("manual");
+    String poolId = poolConfig.getString("id");
+    String jobsPath = "/reservoir/config/pools/" + poolId + "/initializations";
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .get(jobsPath)
+        .then().statusCode(200)
+        .contentType("application/json")
+        .body("", hasSize(0));
+
+    Storage storage = new Storage(vertx, TENANT_1, HttpMethod.POST);
+    UUID olderJobId = UUID.randomUUID();
+    UUID newerJobId = UUID.randomUUID();
+    String sql = "INSERT INTO " + storage.poolInitializationJobTable
+        + " (id, pool_id, status, total_records, started_at, completed_at) VALUES"
+        + " ($1, $3, 'idle', 2, "
+        + " (CURRENT_TIMESTAMP AT TIME ZONE 'UTC') - INTERVAL '1 minute',"
+        + " (CURRENT_TIMESTAMP AT TIME ZONE 'UTC') - INTERVAL '1 minute'),"
+        + " ($2, $3, 'idle', 5, CURRENT_TIMESTAMP AT TIME ZONE 'UTC',"
+        + " CURRENT_TIMESTAMP AT TIME ZONE 'UTC')";
+    storage.getPool().preparedQuery(sql)
+        .execute(Tuple.of(olderJobId, newerJobId, poolId))
+        .toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .get(jobsPath)
+        .then().statusCode(200)
+        .contentType("application/json")
+        .body("", hasSize(2))
+        .body("[0].id", is(newerJobId.toString()))
+        .body("[0].poolId", is(poolId))
+        .body("[0].status", is("idle"))
+        .body("[0].totalRecords", is(5))
+        .body("[0].startedAt", is(Matchers.notNullValue()))
+        .body("[0].completedAt", is(Matchers.notNullValue()))
+        .body("[1].id", is(olderJobId.toString()));
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .get("/reservoir/config/pools/missing/initializations")
+        .then().statusCode(404);
+  }
+
+  @Test
+  public void testGetPoolInitializationsResumesExpiredJob() throws Exception {
+    JsonObject poolConfig = createIsbnPool("manual");
+    String poolId = poolConfig.getString("id");
+    UUID jobId = UUID.randomUUID();
+    Storage storage = new Storage(vertx, TENANT_1, HttpMethod.POST);
+    String sql = "INSERT INTO " + storage.poolInitializationJobTable
+        + " (id, pool_id, status, claim_token, lease_until, started_at)"
+        + " VALUES ($1, $2, 'running', $3,"
+        + " (CURRENT_TIMESTAMP AT TIME ZONE 'UTC') - INTERVAL '1 minute',"
+        + " CURRENT_TIMESTAMP AT TIME ZONE 'UTC')";
+    storage.getPool().preparedQuery(sql)
+        .execute(Tuple.of(jobId, poolId, UUID.randomUUID()))
+        .toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
+
+    String jobsPath = "/reservoir/config/pools/" + poolId + "/initializations";
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .get(jobsPath)
+        .then().statusCode(200)
+        .body("[0].id", is(jobId.toString()));
+
+    Awaitility.await().atMost(Duration.ofSeconds(5)).until(() -> {
+      var response = RestAssured.given()
+          .header(XOkapiHeaders.TENANT, TENANT_1)
+          .get(jobsPath);
+      return response.statusCode() == 200
+          && "idle".equals(response.jsonPath().getString("[0].status"));
+    });
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .get(jobsPath)
+        .then().statusCode(200)
+        .body("[0].id", is(jobId.toString()))
+        .body("[0].status", is("idle"))
+        .body("[0].totalRecords", is(0));
+  }
+
+  @Test
+  public void testAsyncPoolInitialization() {
+    JsonObject poolConfig = createIsbnPool("manual");
+    JsonArray records = new JsonArray()
+        .add(new JsonObject()
+            .put("localId", "S101")
+            .put("payload", new JsonObject()
+                .put("inventory", new JsonObject().put("isbn", new JsonArray().add("1")))))
+        .add(new JsonObject()
+            .put("localId", "S102")
+            .put("payload", new JsonObject()
+                .put("inventory", new JsonObject().put("isbn", new JsonArray().add("2")))));
+    ingestRecords(records, SOURCE_ID_1);
+
+    String initializationsPath = "/reservoir/config/pools/" + poolConfig.getString("id")
+        + "/initializations";
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .post(initializationsPath)
+        .then().statusCode(400);
+
+    var response = RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .contentType("application/json")
+        .body("{}")
+        .post(initializationsPath)
+        .then().statusCode(201)
+        .contentType("application/json")
+        .body("poolId", is(poolConfig.getString("id")))
+        .body("status", is("running"))
+        .body("totalRecords", is(0))
+        .header("Location", Matchers.notNullValue())
+        .extract().response();
+    String location = response.header("Location");
+    String jobPath = URI.create(location).getPath();
+
+    Awaitility.await().atMost(Duration.ofSeconds(5))
+        .until(() -> poolInitializationCompleted(jobPath));
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .get(jobPath)
+        .then().statusCode(200)
+        .contentType("application/json")
+        .body("status", is("idle"))
+        .body("totalRecords", is(2))
+        .body("startedAt", is(Matchers.notNullValue()))
+        .body("completedAt", is(Matchers.notNullValue()))
+        .body("error", is(nullValue()));
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .delete(jobPath)
+        .then().statusCode(204);
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .get(jobPath)
+        .then().statusCode(404);
+  }
+
+  @Test
+  public void testResumeExpiredPoolInitialization() throws Exception {
+    JsonObject poolConfig = createIsbnPool("manual");
+    JsonArray records = new JsonArray()
+        .add(new JsonObject()
+            .put("localId", "S101")
+            .put("payload", new JsonObject()
+                .put("inventory", new JsonObject().put("isbn", new JsonArray().add("1")))))
+        .add(new JsonObject()
+            .put("localId", "S102")
+            .put("payload", new JsonObject()
+                .put("inventory", new JsonObject().put("isbn", new JsonArray().add("2")))))
+        .add(new JsonObject()
+            .put("localId", "S103")
+            .put("payload", new JsonObject()
+                .put("inventory", new JsonObject().put("isbn", new JsonArray().add("3")))));
+
+    ingestRecords(records, SOURCE_ID_1);
+
+    String res = RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .param("count", "exact")
+        .get("/reservoir/records")
+        .then().statusCode(200)
+        .contentType("application/json")
+        .body("resultInfo.totalRecords", is(3))
+        .extract().body().asString();
+    JsonObject jsonResponse = new JsonObject(res);
+    // Batches are sorted by globalId. Get the minimal so we can make a table
+    // with first record already "processed"
+    String minimalId = null;
+    JsonArray items = jsonResponse.getJsonArray("items");
+    for (int i = 0; i < items.size(); i++) {
+        JsonObject rec = items.getJsonObject(i);
+        String id = rec.getString("globalId");
+        if (minimalId == null || id.compareTo(minimalId) < 0) {
+            minimalId = id;
+        }
+    }
+    Storage storage = new Storage(vertx, TENANT_1, HttpMethod.POST);
+    UUID jobId = UUID.randomUUID();
+    String sql = "INSERT INTO " + storage.poolInitializationJobTable
+        + " (id, pool_id, status, claim_token, lease_until, checkpoint, total_records, started_at)"
+        + " VALUES ($1, $2, 'running', $3,"
+        + " (CURRENT_TIMESTAMP AT TIME ZONE 'UTC') - INTERVAL '1 minute',"
+        + " $4, 1, "
+        + " CURRENT_TIMESTAMP AT TIME ZONE 'UTC')";
+    storage.getPool().preparedQuery(sql)
+        .execute(Tuple.of(jobId, poolConfig.getString("id"), UUID.randomUUID(), UUID.fromString(minimalId)))
+        .toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
+
+    String jobPath = "/reservoir/config/pools/" + poolConfig.getString("id")
+        + "/initializations/" + jobId;
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .get(jobPath)
+        .then().statusCode(200)
+        .body("status", anyOf(is("running"), is("idle")));
+
+    Awaitility.await().atMost(Duration.ofSeconds(5))
+        .until(() -> poolInitializationCompleted(jobPath));
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .get(jobPath)
+        .then().statusCode(200)
+        .body("status", is("idle"))
+        .body("totalRecords", is(3));
+  }
+
+  @Test
+  public void testOnlyOnePoolInitializationPerTenant() throws Exception {
+    JsonObject poolConfig = createIsbnPool("manual");
+    Storage storage = new Storage(vertx, TENANT_1, HttpMethod.POST);
+    UUID jobId = UUID.randomUUID();
+    String sql = "INSERT INTO " + storage.poolInitializationJobTable
+        + " (id, pool_id, status, claim_token, lease_until, started_at)"
+        + " VALUES ($1, $2, 'running', $3,"
+        + " (CURRENT_TIMESTAMP AT TIME ZONE 'UTC') + INTERVAL '5 minutes',"
+        + " CURRENT_TIMESTAMP AT TIME ZONE 'UTC')";
+    storage.getPool().preparedQuery(sql)
+        .execute(Tuple.of(jobId, poolConfig.getString("id"), UUID.randomUUID()))
+        .toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .contentType("application/json")
+        .body("{}")
+        .post("/reservoir/config/pools/" + poolConfig.getString("id") + "/initializations")
+        .then().statusCode(409)
+        .body(is("A pool initialization job is already running for this tenant"));
+
+    String jobPath = "/reservoir/config/pools/" + poolConfig.getString("id")
+        + "/initializations/" + jobId;
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .delete(jobPath)
+        .then().statusCode(204);
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .get(jobPath)
+        .then().statusCode(404);
+
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .contentType("application/json")
+        .body("{}")
+        .post("/reservoir/config/pools/" + poolConfig.getString("id") + "/initializations")
+        .then().statusCode(201);
+  }
+
+  private boolean poolInitializationCompleted(String jobPath) {
+    var response = RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .get(jobPath);
+    return response.statusCode() == 200
+        && "idle".equals(response.jsonPath().getString("status"));
   }
 
   @Test

@@ -52,20 +52,17 @@ https POST $host/reservoir/config/pools x-okapi-token:$token \
 
 ## Initialize the pool
 
-Initialize the pool.
+Start initialization of the pool with
 
 ```shell
-https PUT "$host/reservoir/config/pools/goldrush2024/initialize" x-okapi-token:$token
+echo '{}' | https POST "$host/reservoir/config/pools/goldrush2024/initializations" x-okapi-token:$token
 ```
 
-Note that if this is being done for a large consortium then this process will take a long time (typical records-per-second=160).
-After 5-minutes there will be an expected NGINX "Gateway timeout".
+Check progress with:
 
 ```shell
-https PUT "$host/reservoir/config/pools/goldrush2024/initialize" x-okapi-token:$token
+https GET "$host/reservoir/config/pools/goldrush2024/initializations" x-okapi-token:$token
 ```
-
-Watch the AWS facilities from time-to-time at "CloudWatch > Database insights".
 
 The count and statistics can be done only after the initialisation has completed.
 
