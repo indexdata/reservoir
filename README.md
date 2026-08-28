@@ -396,7 +396,7 @@ Inspect job status:
 curl -HX-Okapi-Tenant:$OKAPI_TENANT $OKAPI_URL/reservoir/config/pools/title/initializations/$job
 ```
 
-If `status` is `idle` the job is finished. If an `error` property is present, an error
+If `status` is `idle`, the job is finished. If an `error` property is present, an error
 occurred during the initialization of the pool.
 
 Now, you can retrieve individual record clusters from this pool with:
