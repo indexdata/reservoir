@@ -406,6 +406,9 @@ public class Storage {
     return Future.all(futures).mapEmpty();
   }
 
+  // number of parallel Graal JS module instances used to run each matcher invocation
+  private static final int MATCHER_MODULE_WORKERS = 4;
+
   Future<IngestMatcher> createIngestMatcher(PoolConfig poolConfig, Vertx vertx) {
     IngestMatcher ingestMatcher = new IngestMatcher();
 
@@ -427,8 +430,9 @@ public class Storage {
                   "Module '" + invocation.getModuleName()
                       + "' does not exist for '" + invocation + "'");
             }
-            return ModuleCache.getInstance().lookup(tenant, entity)
-                .map(module -> new ModuleExecutable(module, invocation, vertx));
+            return Future.succeededFuture(new ModuleExecutable(
+                () -> ModuleCache.getInstance().newInstance(entity),
+                invocation, vertx, MATCHER_MODULE_WORKERS));
           }));
     }
     return Future.all(futures).map(results -> {

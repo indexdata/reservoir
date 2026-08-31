@@ -70,6 +70,13 @@ public class ModuleCacheImpl implements ModuleCache {
   }
 
   @Override
+  public Module newInstance(CodeModuleEntity entity) {
+    Module module = createInstance(entity.getType());
+    module.initialize(entity);
+    return module;
+  }
+
+  @Override
   public void purge(String tenantId, String moduleId) {
     String cacheKey = tenantId + ":" + moduleId;
     CacheEntry entry = entries.remove(cacheKey);
