@@ -257,6 +257,20 @@ class PoolInitializationService {
             }));
   }
 
+  private Future<Void> processRecord(Storage storage, IngestMatcher matcher,
+      IngestMetrics ingestMetrics, Row record) {
+    UUID globalId = record.getUUID("id");
+    JsonObject globalRecord = ClusterBuilder.encodeRecord(record);
+    return storage.runMatcher(matcher, ingestMetrics, globalRecord)
+        .compose(result -> storage.pool.withTransaction(
+            connection -> storage.updateClusterForRecord(connection, globalId, result))
+        .recover(e -> storage.pool.withTransaction(
+            connection -> storage.updateClusterForRecord(connection, globalId, result)))
+        .recover(e -> storage.pool.withTransaction(connection ->
+            storage.updateClusterForRecord(connection, globalId, result)))
+        );
+  }
+
   private Future<BatchResult> processRecords(Storage storage, SqlConnection connection,
       Claim claim, IngestMatcher matcher, IngestMetrics ingestMetrics, List<Row> records) {
     if (records.isEmpty()) {
@@ -268,15 +282,11 @@ class PoolInitializationService {
           .execute(Tuple.of(claim.jobId(), claim.token()))
           .map(BatchResult.STOP);
     }
-    Future<Void> future = Future.succeededFuture();
+    List<Future<Void>> futures = new ArrayList<>();
     for (Row record : records) {
-      future = future.compose(ignored -> {
-        UUID globalId = record.getUUID("id");
-        JsonObject globalRecord = ClusterBuilder.encodeRecord(record);
-        return storage.runMatcher(matcher, ingestMetrics, globalRecord)
-            .compose(result -> storage.updateClusterForRecord(connection, globalId, result));
-      });
+      futures.add(processRecord(storage, matcher, ingestMetrics, record));
     }
+    Future<Void> future = Future.all(futures).mapEmpty();
     UUID checkpoint = records.get(records.size() - 1).getUUID("id");
     String sql = "UPDATE " + storage.poolInitializationJobTable
         + " SET checkpoint = $3, total_records = total_records + $4,"
