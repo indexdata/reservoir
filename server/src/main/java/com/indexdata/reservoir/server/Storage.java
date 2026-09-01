@@ -420,7 +420,7 @@ public class Storage {
     if (matcherInvocations.length == 0) {
       return Future.failedFuture("pool config must include 'matcher'");
     }
-    List<Future<?>> futures = new ArrayList<>();
+    List<Future<ModuleExecutable>> futures = new ArrayList<>();
     for (String matcherInvocation : matcherInvocations) {
       ModuleInvocation invocation = new ModuleInvocation(matcherInvocation);
       futures.add(selectCodeModuleEntity(invocation.getModuleName())
@@ -435,12 +435,21 @@ public class Storage {
                 invocation, vertx, MATCHER_MODULE_WORKERS));
           }));
     }
-    return Future.all(futures).map(results -> {
+    return Future.join(futures).map(results -> {
       ingestMatcher.moduleExecutables = new ModuleExecutable[results.size()];
       for (int i = 0; i < results.size(); i++) {
         ingestMatcher.moduleExecutables[i] = results.resultAt(i);
       }
       return ingestMatcher;
+    }).recover(error -> {
+      List<Future<Void>> closeFutures = new ArrayList<>();
+      for (Future<ModuleExecutable> future : futures) {
+        if (future.succeeded()) {
+          closeFutures.add(future.result().close());
+        }
+      }
+      return Future.join(closeFutures)
+          .transform(ignored -> Future.failedFuture(error));
     });
   }
 
@@ -455,12 +464,21 @@ public class Storage {
       }
       futures.add(createIngestMatcher(poolConfig, vertx));
     }
-    return Future.all(futures).map(composite -> {
+    return Future.join(futures).map(composite -> {
       List<IngestMatcher> ingestMatchers = new ArrayList<>();
       for (int i = 0; i < composite.size(); i++) {
         ingestMatchers.add(composite.resultAt(i));
       }
       return ingestMatchers;
+    }).recover(error -> {
+      List<IngestMatcher> ingestMatchers = new ArrayList<>();
+      for (Future<IngestMatcher> future : futures) {
+        if (future.succeeded()) {
+          ingestMatchers.add(future.result());
+        }
+      }
+      return IngestMatcher.closeAll(ingestMatchers)
+          .transform(ignored -> Future.failedFuture(error));
     });
   }
 
@@ -654,8 +672,8 @@ public class Storage {
    */
   public Future<Void> updateGlobalRecords(Vertx vertx, LargeJsonReadStream request) {
     return availableIngestMatchers(vertx)
-      .compose(ingestMatchers -> {
-        return new ReadStreamConsumer<JsonObject, Void>()
+      .compose(ingestMatchers ->
+          new ReadStreamConsumer<JsonObject, Void>()
           .consume(request, r -> {
             JsonObject topRecord = request.topLevelObject();
             SourceId sourceId = new SourceId(topRecord.getString(ClusterBuilder.SOURCE_ID_LABEL));
@@ -666,8 +684,8 @@ public class Storage {
             return ingestGlobalRecord(vertx, sourceId,
               sourceVersion, r, ingestMatchers, ingestMetrics)
           .mapEmpty();
-          });
-      });
+          })
+          .eventually(() -> IngestMatcher.closeAll(ingestMatchers)));
   }
 
   /**
@@ -980,7 +998,8 @@ public class Storage {
               Row row = iterator.next();
               PoolConfig poolConfig = poolConfigFromRow(row);
               return createIngestMatcher(poolConfig, vertx)
-                .compose(matcher -> recalculateMatchKeyValueTable(connection, matcher));
+                .compose(matcher -> recalculateMatchKeyValueTable(connection, matcher)
+                    .eventually(matcher::close));
             })
     );
   }

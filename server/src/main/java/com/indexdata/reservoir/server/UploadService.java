@@ -28,7 +28,9 @@ public class UploadService {
   private Future<IngestStats> uploadPayloadStream(ReadStream<JsonObject> upload,
       IngestWriteStream ingestWriteStream) {
 
-    return upload.pipeTo(ingestWriteStream).map(x -> ingestWriteStream.stats());
+    return upload.pipeTo(ingestWriteStream)
+        .eventually(ingestWriteStream::end)
+        .map(x -> ingestWriteStream.stats());
   }
 
   /**

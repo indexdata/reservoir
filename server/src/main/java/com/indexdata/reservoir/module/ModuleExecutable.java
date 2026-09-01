@@ -18,6 +18,7 @@ public class ModuleExecutable {
   private final ModuleInvocation invocation;
   private final List<Worker> workers;
   private final boolean ownsModules;
+  private Future<Void> closeFuture;
 
   /**
    * A single worker: its own module instance plus a dedicated single-thread executor.
@@ -62,9 +63,15 @@ public class ModuleExecutable {
     if (numWorkers < 1) {
       throw new IllegalArgumentException("numWorkers must be at least 1");
     }
-    return IntStream.range(0, numWorkers)
-        .mapToObj(i -> moduleSupplier.get())
-        .collect(Collectors.toList());
+    List<Module> modules = new ArrayList<>();
+    try {
+      IntStream.range(0, numWorkers)
+          .forEach(i -> modules.add(moduleSupplier.get()));
+      return modules;
+    } catch (RuntimeException e) {
+      modules.forEach(Module::terminate);
+      throw e;
+    }
   }
 
   private ModuleExecutable(List<Module> modules, ModuleInvocation invocation, Vertx vertx,
@@ -127,14 +134,17 @@ public class ModuleExecutable {
    * running since their lifecycle is owned by the caller (e.g. the module cache).
    * @return future that completes when all workers are closed
    */
-  public Future<Void> close() {
-    List<Future<Void>> futures = new ArrayList<>();
-    for (Worker worker : workers) {
-      if (ownsModules) {
-        worker.module.terminate();
+  public synchronized Future<Void> close() {
+    if (closeFuture == null) {
+      List<Future<Void>> futures = new ArrayList<>();
+      for (Worker worker : workers) {
+        if (ownsModules) {
+          worker.module.terminate();
+        }
+        futures.add(worker.executor.close());
       }
-      futures.add(worker.executor.close());
+      closeFuture = Future.all(futures).mapEmpty();
     }
-    return Future.all(futures).mapEmpty();
+    return closeFuture;
   }
 }

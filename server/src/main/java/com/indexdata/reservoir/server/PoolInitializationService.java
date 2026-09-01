@@ -5,6 +5,7 @@ import com.indexdata.reservoir.server.entity.PoolConfig;
 import com.indexdata.reservoir.server.metrics.IngestMetrics;
 import com.indexdata.reservoir.server.metrics.IngestMetricsNop;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
@@ -220,19 +221,23 @@ class PoolInitializationService {
         .compose(pool -> pool == null
             ? Future.failedFuture("Pool " + claim.poolId() + " not found")
             : storage.createIngestMatcher(new PoolConfig(pool), vertx))
-        .onSuccess(matcher -> runBatch(vertx, storage, claim, matcher, new IngestMetricsNop()))
+        .compose(matcher -> runBatch(vertx, storage, claim, matcher, new IngestMetricsNop())
+            .eventually(matcher::close))
         .onFailure(error -> failJob(storage, claim, error));
   }
 
-  private void runBatch(Vertx vertx, Storage storage, Claim claim, IngestMatcher matcher,
+  private Future<Void> runBatch(Vertx vertx, Storage storage, Claim claim, IngestMatcher matcher,
       IngestMetrics ingestMetrics) {
-    processBatch(storage, claim, matcher, ingestMetrics)
-        .onSuccess(result -> {
-          if (result == BatchResult.MORE) {
-            vertx.runOnContext(ignored -> runBatch(vertx, storage, claim, matcher, ingestMetrics));
+    return processBatch(storage, claim, matcher, ingestMetrics)
+        .compose(result -> {
+          if (result == BatchResult.STOP) {
+            return Future.succeededFuture();
           }
-        })
-        .onFailure(error -> failJob(storage, claim, error));
+          Promise<Void> promise = Promise.promise();
+          vertx.runOnContext(ignored ->
+              runBatch(vertx, storage, claim, matcher, ingestMetrics).onComplete(promise));
+          return promise.future();
+        });
   }
 
   private Future<BatchResult> processBatch(Storage storage, Claim claim, IngestMatcher matcher,

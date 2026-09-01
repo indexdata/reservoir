@@ -771,7 +771,8 @@ public class OaiPmhClientService {
               .compose(ingestMatches ->
                   listRecordsRequest(config)
                       .compose(res ->
-                          listRecordsResponse(storage, job, ingestMatches, res)))
+                          listRecordsResponse(storage, job, ingestMatches, res))
+                      .eventually(() -> IngestMatcher.closeAll(ingestMatches)))
               .map(0)
               .recover(e -> {
                 Long waitMs = checkRetryWait(e, config);

@@ -26,10 +26,11 @@ public class IngestWriteStream implements WriteStream<JsonObject> {
   Promise<Void> endHandler;
   boolean ended;
   Handler<Void> drainHandler;
-  List<IngestMatcher> ingestMatchers;
+  Future<List<IngestMatcher>> ingestMatchersFuture;
   AtomicInteger ops = new AtomicInteger();
   int queueSize = 40;
   boolean ingest;
+  boolean finishing;
   Throwable failure;
   private static final Logger log = LogManager.getLogger(IngestWriteStream.class);
 
@@ -62,15 +63,8 @@ public class IngestWriteStream implements WriteStream<JsonObject> {
           if (ingest && localId != null) {
             rec.put(ClusterBuilder.SOURCE_ID_LABEL, params.sourceId.toString());
             rec.put(ClusterBuilder.SOURCE_VERSION_LABEL, params.sourceVersion);
-            if (ingestMatchers == null) {
-              future = storage.availableIngestMatchers(vertx)
-                .map(x -> {
-                  ingestMatchers = x;
-                  return null;
-                });
-            }
-            future = future
-                .compose(x -> storage
+            future = getIngestMatchers()
+                .compose(ingestMatchers -> storage
                   .ingestGlobalRecord(
                       vertx, params.sourceId, params.sourceVersion, rec, ingestMatchers,
                       params.ingestMetrics)
@@ -101,14 +95,7 @@ public class IngestWriteStream implements WriteStream<JsonObject> {
             drainHandler.handle(null);
           }
           if (ops.get() == 0 && ended) {
-            log.info("{} {}", params.getSummary(fileName), stats);
-            if (endHandler != null) {
-              if (failure != null) {
-                endHandler.fail(failure);
-              } else {
-                endHandler.complete();
-              }
-            }
+            finish();
           }
         });
   }
@@ -117,10 +104,37 @@ public class IngestWriteStream implements WriteStream<JsonObject> {
   public Future<Void> end() {
     ended = true;
     if (ops.get() == 0) {
-      log.info("{} {}", params.getSummary(fileName), stats);
-      endHandler.complete();
+      finish();
     }
     return endHandler.future();
+  }
+
+  private synchronized Future<List<IngestMatcher>> getIngestMatchers() {
+    if (ingestMatchersFuture == null) {
+      ingestMatchersFuture = storage.availableIngestMatchers(vertx);
+    }
+    return ingestMatchersFuture;
+  }
+
+  private synchronized void finish() {
+    if (finishing) {
+      return;
+    }
+    finishing = true;
+    log.info("{} {}", params.getSummary(fileName), stats);
+    Future<Void> closeFuture = ingestMatchersFuture == null
+        ? Future.succeededFuture()
+        : ingestMatchersFuture.compose(IngestMatcher::closeAll);
+    closeFuture.onComplete(result -> {
+      if (result.failed() && failure == null) {
+        failure = result.cause();
+      }
+      if (failure != null) {
+        endHandler.tryFail(failure);
+      } else {
+        endHandler.tryComplete();
+      }
+    });
   }
 
   @Override
