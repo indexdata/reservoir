@@ -35,7 +35,7 @@
     <graalvm.version>25.0.4.1</graalvm.version>
     <graalvm-maven-plugin.version>1.1.11</graalvm-maven-plugin.version>
     <log4j2.version>3.0.0-beta3</log4j2.version>
-    <snakeyaml.version>2.6</snakeyaml.version>
+    <snakeyaml.version>2.7</snakeyaml.version>
     <slf4j-api.version>2.0.18</slf4j-api.version>
     <vertx.version>5.1.6</vertx.version>
     <okapi.version>7.0.9</okapi.version>
