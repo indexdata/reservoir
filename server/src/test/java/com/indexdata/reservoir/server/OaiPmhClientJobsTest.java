@@ -5,6 +5,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
@@ -23,7 +24,9 @@ import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.pgclient.PgException;
 import io.vertx.sqlclient.Row;
+import io.vertx.sqlclient.SqlConnection;
 import io.vertx.sqlclient.Tuple;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -35,6 +38,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import org.awaitility.Awaitility;
 import org.folio.okapi.common.XOkapiHeaders;
 import org.junit.After;
@@ -149,6 +153,70 @@ public class OaiPmhClientJobsTest extends TestBase {
     assertFalse(await(service.saveJob(storage, original, true)));
     assertEquals("running", row().getJsonObject("job").getString("status"));
     assertEquals("checkpoint", row().getJsonObject("config").getString("resumptionToken"));
+  }
+
+  private Future<Boolean> writeWithMatchers(Storage target,
+      Function<SqlConnection, Future<Void>> guard) {
+    return target.ingestGlobalRecord(vertx, new SourceId(id), 1,
+        new JsonObject().put("localId", "record-1").put("payload", new JsonObject()),
+        List.of(new IngestMatcher(), new IngestMatcher(), new IngestMatcher()),
+        new IngestMetricsNop(), guard);
+  }
+
+  private Storage failingWrites(AtomicInteger attempts, PgException error, boolean alwaysFail) {
+    return new Storage(vertx, TENANT_1, HttpMethod.POST) {
+      @Override
+      Future<Boolean> upsertGlobalRecord(SqlConnection connection, String localId,
+          SourceId source, int version, JsonObject payload, List<MatcherResult> matches,
+          IngestMetrics metrics) {
+        int attempt = attempts.incrementAndGet();
+        return alwaysFail || attempt == 1 ? Future.failedFuture(error) : Future.succeededFuture(true);
+      }
+    };
+  }
+
+  @Test
+  public void lostClaimIsNotRetriedWithMultipleMatchers() throws Exception {
+    createClient("http://localhost:1/oai");
+    Harvest harvest = await(service.claimJob(storage, id, false));
+    await(service.stopJob(storage, id, false));
+    AtomicInteger checks = new AtomicInteger();
+    assertLost(writeWithMatchers(storage, conn -> {
+      checks.incrementAndGet();
+      return service.guardRecord(storage, conn, harvest);
+    }));
+    assertEquals(1, checks.get());
+  }
+
+  @Test
+  public void onlyUniqueViolationsRetryTheTransactionAndItsGuard() throws Exception {
+    for (String state : List.of("23505", "23503", "40P01")) {
+      PgException error = new PgException("write failed", "ERROR", state, "test failure");
+      AtomicInteger attempts = new AtomicInteger();
+      AtomicInteger checks = new AtomicInteger();
+      Future<Boolean> result = writeWithMatchers(failingWrites(attempts, error, false), conn -> {
+        checks.incrementAndGet();
+        return Future.succeededFuture();
+      });
+      if ("23505".equals(state)) {
+        assertTrue(await(result));
+        assertEquals(2, attempts.get());
+      } else {
+        assertSame(error, assertThrows(ExecutionException.class, () -> await(result)).getCause());
+        assertEquals(1, attempts.get());
+      }
+      assertEquals(attempts.get(), checks.get());
+    }
+  }
+
+  @Test
+  public void uniqueViolationRetriesRemainBounded() {
+    PgException error = new PgException("conflict", "ERROR", "23505", "test failure");
+    AtomicInteger attempts = new AtomicInteger();
+    Future<Boolean> result = writeWithMatchers(failingWrites(attempts, error, true),
+        conn -> Future.succeededFuture());
+    assertSame(error, assertThrows(ExecutionException.class, () -> await(result)).getCause());
+    assertEquals(4, attempts.get()); // initial attempt plus one retry per matcher
   }
 
   @Test

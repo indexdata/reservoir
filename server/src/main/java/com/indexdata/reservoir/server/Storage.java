@@ -18,6 +18,7 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.pgclient.PgException;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.RowIterator;
 import io.vertx.sqlclient.RowSet;
@@ -252,7 +253,8 @@ public class Storage {
                 payload, matcherResults, ingestMetrics)))
         // Retry the entire transaction, including its ownership check, on a matching conflict.
         .recover(e -> {
-          if (retryCount == 0) {
+          if (retryCount == 0 || !(e instanceof PgException pgException)
+              || !"23505".equals(pgException.getSqlState())) {
             return Future.failedFuture(e);
           }
           return upsertGlobalRecord(retryCount - 1, localIdentifier, sourceId, sourceVersion,
