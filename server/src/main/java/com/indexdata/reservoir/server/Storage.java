@@ -251,7 +251,7 @@ public class Storage {
     return pool.withTransaction(conn -> beforeWrite.apply(conn).compose(ignored ->
             upsertGlobalRecord(conn, localIdentifier, sourceId, sourceVersion,
                 payload, matcherResults, ingestMetrics)))
-        // Retry the entire transaction, including its ownership check, on a matching conflict.
+        // Retry unique violations in a new transaction, rechecking ownership on each attempt.
         .recover(e -> {
           if (retryCount == 0 || !(e instanceof PgException pgException)
               || !"23505".equals(pgException.getSqlState())) {
