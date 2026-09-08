@@ -106,6 +106,13 @@ https GET $host/reservoir/pmh-clients/${job}/status x-okapi-token:$token
 
 ## Update a job configuration
 
+Stop a running harvest before updating it (otherwise the update returns HTTP 409):
+
+```shell
+https POST $host/reservoir/pmh-clients/${job}/stop x-okapi-token:$token
+```
+
+
 For example to clear its "from" date, so as to re-ingest (e.g. perhaps there was some complication with their initial ingest):
 
 ```shell
@@ -159,6 +166,12 @@ Investigate the job status. It will probably be "idle" meaning that the remote s
 ```shell
 https GET $host/reservoir/pmh-clients/${job}/status x-okapi-token:$token
 ```
+
+Starting an active job does not restart it. If a worker dies, start and status requests can resume
+its checkpoint after its five-minute lease expires. Interrupted responses may be ingested again.
+
+When upgrading from a version without harvest leases, stop existing harvests and replace all old
+server instances before starting harvests again; old workers do not enforce the new ownership checks.
 
 Use a daily cronjob to start all jobs. Or devise a method to start jobs in groups for a large consortium.
 

@@ -221,6 +221,8 @@ public class Storage {
             CREATE_IF_NO_EXISTS + oaiPmhClientTable
                 + "(id VARCHAR NOT NULL PRIMARY KEY,"
                 + " config JSONB, job JSONB, stop BOOLEAN, owner UUID)",
+            "ALTER TABLE " + oaiPmhClientTable
+                + " ADD COLUMN IF NOT EXISTS lease_until TIMESTAMP",
             CREATE_IF_NO_EXISTS + poolInitializationJobTable
                 + "(id UUID NOT NULL PRIMARY KEY,"
                 + " pool_id VARCHAR NOT NULL,"
@@ -242,28 +244,19 @@ public class Storage {
       .compose(x -> resolveCodeModuleTable(vertx));
   }
 
-  private Future<Boolean> upsertGlobalRecord(String localIdentifier, SourceId sourceId,
-      int sourceVersion, JsonObject payload, List<MatcherResult> matcherResults,
-      IngestMetrics ingestMetrics) {
-    return upsertGlobalRecord(matcherResults.size(), localIdentifier, sourceId,
-        sourceVersion, payload, matcherResults, ingestMetrics);
-  }
-
   private Future<Boolean> upsertGlobalRecord(int retryCount, String localIdentifier,
       SourceId sourceId, int sourceVersion, JsonObject payload, List<MatcherResult> matcherResults,
-      IngestMetrics ingestMetrics) {
-    return pool.withTransaction(conn ->
+      IngestMetrics ingestMetrics, Function<SqlConnection, Future<Void>> beforeWrite) {
+    return pool.withTransaction(conn -> beforeWrite.apply(conn).compose(ignored ->
             upsertGlobalRecord(conn, localIdentifier, sourceId, sourceVersion,
-                payload, matcherResults, ingestMetrics))
-        // addValuesToCluster may fail if for same new match key for parallel operations
-        // we recover just once for that. 2nd will find the new value for the one that
-        // succeeded.
+                payload, matcherResults, ingestMetrics)))
+        // Retry the entire transaction, including its ownership check, on a matching conflict.
         .recover(e -> {
           if (retryCount == 0) {
             return Future.failedFuture(e);
           }
           return upsertGlobalRecord(retryCount - 1, localIdentifier, sourceId, sourceVersion,
-              payload, matcherResults, ingestMetrics);
+              payload, matcherResults, ingestMetrics, beforeWrite);
         });
   }
 
@@ -286,19 +279,25 @@ public class Storage {
   }
 
   Future<Void> deleteGlobalRecord(String localIdentifier, SourceId sourceId, int sourceVersion) {
+    return deleteGlobalRecord(localIdentifier, sourceId, sourceVersion,
+        connection -> Future.succeededFuture());
+  }
+
+  private Future<Void> deleteGlobalRecord(String localIdentifier, SourceId sourceId,
+      int sourceVersion, Function<SqlConnection, Future<Void>> beforeWrite) {
     String q = "UPDATE " + clusterMetaTable + " AS m"
         + " SET datestamp = $4"
         + " FROM " + globalRecordTable + ", " + clusterRecordTable + " AS r"
         + " WHERE m.cluster_id = r.cluster_id AND r.record_id = id"
         + " AND local_id = $1 AND source_id = $2 and source_version = $3";
-    return pool.withTransaction(conn ->
+    return pool.withTransaction(conn -> beforeWrite.apply(conn).compose(ignored ->
         conn.preparedQuery(q)
           .execute(Tuple.of(localIdentifier, sourceId.toString(), sourceVersion,
               LocalDateTime.now(ZoneOffset.UTC)))
           .compose(x -> conn.preparedQuery("DELETE FROM " + globalRecordTable
                   + " WHERE local_id = $1 AND source_id = $2 and source_version = $3")
           .execute(Tuple.of(localIdentifier, sourceId.toString(), sourceVersion))
-          .mapEmpty()));
+          .mapEmpty())));
   }
 
   /**
@@ -315,9 +314,18 @@ public class Storage {
       SourceId sourceId, int sourceVersion, JsonObject globalRecord,
       List<IngestMatcher> ingestMatchers, IngestMetrics ingestMetrics) {
 
+    return ingestGlobalRecord(vertx, sourceId, sourceVersion, globalRecord, ingestMatchers,
+        ingestMetrics, connection -> Future.succeededFuture());
+  }
+
+  /** Ingest with a guard executed inside the transaction that writes the record. */
+  Future<Boolean> ingestGlobalRecord(Vertx vertx,
+      SourceId sourceId, int sourceVersion, JsonObject globalRecord,
+      List<IngestMatcher> ingestMatchers, IngestMetrics ingestMetrics,
+      Function<SqlConnection, Future<Void>> beforeWrite) {
     long startTime = System.nanoTime();
     return ingestGlobalRecord2(vertx, sourceId, sourceVersion, globalRecord,
-        ingestMatchers, ingestMetrics)
+        ingestMatchers, ingestMetrics, beforeWrite)
         .onComplete(x -> ingestMetrics.recordStoring(
             System.nanoTime() - startTime, TimeUnit.NANOSECONDS)
         );
@@ -325,7 +333,8 @@ public class Storage {
 
   private Future<Boolean> ingestGlobalRecord2(Vertx vertx,
       SourceId sourceId, int sourceVersion, JsonObject globalRecord,
-      List<IngestMatcher> ingestMatchers, IngestMetrics ingestMetrics) {
+      List<IngestMatcher> ingestMatchers, IngestMetrics ingestMetrics,
+      Function<SqlConnection, Future<Void>> beforeWrite) {
 
     final String localIdentifier = globalRecord.getString(ClusterBuilder.LOCAL_ID_LABEL);
     if (localIdentifier == null) {
@@ -333,7 +342,7 @@ public class Storage {
       return Future.failedFuture("localId required");
     }
     if (Boolean.TRUE.equals(globalRecord.getBoolean("delete"))) {
-      return deleteGlobalRecord(localIdentifier, sourceId, sourceVersion)
+      return deleteGlobalRecord(localIdentifier, sourceId, sourceVersion, beforeWrite)
         .map(x -> {
           ingestMetrics.incrementRecordsDeleted();
           return null;
@@ -357,8 +366,8 @@ public class Storage {
       for (int i = 0; i < cf.size(); i++) {
         results.add((MatcherResult) cf.resultAt(i));
       }
-      return upsertGlobalRecord(localIdentifier, sourceId, sourceVersion,
-          payload, results, ingestMetrics)
+      return upsertGlobalRecord(results.size(), localIdentifier, sourceId, sourceVersion,
+          payload, results, ingestMetrics, beforeWrite)
         .map(inserted -> {
           if (inserted) {
             ingestMetrics.incrementRecordsInserted();

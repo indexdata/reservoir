@@ -5728,7 +5728,8 @@ public class MainVerticleTest extends TestBase {
         .contentType("application/json")
         .body("items[0].status", is("idle"))
         .body("items[0].totalRecords", is(0))
-        .body("items[0].totalRequests", greaterThanOrEqualTo(1))
+        // An immediate stop may prevent the first request or checkpoint from completing.
+        .body("items[0].totalRequests", greaterThanOrEqualTo(0))
         .body("items[0].lastTotalRecords", greaterThanOrEqualTo(0))
         .body("items[0].lastRunningTime", startsWith("0 days 00 hrs 00 mins 0"))
         .body("items[0].config.id", is(PMH_CLIENT_ID))
