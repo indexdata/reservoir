@@ -28,6 +28,7 @@ import io.vertx.sqlclient.Tuple;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
@@ -148,6 +149,76 @@ public class OaiPmhClientJobsTest extends TestBase {
     assertFalse(await(service.saveJob(storage, original, true)));
     assertEquals("running", row().getJsonObject("job").getString("status"));
     assertEquals("checkpoint", row().getJsonObject("config").getString("resumptionToken"));
+  }
+
+  @Test
+  public void fourRecordFencesCanOverlapWithoutRenewingLease() throws Exception {
+    createClient("http://localhost:1/oai");
+    Harvest harvest = await(service.claimJob(storage, id, false));
+    LocalDateTime lease = row().getLocalDateTime("lease_until");
+    Promise<Void> release = Promise.promise();
+    List<Future<Void>> entered = new ArrayList<>();
+    List<Future<Void>> transactions = new ArrayList<>();
+    try {
+      for (int i = 0; i < 4; i++) {
+        Promise<Void> locked = Promise.promise();
+        entered.add(locked.future());
+        transactions.add(storage.getPool().withTransaction(conn ->
+            service.guardRecord(storage, conn, harvest).compose(ignored -> {
+              locked.complete();
+              return release.future();
+            })));
+      }
+      // All four must hold the fence before any transaction is allowed to commit.
+      await(Future.all(entered));
+      transactions.forEach(transaction -> assertFalse(transaction.isComplete()));
+      release.complete();
+      await(Future.all(transactions));
+      assertEquals(lease, row().getLocalDateTime("lease_until"));
+    } finally {
+      release.tryComplete();
+      await(Future.join(transactions));
+    }
+  }
+
+  @Test
+  public void deleteWaitsForAllSharedRecordFences() throws Exception {
+    createClient("http://localhost:1/oai");
+    Harvest harvest = await(service.claimJob(storage, id, false));
+    Promise<Void> firstLocked = Promise.promise();
+    Promise<Void> secondLocked = Promise.promise();
+    Promise<Void> releaseFirst = Promise.promise();
+    Promise<Void> releaseSecond = Promise.promise();
+    Future<Void> first = storage.getPool().withTransaction(conn ->
+        service.guardRecord(storage, conn, harvest).compose(ignored -> {
+          firstLocked.complete();
+          return releaseFirst.future();
+        }));
+    Future<Void> second = storage.getPool().withTransaction(conn ->
+        service.guardRecord(storage, conn, harvest).compose(ignored -> {
+          secondLocked.complete();
+          return releaseSecond.future();
+        }));
+    try {
+      await(Future.all(firstLocked.future(), secondLocked.future()));
+      var deleted = storage.getPool().preparedQuery("DELETE FROM " + storage.getOaiPmhClientTable()
+          + " WHERE id = $1").execute(Tuple.of(id));
+      Awaitility.await().atMost(Duration.ofSeconds(3)).until(() ->
+          await(storage.getPool().query("SELECT count(*) FROM pg_stat_activity"
+              + " WHERE wait_event_type = 'Lock' AND query LIKE 'DELETE%oai_pmh_clients%'")
+              .execute()).iterator().next().getLong(0) > 0);
+      releaseFirst.complete();
+      await(first);
+      assertFalse(deleted.isComplete());
+      releaseSecond.complete();
+      await(second);
+      assertEquals(1, await(deleted).rowCount());
+      assertLost(write(harvest, false));
+    } finally {
+      releaseFirst.tryComplete();
+      releaseSecond.tryComplete();
+      await(Future.join(first, second));
+    }
   }
 
   @Test

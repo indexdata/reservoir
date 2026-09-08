@@ -427,14 +427,18 @@ public class OaiPmhClientService {
         .execute(Tuple.of(harvest.id, harvest.owner)).map(rows -> rows.rowCount() > 0);
   }
 
-  // The row lock lasts until the record's transaction commits. Stop, delete and takeover
-  // therefore serialize with ingestion, without holding a connection during HTTP requests.
+  // Records share this lock until their transactions commit. Stop, delete and takeover
+  // need an exclusive lock, so they wait for all fenced records. Lease renewal belongs to
+  // the heartbeat; updating the lease here would serialize otherwise independent records.
   Future<Void> guardRecord(Storage storage, SqlConnection connection, Harvest harvest) {
     if (harvest.cancellation != null) {
       return Future.failedFuture(harvest.cancellation);
     }
-    return renewClaim(storage, connection, harvest).compose(owned -> owned
-        ? Future.succeededFuture() : Future.failedFuture(new ClaimLostException()));
+    return connection.preparedQuery("SELECT id FROM " + storage.getOaiPmhClientTable()
+            + ACTIVE_CLAIM + " FOR SHARE")
+        .execute(Tuple.of(harvest.id, harvest.owner))
+        .compose(rows -> rows.iterator().hasNext()
+            ? Future.succeededFuture() : Future.failedFuture(new ClaimLostException()));
   }
 
   private void runHarvest(Vertx vertx, Storage storage, Harvest harvest) {
