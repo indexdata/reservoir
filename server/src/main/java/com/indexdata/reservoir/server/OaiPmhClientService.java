@@ -526,7 +526,12 @@ public class OaiPmhClientService {
     if (CLIENT_ID_ALL.equals(id)) {
       f = getOaiPmhClients(storage).compose(rows -> {
         List<Future<Void>> futures = new LinkedList<>();
-        rows.forEach(row -> futures.add(startJob(ctx.vertx(), storage, row.getString("id"), true)));
+        rows.forEach(row -> {
+          String clientId = row.getString("id");
+          if (getJob(row, clientId).isRunning()) {
+            futures.add(startJob(ctx.vertx(), storage, clientId, true));
+          }
+        });
         return Future.all(futures);
       }).compose(ignored -> getOaiPmhClients(storage)).map(rows -> {
         JsonArray items = new JsonArray();
