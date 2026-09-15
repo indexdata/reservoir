@@ -49,7 +49,9 @@ class OaiPmhClientServiceTest {
       "503, null, 0, 1",
       "504, null, 0, 1",
       "503, 120, 0, 120000",
-      "503, invalid, 0, 1"
+      "503, invalid, 0, 1",
+      "503, 9223372036854775807, 10, 10000",
+      "503, null, -1, 1"
   })
   void testCheckRetryHttpStatusError(int statusCode, String retryAfter, int waitRetries, String expectedWaitMs) {
     var e = new OaiPmhClientService.HttpStatusError(statusCode, retryAfter, "server error");

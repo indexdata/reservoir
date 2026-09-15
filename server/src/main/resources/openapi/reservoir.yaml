@@ -856,7 +856,7 @@ paths:
         "500":
           $ref: "#/components/responses/trait_500"
     put:
-      description: Update OAI-PMH client
+      description: Update OAI-PMH client. Stop a running harvest before updating its configuration.
       operationId: putOaiPmhClient
       requestBody:
         content:
@@ -870,6 +870,8 @@ paths:
           $ref: "#/components/responses/trait_400"
         "404":
           $ref: "#/components/responses/trait_404"
+        "409":
+          $ref: "#/components/responses/trait_409"
         "500":
           $ref: "#/components/responses/trait_500"
     delete:
@@ -896,7 +898,9 @@ paths:
         schema:
           type: string
     post:
-      description: Start OAI PMH client job
+      description: >
+        Start OAI PMH client job. An already active job is left running without restarting it.
+        A running job with an expired lease resumes from its saved checkpoint.
       operationId: startOaiPmhClient
       responses:
         "204":
@@ -919,7 +923,9 @@ paths:
         schema:
           type: string
     post:
-      description: Stop OAI PMH client job
+      description: >
+        Stop OAI PMH client job. Waits for any record transaction already in progress
+        and prevents further writes by that worker. An interrupted page may be replayed on restart.
       operationId: stopOaiPmhClient
       responses:
         "204":
@@ -942,7 +948,8 @@ paths:
         schema:
           type: string
     get:
-      description: Get OAI PMH client status
+      description: >
+        Get OAI PMH client status. A running job with an expired lease is reclaimed and resumed.
       operationId: statusOaiPmhClient
       responses:
         "200":

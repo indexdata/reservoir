@@ -503,6 +503,15 @@ curl -HX-Okapi-Tenant:$OKAPI_TENANT -XPOST \
   $OKAPI_URL/reservoir/pmh-clients/_all/start
 ```
 
+Starting an already active job leaves its worker running. Each client has one renewable five-minute
+lease. After a worker crashes, a start or status request (including `_all`) can reclaim an expired
+lease and resume the saved checkpoint. Status requests do not start idle jobs.
+
+Stop a running job before changing its configuration; updating a running job returns HTTP 409.
+Stopping waits for record transactions already in progress and prevents the old worker from writing
+further records or job state. Checkpoints are saved after a complete response, so restarting after
+an interruption can replay records from that response. Record counts can therefore include replays.
+
 Each job will continue until the server returns error or returns no resumption token. The `from`
 property of the configuration is populated with latest datestamp in records received. This enables
 the client to repeat the job again at a later date to fetch updates from `from` to now (unless `until` is
