@@ -37,12 +37,12 @@
     <log4j2.version>3.0.0-beta3</log4j2.version>
     <snakeyaml.version>2.7</snakeyaml.version>
     <slf4j-api.version>2.0.19</slf4j-api.version>
-    <vertx.version>5.1.7</vertx.version>
-    <okapi.version>7.0.9</okapi.version>
+    <vertx.version>5.1.8</vertx.version>
+    <okapi.version>7.0.10</okapi.version>
     <vertxlib.version>4.1.3</vertxlib.version>
     <micrometer.version>1.17.1</micrometer.version>
     <!-- vert.x is shipped with 4.2.5.Final, but we pin here to be able to experiment with SNAPSHOT versions -->
-    <netty.version>4.2.17.Final</netty.version>
+    <netty.version>4.2.18.Final</netty.version>
   </properties>
   <dependencyManagement>
     <dependencies>
