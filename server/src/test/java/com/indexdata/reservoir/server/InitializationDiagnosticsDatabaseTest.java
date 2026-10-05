@@ -96,7 +96,8 @@ public class InitializationDiagnosticsDatabaseTest extends TestBase {
             + " FROM generate_series(1, 3) n").execute())
         .compose(ignored -> storage.recalculateMatchKeyValueTable(connection, new IngestMatcher()))
         .transform(result -> {
-          context.assertTrue(result.failed(), "Initialization must fail, not return a record count");
+          context.assertTrue(result.failed(),
+            "Initialization must fail, not return a record count");
           context.assertEquals(failAt, processed.get(), "No records after the failure may run");
           if (sqlFailure) {
             context.assertTrue(result.cause().getMessage().contains("nonexistent_column"));
