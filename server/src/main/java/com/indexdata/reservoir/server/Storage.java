@@ -1080,7 +1080,13 @@ public class Storage {
             })
     ).andThen(result -> {
       if (initializationDiagnostics != null) {
-        initializationDiagnostics.summary(result.succeeded() ? "completed" : "failed");
+        String status;
+        if (result.failed()) {
+          status = "failed";
+        } else {
+          status = result.result() == null ? "not_found" : "completed";
+        }
+        initializationDiagnostics.summary(status);
       }
     });
   }

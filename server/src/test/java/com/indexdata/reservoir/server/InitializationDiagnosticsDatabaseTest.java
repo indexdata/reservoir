@@ -16,6 +16,13 @@ import org.junit.runner.RunWith;
 @RunWith(VertxUnitRunner.class)
 public class InitializationDiagnosticsDatabaseTest extends TestBase {
   @Test
+  public void missingPoolRemainsNotFound(TestContext context) {
+    Storage storage = new Storage(vertx, TENANT_1, HttpMethod.POST);
+    storage.initializePool(vertx, "missing-diagnostics-pool")
+        .onComplete(context.asyncAssertSuccess(context::assertNull));
+  }
+
+  @Test
   public void explainPreservesQueryResults(TestContext context) {
     Storage storage = new Storage(vertx, TENANT_1, HttpMethod.POST);
     var diagnostics = new InitializationDiagnostics(TENANT_1, "pool", "job", 1, 1, 100);

@@ -157,7 +157,8 @@ job after a process failure starts new counters and a new plan budget. Progress
 counts represent attempted records, including work that could subsequently roll
 back; the job API remains the source for committed progress. An async final status
 of `stopped` can mean completion, cancellation or loss of the claim; consult the job
-API for the outcome. For comparison, use the same matcher revision and fresh pools
+API for the outcome. Synchronous initialization reports `not_found` when the pool
+is missing (HTTP 404), `completed` on success, and `failed` on error. For comparison, use the same matcher revision and fresh pools
 on both datasets and retain the final summaries as well as the sampled plans.
 
 ## Running without Okapi
