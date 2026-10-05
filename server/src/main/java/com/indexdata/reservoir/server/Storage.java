@@ -12,6 +12,7 @@ import com.indexdata.reservoir.util.ReadStreamConsumer;
 import com.indexdata.reservoir.util.SourceId;
 import com.indexdata.reservoir.util.readstream.LargeJsonReadStream;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpMethod;
@@ -1000,6 +1001,36 @@ public class Storage {
           RowStream<Row> stream = pq.createStream(sqlStreamFetchSize);
           long[] fetchStart = {initializationDiagnostics == null ? 0 : System.nanoTime()};
           Promise<Integer> promise = Promise.promise();
+          AtomicBoolean finished = new AtomicBoolean();
+          Handler<Throwable> fail = error -> {
+            if (!finished.compareAndSet(false, true)) {
+              return;
+            }
+            log.error(error.getMessage(), error);
+            stream.pause();
+            stream.close()
+                .recover(closeError -> {
+                  if (closeError != error) {
+                    error.addSuppressed(closeError);
+                  }
+                  return Future.succeededFuture();
+                })
+                .compose(ignored -> tx.rollback())
+                .onComplete(rollback -> {
+                  if (rollback.failed() && rollback.cause() != error) {
+                    error.addSuppressed(rollback.cause());
+                  }
+                  promise.tryFail(error);
+                });
+          };
+          stream.exceptionHandler(fail);
+          stream.endHandler(end -> {
+            if (finished.compareAndSet(false, true)) {
+              initializationStage("commit", tx::commit)
+                  .map(totalRecords.get())
+                  .onComplete(promise);
+            }
+          });
           stream.handler(row -> {
             if (initializationDiagnostics != null) {
               initializationDiagnostics.elapsed("fetch.wait", fetchStart[0], true);
@@ -1009,24 +1040,15 @@ public class Storage {
             UUID globalId = row.getUUID("id");
             JsonObject globalRecord = ClusterBuilder.encodeRecord(row);
             initializeRecord(connection, ingestMatcher, ingestMetrics, globalId, globalRecord)
-                .onFailure(e -> log.error(e.getMessage(), e))
-                .onComplete(e -> {
-                  if (initializationDiagnostics != null) {
-                    fetchStart[0] = System.nanoTime();
+                .onFailure(fail)
+                .onSuccess(ignored -> {
+                  if (!finished.get()) {
+                    if (initializationDiagnostics != null) {
+                      fetchStart[0] = System.nanoTime();
+                    }
+                    stream.resume();
                   }
-                  stream.resume();
                 });
-          });
-          stream.endHandler(end -> {
-            initializationStage("commit", tx::commit)
-                .map(totalRecords.get())
-                .onComplete(promise);
-          });
-          stream.exceptionHandler(e -> {
-            log.error(e.getMessage(), e);
-            tx.rollback()
-                .compose(x -> Future.<Integer>failedFuture(e))
-                .onComplete(promise);
           });
           return promise.future();
         })
