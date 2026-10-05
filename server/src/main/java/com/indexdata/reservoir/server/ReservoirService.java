@@ -536,7 +536,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
       throw badRequest(e);
     }
     return resolved
-      .compose(cm -> ModuleCache.getInstance().lookup(Tenant.get(ctx), cm)
+      .<CodeModuleEntity>compose(cm -> ModuleCache.getInstance().lookup(Tenant.get(ctx), cm)
         .map(module -> cm)
       )
       .recover(cause -> Future.failedFuture(badRequest(cause)))
@@ -575,7 +575,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
       throw badRequest(e);
     }
     return resolved
-      .compose(cm -> ModuleCache.getInstance().lookup(Tenant.get(ctx), cm)
+      .<CodeModuleEntity>compose(cm -> ModuleCache.getInstance().lookup(Tenant.get(ctx), cm)
         .map(module -> cm)
       )
       .recover(cause -> Future.failedFuture(badRequest(cause)))

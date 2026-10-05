@@ -328,7 +328,7 @@ public class OaiPmhClientService {
               }
               return connection.preparedQuery("UPDATE " + storage.getOaiPmhClientTable()
                       + " SET config = $2 WHERE id = $1").execute(Tuple.of(id, config))
-                  .map(rowsUpdated -> rowsUpdated.rowCount() > 0);
+                  .<Boolean>map(rowsUpdated -> rowsUpdated.rowCount() > 0);
             })).compose(found -> {
               if (found) {
                 return ctx.response().setStatusCode(204).end();
