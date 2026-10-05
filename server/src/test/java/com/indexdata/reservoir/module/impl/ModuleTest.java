@@ -348,7 +348,7 @@ public class ModuleTest {
         .put("function", "transform");
 
     new CodeModuleBuilder(config).resolve(vertx)
-      .compose(entity ->
+      .<Boolean>compose(entity ->
         ModuleCache.getInstance().lookup(TENANT, entity).compose(m1 ->
           ModuleCache.getInstance().lookup(TENANT, entity).map(m2 -> m1 == m2)))
       .onComplete(context.asyncAssertSuccess(equals -> context.assertTrue(equals)));
@@ -362,7 +362,7 @@ public class ModuleTest {
         .put("function", "transform");
 
     new CodeModuleBuilder(config).resolve(vertx).compose(entity ->
-      ModuleCache.getInstance().lookup(TENANT, entity).compose(m1 -> {
+      ModuleCache.getInstance().lookup(TENANT, entity).<Boolean>compose(m1 -> {
         ModuleCache.getInstance().purge(TENANT, "marc-transformer");
         ModuleCache.getInstance().purge(TENANT, "marc-transformer");
         return ModuleCache.getInstance().lookup(TENANT, entity).map(m2 -> m1 == m2);
@@ -378,7 +378,7 @@ public class ModuleTest {
         .put("url", HOSTPORT + "/lib/marc-transformer.mjs")
         .put("function", "transform");
 
-    new CodeModuleBuilder(config).resolve(vertx).compose(entity ->
+    new CodeModuleBuilder(config).resolve(vertx).<Boolean>compose(entity ->
     ModuleCache.getInstance().lookup(TENANT, entity).compose(m1 -> {
       config.put("id", "marc-transformer2");
       return new CodeModuleBuilder(config).resolve(vertx).compose(entity2 ->
@@ -400,7 +400,7 @@ public class ModuleTest {
         .put("url", HOSTPORT + "/lib/marc-transformer.mjs")
         .put("function", "transform1");
 
-    new CodeModuleBuilder(config1).resolve(vertx).compose(entity1 ->
+    new CodeModuleBuilder(config1).resolve(vertx).<Boolean>compose(entity1 ->
       new CodeModuleBuilder(config2).resolve(vertx).compose(entity2 ->
         ModuleCache.getInstance().lookup(TENANT, entity1).compose(m1 ->
           ModuleCache.getInstance().lookup(TENANT, entity2).map(m2 -> m1 == m2))))
