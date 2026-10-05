@@ -1026,6 +1026,9 @@ public class Storage {
           stream.exceptionHandler(fail);
           stream.endHandler(end -> {
             if (finished.compareAndSet(false, true)) {
+              if (initializationDiagnostics != null) {
+                initializationDiagnostics.elapsed("fetch.wait", fetchStart[0], true);
+              }
               initializationStage("commit", tx::commit)
                   .map(totalRecords.get())
                   .onComplete(promise);
