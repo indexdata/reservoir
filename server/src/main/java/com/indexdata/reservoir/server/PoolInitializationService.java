@@ -216,6 +216,8 @@ class PoolInitializationService {
   }
 
   private void startClaim(Vertx vertx, Storage storage, Claim claim) {
+    storage.initializationDiagnostics = InitializationDiagnostics.create(
+        storage.getTenant(), claim.poolId(), claim.jobId().toString());
     storage.selectPoolConfig(claim.poolId())
         .compose(pool -> pool == null
             ? Future.failedFuture("Pool " + claim.poolId() + " not found")
@@ -226,10 +228,12 @@ class PoolInitializationService {
 
   private void runBatch(Vertx vertx, Storage storage, Claim claim, IngestMatcher matcher,
       IngestMetrics ingestMetrics) {
-    processBatch(storage, claim, matcher, ingestMetrics)
+    storage.initializationStage("batch", () -> processBatch(storage, claim, matcher, ingestMetrics))
         .onSuccess(result -> {
           if (result == BatchResult.MORE) {
             vertx.runOnContext(ignored -> runBatch(vertx, storage, claim, matcher, ingestMetrics));
+          } else if (storage.initializationDiagnostics != null) {
+            storage.initializationDiagnostics.summary("stopped");
           }
         })
         .onFailure(error -> failJob(storage, claim, error));
@@ -237,7 +241,7 @@ class PoolInitializationService {
 
   private Future<BatchResult> processBatch(Storage storage, Claim claim, IngestMatcher matcher,
       IngestMetrics ingestMetrics) {
-    return storage.pool.withTransaction(connection ->
+    return storage.initializationTransaction(connection ->
         connection.preparedQuery("SELECT claim_token, checkpoint FROM "
                 + storage.poolInitializationJobTable + " WHERE id = $1 AND status = 'running'"
                 + " FOR UPDATE")
@@ -251,7 +255,8 @@ class PoolInitializationService {
               if (!claim.token().equals(job.getUUID("claim_token"))) {
                 return Future.succeededFuture(BatchResult.STOP);
               }
-              return selectBatch(storage, connection, job.getUUID("checkpoint"))
+              return storage.initializationStage("fetch", () ->
+                  selectBatch(storage, connection, job.getUUID("checkpoint")))
                   .compose(records -> processRecords(storage, connection, claim, matcher,
                       ingestMetrics, records));
             }));
@@ -273,8 +278,7 @@ class PoolInitializationService {
       future = future.compose(ignored -> {
         UUID globalId = record.getUUID("id");
         JsonObject globalRecord = ClusterBuilder.encodeRecord(record);
-        return storage.runMatcher(matcher, ingestMetrics, globalRecord)
-            .compose(result -> storage.updateClusterForRecord(connection, globalId, result));
+        return storage.initializeRecord(connection, matcher, ingestMetrics, globalId, globalRecord);
       });
     }
     UUID checkpoint = records.get(records.size() - 1).getUUID("id");
@@ -308,6 +312,9 @@ class PoolInitializationService {
   }
 
   private void failJob(Storage storage, Claim claim, Throwable error) {
+    if (storage.initializationDiagnostics != null) {
+      storage.initializationDiagnostics.summary("failed");
+    }
     log.error("Pool initialization failed tenant={} pool={} job={}", storage.getTenant(),
         claim.poolId(), claim.jobId(), error);
     String sql = "UPDATE " + storage.poolInitializationJobTable

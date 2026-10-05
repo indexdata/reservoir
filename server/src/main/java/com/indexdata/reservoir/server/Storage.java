@@ -41,6 +41,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.tlib.postgres.PgCqlQuery;
@@ -75,6 +76,7 @@ public class Storage {
   final String poolInitializationJobTable;
   final Vertx vertx;
   private final String tenant;
+  InitializationDiagnostics initializationDiagnostics;
   static int sqlStreamFetchSize = 50;
 
   /**
@@ -476,6 +478,56 @@ public class Storage {
         .compose(poolConfigs -> createIngestMatchers(poolConfigs, vertx));
   }
 
+  <T> Future<T> initializationStage(String stage, Supplier<Future<T>> action) {
+    return initializationDiagnostics == null ? action.get()
+        : initializationDiagnostics.measure(stage, action);
+  }
+
+  <T> Future<T> initializationTransaction(Function<SqlConnection, Future<T>> action) {
+    if (initializationDiagnostics == null) {
+      return pool.withTransaction(action);
+    }
+    long start = System.nanoTime();
+    long[] finish = {0};
+    return pool.withTransaction(connection -> {
+      initializationDiagnostics.elapsed("acquire.begin", start, true);
+      return action.apply(connection).andThen(result -> finish[0] = System.nanoTime());
+    }).andThen(result -> {
+      if (finish[0] != 0) {
+        initializationDiagnostics.elapsed("transaction.finish", finish[0], result.succeeded());
+      }
+    });
+  }
+
+  private Future<RowSet<Row>> clusterQuery(SqlConnection connection, String stage,
+      String sql, Tuple parameters) {
+    if (initializationDiagnostics == null) {
+      return connection.preparedQuery(sql).execute(parameters);
+    }
+    return initializationStage(stage, () -> connection.preparedQuery(sql).execute(parameters))
+        .map(rows -> {
+          if (initializationDiagnostics != null) {
+            initializationDiagnostics.rows(stage, rows.rowCount());
+          }
+          return rows;
+        });
+  }
+
+  Future<Void> initializeRecord(SqlConnection connection, IngestMatcher matcher,
+      IngestMetrics metrics, UUID globalId, JsonObject record) {
+    return initializationStage("matcher", () -> runMatcher(matcher, metrics, record))
+        .compose(result -> {
+          if (initializationDiagnostics != null) {
+            initializationDiagnostics.keys(result.keys.size());
+          }
+          return updateClusterForRecord(connection, globalId, result);
+        }).andThen(result -> {
+          if (initializationDiagnostics != null) {
+            initializationDiagnostics.recordDone(result.succeeded());
+          }
+        });
+  }
+
   Future<Set<UUID>> updateClusterValues(SqlConnection conn, UUID newClusterId,
       MatcherResult matcherResult) {
     StringBuilder q = new StringBuilder("SELECT cluster_id, match_value FROM " + clusterValueTable
@@ -496,13 +548,20 @@ public class Storage {
     }
     q.append(")");
     Set<String> foundKeys = new HashSet<>();
-    return conn.preparedQuery(q.toString())
-        .execute(Tuple.from(tupleList))
+    String stage = "lookup.keys=" + matcherResult.keys.size();
+    Tuple parameters = Tuple.from(tupleList);
+    Future<Void> explanation = initializationDiagnostics == null ? Future.succeededFuture()
+        : initializationDiagnostics.explain(conn, q.toString(), parameters,
+            matcherResult.keys.size());
+    return explanation.compose(ignored -> clusterQuery(conn, stage, q.toString(), parameters))
         .map(rowSet -> {
           rowSet.forEach(row -> {
             foundKeys.add(row.getString("match_value"));
             clustersFound.add(row.getUUID("cluster_id"));
           });
+          if (initializationDiagnostics != null) {
+            initializationDiagnostics.clusters(clustersFound.size());
+          }
           if (clustersFound.isEmpty()) {
             return newClusterId;
           } else {
@@ -541,11 +600,11 @@ public class Storage {
         + " WHERE cluster_meta.cluster_id = cluster_records.cluster_id"
         + " AND cluster_records.match_key_config_id = $2"
         + " AND cluster_records.record_id = $3";
-    return conn.preparedQuery(q).execute(Tuple.of(
+    return clusterQuery(conn, "remove.meta", q, Tuple.of(
         LocalDateTime.now(ZoneOffset.UTC), matcherResult.poolId, globalId))
-        .compose(x -> conn.preparedQuery("DELETE FROM " + clusterRecordTable
-            + " WHERE record_id = $1 AND match_key_config_id = $2")
-            .execute(Tuple.of(globalId, matcherResult.poolId))
+        .compose(x -> clusterQuery(conn, "remove.record", "DELETE FROM " + clusterRecordTable
+            + " WHERE record_id = $1 AND match_key_config_id = $2",
+            Tuple.of(globalId, matcherResult.poolId))
             .mapEmpty());
   }
 
@@ -571,11 +630,11 @@ public class Storage {
           });
         })
         .compose(clusterId ->
-            conn.preparedQuery("INSERT INTO " + clusterRecordTable
+            clusterQuery(conn, "write.record", "INSERT INTO " + clusterRecordTable
                     + " (record_id, match_key_config_id, cluster_id) VALUES ($1, $2, $3)"
                     + " ON CONFLICT (record_id, match_key_config_id)"
-                    + " DO UPDATE SET record_id = $1, match_key_config_id = $2, cluster_id = $3")
-                .execute(Tuple.of(globalId, matcherResult.poolId, clusterId))
+                    + " DO UPDATE SET record_id = $1, match_key_config_id = $2, cluster_id = $3",
+                Tuple.of(globalId, matcherResult.poolId, clusterId))
         )
         .mapEmpty();
   }
@@ -603,15 +662,14 @@ public class Storage {
     if (no == 3) {
       return Future.succeededFuture();
     }
-    return conn.preparedQuery(q.toString())
-        .execute(Tuple.from(tupleList))
+    return clusterQuery(conn, "write.values", q.toString(), Tuple.from(tupleList))
         .mapEmpty();
   }
 
   Future<UUID> createMetaEntry(SqlConnection conn, UUID clusterId, String poolConfigId) {
-    return conn.preparedQuery("INSERT INTO " + clusterMetaTable
-            + " (cluster_id, datestamp, match_key_config_id) VALUES ($1, $2, $3)")
-        .execute(Tuple.of(clusterId, LocalDateTime.now(ZoneOffset.UTC), poolConfigId))
+    return clusterQuery(conn, "write.meta", "INSERT INTO " + clusterMetaTable
+            + " (cluster_id, datestamp, match_key_config_id) VALUES ($1, $2, $3)",
+        Tuple.of(clusterId, LocalDateTime.now(ZoneOffset.UTC), poolConfigId))
         .map(clusterId);
   }
 
@@ -629,8 +687,7 @@ public class Storage {
       setClause.append("cluster_id = $");
       setClause.append(no);
     }
-    return conn.preparedQuery(setClause.toString())
-        .execute(Tuple.from(tupleList))
+    return clusterQuery(conn, "update.meta", setClause.toString(), Tuple.from(tupleList))
         .mapEmpty();
   }
 
@@ -646,10 +703,11 @@ public class Storage {
       setClause.append("cluster_id = $");
       setClause.append(no);
     }
-    return conn.preparedQuery("UPDATE " + clusterValueTable + setClause)
-        .execute(Tuple.from(tupleList))
-        .compose(x -> conn.preparedQuery("UPDATE " + clusterRecordTable + setClause)
-            .execute(Tuple.from(tupleList)))
+    return clusterQuery(conn, "merge.values", "UPDATE " + clusterValueTable + setClause,
+        Tuple.from(tupleList))
+        .compose(x -> clusterQuery(conn, "merge.records",
+            "UPDATE " + clusterRecordTable + setClause,
+            Tuple.from(tupleList)))
         .mapEmpty();
   }
 
@@ -940,20 +998,27 @@ public class Storage {
     return connection.prepare(query).compose(pq ->
         connection.begin().compose(tx -> {
           RowStream<Row> stream = pq.createStream(sqlStreamFetchSize);
+          long[] fetchStart = {initializationDiagnostics == null ? 0 : System.nanoTime()};
           Promise<Integer> promise = Promise.promise();
           stream.handler(row -> {
+            if (initializationDiagnostics != null) {
+              initializationDiagnostics.elapsed("fetch.wait", fetchStart[0], true);
+            }
             stream.pause();
             totalRecords.incrementAndGet();
             UUID globalId = row.getUUID("id");
             JsonObject globalRecord = ClusterBuilder.encodeRecord(row);
-            runMatcher(ingestMatcher, ingestMetrics, globalRecord)
-                .compose(matcherResult ->
-                    updateClusterForRecord(connection, globalId, matcherResult))
+            initializeRecord(connection, ingestMatcher, ingestMetrics, globalId, globalRecord)
                 .onFailure(e -> log.error(e.getMessage(), e))
-                .onComplete(e -> stream.resume());
+                .onComplete(e -> {
+                  if (initializationDiagnostics != null) {
+                    fetchStart[0] = System.nanoTime();
+                  }
+                  stream.resume();
+                });
           });
           stream.endHandler(end -> {
-            tx.commit()
+            initializationStage("commit", tx::commit)
                 .map(totalRecords.get())
                 .onComplete(promise);
           });
@@ -975,6 +1040,8 @@ public class Storage {
    * @return number of records processed
    */
   public Future<Integer> initializePool(Vertx vertx, String id) {
+    initializationDiagnostics = InitializationDiagnostics.create(
+        tenant, id, UUID.randomUUID().toString());
     return pool.withConnection(connection ->
         connection.preparedQuery(
                 "SELECT * FROM " + poolConfigTable + " WHERE id = $1")
@@ -989,7 +1056,11 @@ public class Storage {
               return createIngestMatcher(poolConfig, vertx)
                 .compose(matcher -> recalculateMatchKeyValueTable(connection, matcher));
             })
-    );
+    ).andThen(result -> {
+      if (initializationDiagnostics != null) {
+        initializationDiagnostics.summary(result.succeeded() ? "completed" : "failed");
+      }
+    });
   }
 
   class StatsTrack {
