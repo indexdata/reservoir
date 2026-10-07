@@ -1,7 +1,10 @@
 package com.indexdata.reservoir.server;
 
+import com.indexdata.reservoir.server.metrics.InitializationMetrics;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
+import io.vertx.micrometer.backends.BackendRegistries;
 import io.vertx.sqlclient.SqlConnection;
 import io.vertx.sqlclient.Tuple;
 import java.util.LinkedHashMap;
@@ -10,10 +13,12 @@ import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-/** Bounded, opt-in diagnostics owned by one initialization execution. */
+/** Metrics and optional plan diagnostics owned by one initialization execution. */
 class InitializationDiagnostics {
   private static final Logger log = LogManager.getLogger(InitializationDiagnostics.class);
   private final JsonObject context;
+  private InitializationMetrics metrics;
+  private boolean diagnosticsEnabled = true;
   private final int every;
   private final int maxPlans;
   private final int summaryEvery;
@@ -39,13 +44,22 @@ class InitializationDiagnostics {
 
   static InitializationDiagnostics create(Map<String, String> env, String tenant,
       String pool, String job) {
-    if (!Boolean.parseBoolean(env.get("RESERVOIR_INIT_DIAGNOSTICS"))) {
+    return create(env, tenant, pool, job, BackendRegistries.getDefaultNow());
+  }
+
+  static InitializationDiagnostics create(Map<String, String> env, String tenant,
+      String pool, String job, MeterRegistry registry) {
+    boolean enabled = Boolean.parseBoolean(env.get("RESERVOIR_INIT_DIAGNOSTICS"));
+    if (!enabled && registry == null) {
       return null;
     }
-    return new InitializationDiagnostics(tenant, pool, job,
+    var result = new InitializationDiagnostics(tenant, pool, job,
         setting(env, "RESERVOIR_INIT_EXPLAIN_EVERY", 5000, 1),
         setting(env, "RESERVOIR_INIT_EXPLAIN_MAX", 0, 0),
         setting(env, "RESERVOIR_INIT_SUMMARY_EVERY", 5000, 1));
+    result.diagnosticsEnabled = enabled;
+    result.metrics = registry == null ? null : new InitializationMetrics(registry);
+    return result;
   }
 
   private static int setting(Map<String, String> env, String name, int fallback, int minimum) {
@@ -91,6 +105,9 @@ class InitializationDiagnostics {
   void elapsed(String stage, long start, boolean success) {
     Timing timing = timings.computeIfAbsent(stage, ignored -> new Timing());
     long elapsed = System.nanoTime() - start;
+    if (metrics != null) {
+      metrics.elapsed(stage, elapsed, success);
+    }
     timing.calls++;
     timing.nanos += elapsed;
     timing.maxNanos = Math.max(timing.maxNanos, elapsed);
@@ -100,29 +117,41 @@ class InitializationDiagnostics {
   }
 
   void rows(String stage, int count) {
+    if (metrics != null) {
+      metrics.rows(stage, count);
+    }
     timings.computeIfAbsent(stage, ignored -> new Timing()).rows += count;
   }
 
   void keys(int count) {
+    if (metrics != null) {
+      metrics.keys(count);
+    }
     keyCounts.merge(count, 1L, Long::sum);
   }
 
   void clusters(int count) {
+    if (metrics != null) {
+      metrics.clusters(count);
+    }
     clustersFound += count;
   }
 
   void recordDone(boolean success) {
+    if (metrics != null) {
+      metrics.recordDone(success);
+    }
     records++;
     if (!success) {
       failures++;
     }
-    if (records % summaryEvery == 0) {
+    if (diagnosticsEnabled && records % summaryEvery == 0) {
       summary("progress");
     }
   }
 
   boolean samplePlan() {
-    if (plans >= maxPlans || records % every != 0) {
+    if (!diagnosticsEnabled || plans >= maxPlans || records % every != 0) {
       return false;
     }
     plans++;
