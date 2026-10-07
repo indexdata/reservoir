@@ -70,10 +70,14 @@ You will need Postgres 12 or later.
 You can create an empty database and a user with, e.g:
 
 ```
-CREATE DATABASE folio_modules;
-CREATE USER folio WITH CREATEROLE PASSWORD 'folio';
-GRANT ALL PRIVILEGES ON DATABASE folio_modules TO folio;
+sudo -u postgres psql
+# CREATE DATABASE folio_modules;
+# CREATE USER folio WITH CREATEROLE PASSWORD 'folio';
+# GRANT ALL PRIVILEGES ON DATABASE folio_modules TO folio;
 ```
+
+`CREATEROLE` allows Reservoir to create tenant roles and drop them when a tenant's
+data is purged. The `#` prefixes above represent the psql prompt.
 
 The server's database connection is then configured by setting environment variables:
 `DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD`, `DB_DATABASE`,
