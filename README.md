@@ -104,6 +104,88 @@ java -Dport=8081 \
 If you see warnings about polyglot engine using a fallback runtime, ensure
 that you have compiled Reservoir with `-Pregular-jvm`.
 
+## Pool initialization diagnostics
+
+Initialization metrics are enabled whenever the Micrometer backend is enabled (see
+[Server metrics](#server-metrics)), for both synchronous and asynchronous initialization.
+They do not apply to normal ingest. A final summary with tenant/pool/job context is
+logged for each execution when metrics or diagnostics are enabled.
+
+Periodic diagnostic summaries and sampled EXPLAIN plans are disabled by default.
+Configure these environment variables on Reservoir before starting it:
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `RESERVOIR_INIT_DIAGNOSTICS` | `false` | Enable periodic timing summaries and allow plan sampling with `true`. |
+| `RESERVOIR_INIT_SUMMARY_EVERY` | `5000` | Log cumulative timings every N processed records, plus a final summary. |
+| `RESERVOIR_INIT_EXPLAIN_MAX` | `0` | Maximum sampled lookup plans per initialization execution; zero disables plans. |
+| `RESERVOIR_INIT_EXPLAIN_EVERY` | `5000` | Sample the first record, then every N records, when that record performs a lookup. |
+
+For example, enable timings and at most 20 plans:
+
+```sh
+export RESERVOIR_INIT_DIAGNOSTICS=true
+export RESERVOIR_INIT_EXPLAIN_MAX=20
+export RESERVOIR_INIT_EXPLAIN_EVERY=5000
+```
+
+Start Reservoir with this environment, initialize a fresh pool, wait for completion,
+and collect INFO logs containing `Pool initialization diagnostics` and
+`Pool initialization plan`. Each JSON entry identifies tenant, pool and execution/job.
+Invalid numeric settings fall back to their documented defaults with a warning.
+Setting plan options alone does not enable diagnostics.
+
+Summaries include a histogram of matcher key counts and per-stage calls, total/mean/max
+milliseconds, failures, and SQL rows returned or affected. Lookup timings are grouped
+by key count. `merge.values` and `merge.records` show how often clusters were merged
+and how many rows were moved. Matcher timings include all configured matcher invocations.
+Async `fetch` measures batch reads; sync `fetch.wait` measures waiting for streamed rows.
+Async `acquire.begin` includes connection acquisition and transaction start;
+`transaction.finish` includes commit/rollback and connection release. Sync commits are
+reported as `commit`. Async `batch` is inclusive of all stages and diagnostic overhead:
+do not add it to the individual stage totals. All timings are application elapsed
+time, including network and callback scheduling, not database CPU time.
+
+The following initialization metrics are exposed to Prometheus:
+
+| Metric | Labels | Meaning |
+| --- | --- | --- |
+| `reservoir_initialization_stage_duration_seconds` | `stage`, `outcome` | Stage timer with count, sum, max and histogram buckets; outcome is `success` or `failure`. |
+| `reservoir_initialization_record_attempts_total` | `outcome` | Finished record attempts, including attempts whose transaction later rolls back. |
+| `reservoir_initialization_rows_total` | `stage` | Rows returned or affected by instrumented SQL statements, including rolled-back work. |
+| `reservoir_initialization_keys_per_record` | none | Matcher key-count histogram with fixed upper bounds: 0.5 (zero keys), 1, 2, 5, 10, 20, 50, 100, 250, 500, 1000, and +Inf. |
+| `reservoir_initialization_clusters_found_total` | none | Clusters found during attempted record processing. |
+
+Metrics aggregate across tenants, pools and jobs, with no identifiers as labels.
+Lookup stages use the fixed label `lookup`; exact key counts remain in summary logs.
+For example, `rate(reservoir_initialization_record_attempts_total[5m])` shows attempted
+throughput, and stage timer sums divided by counts show mean latency.
+Record success means processing succeeded **before commit**, not committed progress;
+use the asynchronous job's `totalRecords` for persisted progress. These counters may
+include retries after a rollback or restart. There is no successful-job counter:
+async `stopped` in the final log can mean completion, cancellation or loss of claim.
+Plan sampling still requires `RESERVOIR_INIT_DIAGNOSTICS=true` and a positive
+`RESERVOIR_INIT_EXPLAIN_MAX`, independently of the metrics backend.
+
+Plans use `EXPLAIN (ANALYZE, BUFFERS, TIMING OFF, FORMAT JSON)` on the lookup SELECT
+with its parameters and transaction, before cluster writes. This executes an extra
+SELECT; its overhead is recorded as `explain`.
+No modifying query is replayed. An explain error fails the transaction and is reported
+as an initialization error; Vert.x transactions cannot recover from SQL errors using
+a savepoint. Use timings alone (`RESERVOIR_INIT_EXPLAIN_MAX=0`) to avoid extra SQL.
+Plans can contain match values in index conditions. A separate EXPLAIN can use a
+different plan from the ordinary cached prepared statement and warm its buffers;
+use PostgreSQL `auto_explain` if the actual statement's plan is needed.
+
+Counters and plan budgets are in memory, scoped to one execution. Resuming an async
+job after a process failure starts new counters and a new plan budget. Progress
+counts represent attempted records, including work that could subsequently roll
+back; the job API remains the source for committed progress. An async final status
+of `stopped` can mean completion, cancellation or loss of the claim; consult the job
+API for the outcome. Synchronous initialization reports `not_found` when the pool
+is missing (HTTP 404), `completed` on success, and `failed` on error. For comparison, use the same matcher revision and fresh pools
+on both datasets and retain the final summaries as well as the sampled plans.
+
 ## Running without Okapi
 
 It is possible to run Reservoir without Okapi by defining environment variable
