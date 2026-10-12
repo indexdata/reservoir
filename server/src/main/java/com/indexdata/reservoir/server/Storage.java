@@ -478,8 +478,7 @@ public class Storage {
 
   Future<Set<UUID>> updateClusterValues(SqlConnection conn, UUID newClusterId,
       MatcherResult matcherResult) {
-    StringBuilder q = new StringBuilder("SELECT cluster_id, match_value FROM " + clusterValueTable
-        + " WHERE match_key_config_id = $1 AND (");
+    StringBuilder q = new StringBuilder();
     List<Object> tupleList = new ArrayList<>();
     tupleList.add(matcherResult.poolId);
     Set<UUID> clustersFound = new HashSet<>();
@@ -489,12 +488,14 @@ public class Storage {
         return Future.succeededFuture(clustersFound);
       }
       if (no > 2) {
-        q.append(" OR ");
+        q.append(" UNION ALL ");
       }
-      q.append("match_value = $" + no++);
+      // Exact lookups keep both columns in the index condition on PostgreSQL 16,
+      // even before statistics account for a newly populated pool.
+      q.append("SELECT cluster_id, match_value FROM ").append(clusterValueTable)
+          .append(" WHERE match_key_config_id = $1 AND match_value = $").append(no++);
       tupleList.add(key);
     }
-    q.append(")");
     Set<String> foundKeys = new HashSet<>();
     return conn.preparedQuery(q.toString())
         .execute(Tuple.from(tupleList))
