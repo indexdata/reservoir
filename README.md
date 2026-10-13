@@ -28,7 +28,7 @@ This project has three subprojects:
 
 Requirements:
 
-* Java 25, preferably GraalVM at version defined by `graalvm.version` in `pom.xml`
+* Java 25, preferably GraalVM at the first three version components of `graalvm.version` in `pom.xml`
 * Maven 3.9.x
 * Docker (unless `-DskipTests` is used)
 
@@ -36,7 +36,7 @@ It is easiest to use [sdkman](https://sdkman.io):
 
     curl -s "https://get.sdkman.io" | bash
     . $HOME/.sdkman/bin/sdkman-init.sh
-    GRAALVM_VERSION=$(sed -n 's:.*<graalvm.version>\(.*\)</graalvm.version>.*:\1:p' pom.xml)
+    GRAALVM_VERSION=$(sed -nE 's:.*<graalvm.version>([0-9]+\.[0-9]+\.[0-9]+)[^<]*</graalvm.version>.*:\1:p' pom.xml)
     sdk install java "${GRAALVM_VERSION}-graal"
     sdk install maven
 
