@@ -299,7 +299,10 @@ paths:
         schema:
           type: string
     put:
-      description: Recalculate clusters in the pool across all records
+      description: >
+        Deprecated; recalculate clusters in the pool across all records using
+        POST /reservoir/config/pools/{id}/initializations instead.
+      deprecated: true
       operationId: initializePool
       responses:
         "200":
@@ -458,7 +461,7 @@ paths:
         schema:
           type: string
     put:
-      description: Deprecated; initialize the pool using /reservoir/config/pools/{id}/initialize
+      description: Deprecated; initialize the pool using POST /reservoir/config/pools/{id}/initializations instead.
       deprecated: true
       operationId: initializeMatchKey
       responses:
