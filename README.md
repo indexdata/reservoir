@@ -470,7 +470,9 @@ curl -HX-Okapi-Tenant:$OKAPI_TENANT -HContent-type:application/json \
  $OKAPI_URL/reservoir/config/pools -d @title-pool.json
 ```
 
-and start initializing the pool (background job) for this config:
+and start initializing the pool (background job) for this config using
+`POST /reservoir/config/pools/{id}/initializations`, which replaces the deprecated
+`PUT /reservoir/config/pools/{id}/initialize` endpoint:
 
 ```
 job=$(curl -fsS -HX-Okapi-Tenant:$OKAPI_TENANT -HContent-Type:application/json -d'{}' \
@@ -797,11 +799,14 @@ which are below the default idle timeout values (~300s).
 
 Similarly, certain Reservoir API operations, including:
 
-  * `/config/pools/{name}/initialize`
   * `/clusters/?poolId={name}&count=exact`
 
 are database heavy and may take a long time. Such requests may be considered idle by the front load-balancer
 or ingress controller and require tuning of the timeout values.
+
+For pool initialization, use `POST /reservoir/config/pools/{id}/initializations`
+to start a background job and poll `GET /reservoir/config/pools/{id}/initializations/{jobId}`
+for completion, avoiding a long-running initialization request.
 
 Specifically, for NGINX it is recommended that the read timeout is increased beyond the default 60s:
 
