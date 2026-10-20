@@ -7,6 +7,7 @@ import com.jayway.jsonpath.PathNotFoundException;
 import com.jayway.jsonpath.ReadContext;
 import io.vertx.core.json.JsonObject;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 
@@ -48,11 +49,11 @@ public class ModuleJsonPath implements Module {
         keys.add(string);
       } else if (o instanceof List<?> list) {
         for (Object m : list) {
-          if (!(m instanceof String)) {
-            return keys;
+          if (!(m instanceof String string)) {
+            return Collections.emptySet();
           }
+          keys.add(string);
         }
-        keys.addAll((List<String>) o);
       }
     } catch (PathNotFoundException e) {
       //ignore
