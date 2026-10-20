@@ -30,11 +30,6 @@
       <optional>true</optional>
     </dependency>
     <dependency>
-      <groupId>net.sf.saxon</groupId>
-      <artifactId>Saxon-HE</artifactId>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
       <groupId>com.fasterxml</groupId>
       <artifactId>aalto-xml</artifactId>
     </dependency>

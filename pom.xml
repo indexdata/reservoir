@@ -168,11 +168,6 @@
         <scope>import</scope>
       </dependency>
       <dependency>
-        <groupId>net.sf.saxon</groupId>
-        <artifactId>Saxon-HE</artifactId>
-        <version>13.1</version>
-      </dependency>
-      <dependency>
         <groupId>org.graalvm.polyglot</groupId>
         <artifactId>polyglot</artifactId>
         <version>${graalvm.version}</version>
