@@ -185,6 +185,18 @@
     </dependency>
   </dependencies>
   <build>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <excludes>
+          <!-- Copy expanded contracts from generated resources instead. -->
+          <exclude>openapi/*.yaml</exclude>
+        </excludes>
+      </resource>
+      <resource>
+        <directory>${project.build.directory}/generated-resources</directory>
+      </resource>
+    </resources>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -264,13 +276,16 @@
         <groupId>org.folio</groupId>
         <artifactId>openapi-deref-plugin</artifactId>
         <version>${vertxlib.version}</version>
+        <configuration>
+          <output>${project.build.directory}/generated-resources/openapi</output>
+        </configuration>
         <executions>
           <execution>
             <id>dereference-books</id>
             <goals>
               <goal>dereference</goal>
             </goals>
-            <phase>process-resources</phase>
+            <phase>generate-resources</phase>
           </execution>
         </executions>
       </plugin>
