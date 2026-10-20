@@ -32,8 +32,10 @@ RUN --mount=type=${MAVEN_MOUNT_TYPE},source=${MAVEN_MOUNT_SOURCE},target=/root/.
 
 FROM ${GRAALVM_IMAGE} AS slim
 
+# Log4j 2 uses java.beans.PropertyChangeEvent from java.desktop during initialization.
 ENV JAVA_MODULES=\
 java.base,\
+java.desktop,\
 java.logging,\
 java.sql,\
 java.xml,\
