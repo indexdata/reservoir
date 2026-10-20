@@ -12,6 +12,27 @@ import org.junit.jupiter.api.Test;
 
 public class ClusterBuilderTest {
   @Test
+  public void sortBySourceThenNumericVersionThenLocalId() {
+    JsonObject laterSource = new JsonObject()
+        .put("sourceId", "bib").put("sourceVersion", 1).put("localId", "001");
+    JsonObject laterVersion = new JsonObject()
+        .put("sourceId", "abe").put("sourceVersion", 10).put("localId", "001");
+    JsonObject laterLocalId = new JsonObject()
+        .put("sourceId", "abe").put("sourceVersion", 2).put("localId", "002");
+    JsonObject earlierLocalId = new JsonObject()
+        .put("sourceId", "abe").put("sourceVersion", 2).put("localId", "001");
+    JsonObject defaultVersion = new JsonObject()
+        .put("sourceId", "abe").put("localId", "003");
+    JsonArray records = new JsonArray().add(laterSource).add(laterVersion)
+        .add(laterLocalId).add(earlierLocalId).add(defaultVersion);
+
+    ClusterBuilder.sort(records);
+
+    assertThat(records, is(new JsonArray().add(defaultVersion).add(earlierLocalId)
+        .add(laterLocalId).add(laterVersion).add(laterSource)));
+  }
+
+  @Test
   public void datestamp() {
     UUID clusterId = UUID.randomUUID();
     ClusterBuilder clusterBuilder = new ClusterBuilder(clusterId);

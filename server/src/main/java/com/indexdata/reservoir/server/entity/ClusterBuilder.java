@@ -96,10 +96,12 @@ public class ClusterBuilder {
   }
 
   static void sort(JsonArray records) {
-    ((List<JsonObject>) records.getList())
-        .sort(Comparator.comparing((JsonObject a) -> a.getString(ClusterBuilder.SOURCE_ID_LABEL))
+    Comparator<JsonObject> comparator =
+        Comparator.comparing((JsonObject a) -> a.getString(ClusterBuilder.SOURCE_ID_LABEL))
             .thenComparingInt(a -> a.getInteger(ClusterBuilder.SOURCE_VERSION_LABEL, 0))
-            .thenComparing(a -> a.getString(ClusterBuilder.LOCAL_ID_LABEL)));
+            .thenComparing(a -> a.getString(ClusterBuilder.LOCAL_ID_LABEL));
+    List<?> list = records.getList();
+    list.sort((a, b) -> comparator.compare((JsonObject) a, (JsonObject) b));
   }
 
   /**
