@@ -1,8 +1,18 @@
 version: 2
+registries:
+  folio-nexus:
+    type: maven-repository
+    url: https://repository.folio.org/repository/maven-folio
+  indexdata:
+    type: maven-repository
+    url: https://maven.indexdata.com/
 updates:
   # Maven (root + all modules)
   - package-ecosystem: "maven"
     directory: "/"
+    registries:
+      - folio-nexus
+      - indexdata
     schedule:
       interval: "daily"
     cooldown:
