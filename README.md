@@ -244,7 +244,19 @@ If you feel adventurous and want to run Reservoir in a Docker container, build t
 docker build -t reservoir-jit:latest -f Dockerfile-jit .
 ```
 
-or container that use the native image:
+To build and smoke-test the JIT image (requires Docker Compose v2 and curl):
+
+```sh
+bash tests/docker-jit-smoke.sh
+```
+
+The test starts an isolated PostgreSQL database and Reservoir, requires five
+consecutive successful `/healthz` responses, and removes the containers and database
+afterwards. On failure it prints container logs. To test an image already built,
+pass its tag, for example `bash tests/docker-jit-smoke.sh reservoir-jit:latest`.
+This test also runs in the `mvn-verify` workflow for pull requests and master pushes.
+
+To build the native image instead:
 
 ```
 docker build -t reservoir-native:latest -f Dockerfile-native .

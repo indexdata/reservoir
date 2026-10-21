@@ -5,6 +5,26 @@ on:
   pull_request:
 
 jobs:
+  docker-jit-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - name: Build JIT image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./Dockerfile-jit
+          load: true
+          tags: reservoir-jit:smoke-test
+          build-args: |
+            GIT_COMMIT=${{ github.sha }}
+          cache-from: type=gha,scope=jit-smoke
+          cache-to: type=gha,mode=max,scope=jit-smoke
+      - name: Check JIT image startup
+        run: bash tests/docker-jit-smoke.sh reservoir-jit:smoke-test
+
   mvn-verify:
     runs-on: ubuntu-latest
     steps:
