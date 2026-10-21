@@ -6,7 +6,8 @@ services:
       POSTGRES_PASSWORD: folio
       POSTGRES_DB: folio
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U folio -d folio"]
+      # The temporary initialization server only accepts Unix-socket connections.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U folio -d folio"]
       interval: 1s
       timeout: 3s
       retries: 60
