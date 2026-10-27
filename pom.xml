@@ -32,7 +32,7 @@
   </licenses>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <graalvm.version>25.0.5.0.2</graalvm.version>
+    <graalvm.version>25.0.5.0.3</graalvm.version>
     <graalvm-maven-plugin.version>1.1.16</graalvm-maven-plugin.version>
     <log4j2.version>2.26.1</log4j2.version>
     <snakeyaml.version>2.7</snakeyaml.version>
@@ -141,7 +141,7 @@
       <dependency>
         <groupId>io.rest-assured</groupId>
         <artifactId>rest-assured</artifactId>
-        <version>6.2.0</version>
+        <version>6.3.0</version>
       </dependency>
       <dependency>
         <groupId>org.apache.solr</groupId>
