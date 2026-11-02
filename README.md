@@ -36,10 +36,8 @@ It is easiest to use [sdkman](https://sdkman.io):
 
     curl -s "https://get.sdkman.io" | bash
     . $HOME/.sdkman/bin/sdkman-init.sh
-    sdk install java 25.0.4-graal
+    sdk install java 25.0.5.0+3-graal
     sdk install maven
-
-SDKMAN currently does not provide GraalVM 25.0.4.1.1. The command above installs 25.0.4 as a temporary fallback.
 
 Otherwise, you'll need to install everything manually and set `JAVA_HOME`:
 
