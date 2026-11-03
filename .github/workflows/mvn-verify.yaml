@@ -42,3 +42,22 @@ jobs:
           native-image --version
       - name: Run the Maven verify phase
         run: mvn -B verify
+
+  mvn-native-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '25'
+          distribution: 'graalvm'
+          cache: 'maven'
+      - name: Show GraalVM and Java versions
+        run: |
+          echo "GRAALVM_HOME: $GRAALVM_HOME"
+          echo "JAVA_HOME: $JAVA_HOME"
+          java --version
+          native-image --version
+      - name: Run the Maven verify phase with the native profile
+        run: mvn -B -Pnative verify
