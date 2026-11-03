@@ -46,6 +46,20 @@ jobs:
   mvn-native-verify:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: folio
+          POSTGRES_PASSWORD: folio
+          POSTGRES_DB: folio
+        ports:
+          - 5432/tcp
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U folio -d folio"
+          --health-interval 1s
+          --health-timeout 3s
+          --health-retries 60
     steps:
       - uses: actions/checkout@v7
       - uses: graalvm/setup-graalvm@v1
@@ -63,3 +77,11 @@ jobs:
         env:
           GRAALVM_QUICK_BUILD: 'true'
         run: mvn -B -Pnative verify
+      - name: Check native executable startup
+        env:
+          DB_USERNAME: folio
+          DB_PASSWORD: folio
+          DB_HOST: 127.0.0.1
+          DB_DATABASE: folio
+          DB_PORT: ${{ job.services.postgres.ports[5432] }}
+        run: bash tests/native-smoke.sh
