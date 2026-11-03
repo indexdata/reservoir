@@ -49,6 +49,12 @@ public class MainVerticle extends VerticleBase {
       future = future.compose(x -> storage.init());
     }
     return future
+        .compose(x ->
+          vertx.executeBlocking(() -> {
+            JavaScriptCheck.check();
+            return null;
+          })
+        )
         .compose(x -> RouterCreator.mountAll(vertx, routerCreators, "reservoir"))
         .compose(router -> {
           HttpServerOptions so = new HttpServerOptions()
@@ -59,13 +65,7 @@ public class MainVerticle extends VerticleBase {
           return vertx.createHttpServer(so)
               .requestHandler(router)
               .listen(port).mapEmpty();
-        })
-        .compose(x ->
-          vertx.executeBlocking(() -> {
-            JavaScriptCheck.check();
-            return null;
-          })
-        );
+        });
   }
 
   @Override
