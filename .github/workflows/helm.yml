@@ -1,6 +1,7 @@
 name: publish-chart
 
 permissions:
+  actions: read
   packages: write
   contents: read
 
@@ -29,11 +30,34 @@ jobs:
             chart_path: ./chart
             md_path: ./descriptors/ModuleDescriptor-template.json
     steps:
+      # Use the source recorded by this exact image build, not either workflow's github.sha.
+      - name: Download publication source
+        uses: actions/download-artifact@v8
+        with:
+          name: published-source-jit
+          path: ${{ runner.temp }}/published-source
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Read publication source
+        id: source
+        run: |
+          SOURCE_SHA=$(cat "$RUNNER_TEMP/published-source/source-sha")
+          if [[ ! "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Invalid publication source SHA" >&2
+            exit 1
+          fi
+          echo "sha=$SOURCE_SHA" >> "$GITHUB_OUTPUT"
+
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.source.outputs.sha }}
 
       - name: Calculate chart and app version with short SHA
+        env:
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
         run: |
-          SHORT_SHA=$(echo $GITHUB_SHA | cut -c1-7)
+          SHORT_SHA=${SOURCE_SHA:0:7}
           CHART_VERSION="${{ matrix.chart_base_version }}+sha.$SHORT_SHA"
           APP_VERSION="sha-$SHORT_SHA"
           echo "CHART_VERSION=$CHART_VERSION" >> $GITHUB_ENV

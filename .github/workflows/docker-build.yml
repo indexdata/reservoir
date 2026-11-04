@@ -13,6 +13,8 @@ on:
 env:
   REGISTRY: ghcr.io
   CURRENT_BRANCH: ${{ github.ref_name }}
+  # workflow_run's github.sha can be newer than the commit that passed verification.
+  SOURCE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
 
 jobs:
   build:
@@ -37,7 +39,15 @@ jobs:
       - name: checkout module
         uses: actions/checkout@v7
         with:
+          ref: ${{ env.SOURCE_SHA }}
           submodules: recursive
+
+      - name: Record publication source
+        id: source
+        run: |
+          mkdir -p "$RUNNER_TEMP/published-source"
+          printf '%s\n' "$SOURCE_SHA" > "$RUNNER_TEMP/published-source/source-sha"
+          echo "short_sha=${SOURCE_SHA:0:7}" >> "$GITHUB_OUTPUT"
 
       - name: Log in to the Container registry
         uses: docker/login-action@v4
@@ -55,7 +65,7 @@ jobs:
             type=ref,event=branch
             type=ref,event=tag
             type=ref,event=pr
-            type=sha
+            type=raw,value=sha-${{ steps.source.outputs.short_sha }},priority=100
           labels: |
             org.opencontainers.image.title=${{ matrix.title }}
             org.opencontainers.image.description=${{ github.event.repository.description }}
@@ -63,8 +73,8 @@ jobs:
             org.opencontainers.image.licenses=${{ matrix.licenses }}
             org.opencontainers.image.url=https://github.com/${{ github.repository }}
             org.opencontainers.image.documentation=https://github.com/${{ github.repository }}/README.md
-            org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.created=${{ steps.meta.outputs.created }}
+            org.opencontainers.image.revision=${{ env.SOURCE_SHA }}
+            org.opencontainers.image.created={{date 'YYYY-MM-DDTHH:mm:ss.SSS[Z]'}}
             org.opencontainers.image.vendor=Index Data ApS
           # GHCR ignores labels so we push them also as annotations
           annotations: |
@@ -74,8 +84,8 @@ jobs:
             org.opencontainers.image.licenses=${{ matrix.licenses }}
             org.opencontainers.image.url=https://github.com/${{ github.repository }}
             org.opencontainers.image.documentation=https://github.com/${{ github.repository }}/README.md
-            org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.created=${{ steps.meta.outputs.created }}
+            org.opencontainers.image.revision=${{ env.SOURCE_SHA }}
+            org.opencontainers.image.created={{date 'YYYY-MM-DDTHH:mm:ss.SSS[Z]'}}
             org.opencontainers.image.vendor=Index Data ApS
         env:
           DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
@@ -93,6 +103,14 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           annotations: ${{ steps.meta.outputs.annotations }} # GHCR ignores labels so we push them also as annotations
           build-args: |
-            GIT_COMMIT=${{ github.sha }}
+            GIT_COMMIT=${{ env.SOURCE_SHA }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Pass publication source to Helm
+        uses: actions/upload-artifact@v7
+        with:
+          name: published-source-${{ matrix.module }}
+          path: ${{ runner.temp }}/published-source/source-sha
+          if-no-files-found: error
+          overwrite: true
