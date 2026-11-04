@@ -28,6 +28,11 @@ fi
 "${compose[@]}" up -d --wait --wait-timeout 90 postgres
 "${compose[@]}" up -d reservoir
 container=$("${compose[@]}" ps -q reservoir)
+runtime_modules=$(docker exec "$container" java --list-modules)
+if [[ $runtime_modules == *java.desktop@* ]]; then
+  echo "The JIT runtime unexpectedly includes java.desktop" >&2
+  exit 1
+fi
 address=$("${compose[@]}" port reservoir 8081)
 
 # Require repeated successful requests so a process that exits just after binding

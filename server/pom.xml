@@ -244,6 +244,22 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
+        <configuration>
+          <!-- Log4j Core 2.26.1 uses these two java.desktop types for configuration
+               notifications. Rewrite their references throughout the fat JAR to
+               our compatibility types, including LoggerContext's public API.
+               Keep the original Maven dependencies untouched. -->
+          <relocations>
+            <relocation>
+              <pattern>java.beans.PropertyChangeEvent</pattern>
+              <shadedPattern>com.indexdata.reservoir.logging.PropertyChangeEvent</shadedPattern>
+            </relocation>
+            <relocation>
+              <pattern>java.beans.PropertyChangeListener</pattern>
+              <shadedPattern>com.indexdata.reservoir.logging.PropertyChangeListener</shadedPattern>
+            </relocation>
+          </relocations>
+        </configuration>
         <executions>
           <execution>
             <phase>package</phase>
