@@ -275,6 +275,90 @@
     </dependencies>
   </dependencyManagement>
   <profiles>
+    <!-- OS profiles set the Netty classifier; -Dlinux-native-deps selects matching Linux
+         natives and disables macOS DNS. -Pdocker-build separately selects Docker settings.
+         The native-dependency switch activates by property presence, regardless of its value. -->
+    <profile>
+      <id>linux-amd64</id>
+      <activation>
+        <os>
+          <name>Linux</name>
+          <arch>amd64</arch>
+        </os>
+      </activation>
+      <properties>
+        <netty.native.classifier>linux-x86_64</netty.native.classifier>
+      </properties>
+    </profile>
+    <profile>
+      <id>linux-arm64</id>
+      <activation>
+        <os>
+          <name>Linux</name>
+          <arch>aarch64</arch>
+        </os>
+      </activation>
+      <properties>
+        <netty.native.classifier>linux-aarch_64</netty.native.classifier>
+      </properties>
+    </profile>
+    <profile>
+      <id>linux-native-deps</id>
+      <activation>
+        <property>
+          <name>linux-native-deps</name>
+        </property>
+      </activation>
+      <dependencyManagement>
+        <dependencies>
+          <dependency>
+            <groupId>org.folio</groupId>
+            <artifactId>vertx-lib</artifactId>
+            <version>${vertxlib.version}</version>
+            <exclusions>
+              <!-- Profile dependency management replaces the base exclusion list. -->
+              <exclusion>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>*</artifactId>
+              </exclusion>
+              <!-- Replace the aggregate BoringSSL dependency and fixed x86-64 epoll
+                   dependency with the detected Linux classifier below. -->
+              <exclusion>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-tcnative-boringssl-static</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-transport-native-epoll</artifactId>
+              </exclusion>
+            </exclusions>
+          </dependency>
+        </dependencies>
+      </dependencyManagement>
+      <dependencies>
+        <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-tcnative-boringssl-static</artifactId>
+          <!-- Version comes from the imported BOM, including classified artifacts. -->
+          <classifier>${netty.native.classifier}</classifier>
+          <scope>runtime</scope>
+          <exclusions>
+            <!-- Classified artifacts share a POM that also pulls in every other platform. -->
+            <exclusion>
+              <groupId>io.netty</groupId>
+              <artifactId>netty-tcnative-boringssl-static</artifactId>
+            </exclusion>
+          </exclusions>
+        </dependency>
+        <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-transport-native-epoll</artifactId>
+          <version>${netty.version}</version>
+          <classifier>${netty.native.classifier}</classifier>
+          <scope>runtime</scope>
+        </dependency>
+      </dependencies>
+    </profile>
     <profile>
       <id>docker-build</id>
       <build>
@@ -288,24 +372,6 @@
           </plugin>
         </plugins>
       </build>
-    </profile>
-    <profile>
-      <id>apple-silicon</id>
-      <activation>
-        <os>
-          <family>mac</family>
-          <arch>aarch64</arch>
-        </os>
-      </activation>
-      <dependencies>
-        <dependency>
-          <groupId>io.netty</groupId>
-          <artifactId>netty-resolver-dns-native-macos</artifactId>
-          <classifier>osx-aarch_64</classifier>
-          <!--<version>align with Vert.x netty version</version>-->
-          <!--see https://github.com/eclipse-vertx/vert.x/blob/master/src/main/asciidoc/override/hostname-resolution.adoc -->
-        </dependency>
-      </dependencies>
     </profile>
   </profiles>
   <build>
@@ -365,6 +431,12 @@
               </filter>
             </filters>
           </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-dependency-plugin</artifactId>
+          <!-- Older go-offline versions mishandle Netty's optional native build dependencies. -->
+          <version>3.11.0</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>

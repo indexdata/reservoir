@@ -1,0 +1,3 @@
+# Maven rebuilds these inside the JIT builder stage.
+# Keep this specific to Dockerfile-jit: Dockerfile-native needs the host-built executable.
+**/target

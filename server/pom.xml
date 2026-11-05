@@ -308,6 +308,24 @@
     </plugins>
   </build>
   <profiles>
+    <!-- Include ARM macOS DNS support unless -Dlinux-native-deps is supplied.
+         Property activation also keeps it enabled with regular-jvm or native. -->
+    <profile>
+      <id>macos-dns</id>
+      <activation>
+        <property>
+          <name>!linux-native-deps</name>
+        </property>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-resolver-dns-native-macos</artifactId>
+          <classifier>osx-aarch_64</classifier>
+          <scope>runtime</scope>
+        </dependency>
+      </dependencies>
+    </profile>
     <profile>
       <id>docker-build</id>
       <build>
