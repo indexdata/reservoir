@@ -34,6 +34,9 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <graalvm.version>25.0.5.0.3</graalvm.version>
     <graalvm-maven-plugin.version>1.1.18</graalvm-maven-plugin.version>
+    <!-- Opt-in: -Dshade.minimizeJar=true (Docker: SHADE_MINIMIZE_JAR=true).
+         Verify reflective and JNI paths in the packaged JAR. -->
+    <shade.minimizeJar>false</shade.minimizeJar>
     <log4j2.version>2.26.1</log4j2.version>
     <snakeyaml.version>2.7</snakeyaml.version>
     <slf4j-api.version>2.0.20</slf4j-api.version>
@@ -390,6 +393,7 @@
           </dependencies>
           <configuration>
             <createDependencyReducedPom>false</createDependencyReducedPom>
+            <minimizeJar>${shade.minimizeJar}</minimizeJar>
             <transformers>
               <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                 <manifestEntries>
@@ -410,6 +414,47 @@
             <artifactSet/>
             <outputFile>${project.build.directory}/${project.artifactId}-fat.jar</outputFile>
             <filters>
+              <filter>
+                <artifact>io.netty:netty-resolver-dns-classes-macos</artifact>
+                <excludeDefaults>false</excludeDefaults>
+                <includes>
+                  <!-- Netty loads the macOS DNS provider through reflection. -->
+                  <include>**</include>
+                </includes>
+              </filter>
+              <filter>
+                <artifact>io.netty:netty-tcnative-classes</artifact>
+                <excludeDefaults>false</excludeDefaults>
+                <includes>
+                  <!-- JNI loads support classes such as SSLCredential and CertificateVerifierTask. -->
+                  <include>**</include>
+                </includes>
+              </filter>
+              <filter>
+                <artifact>org.graalvm.*:*</artifact>
+                <excludeDefaults>false</excludeDefaults>
+                <includes>
+                  <!-- Graal loads generated implementations dynamically. -->
+                  <include>**</include>
+                </includes>
+              </filter>
+              <filter>
+                <artifact>org.apache.logging.log4j:log4j-core</artifact>
+                <excludeDefaults>false</excludeDefaults>
+                <includes>
+                  <!-- Log4j selects plugins through cache metadata and configuration files. -->
+                  <include>**</include>
+                </includes>
+              </filter>
+              <filter>
+                <artifact>org.marc4j:marc4j</artifact>
+                <excludeDefaults>false</excludeDefaults>
+                <includes>
+                  <!-- AnselToUnicode loads this MARC-8 table through reflection.
+                       Shade's minimizer matches class paths without the .class suffix. -->
+                  <include>org/marc4j/converter/impl/CodeTableGenerated*</include>
+                </includes>
+              </filter>
               <filter>
                 <artifact>*:*</artifact>
                 <excludes>
