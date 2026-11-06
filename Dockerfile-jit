@@ -18,7 +18,7 @@ COPY server/pom.xml server/pom.xml
 COPY util/pom.xml util/pom.xml
 
 RUN --mount=type=${MAVEN_MOUNT_TYPE},source=${MAVEN_MOUNT_SOURCE},target=/root/.m2/repository \
-    mvn -B dependency:go-offline
+    mvn -B -Pdocker-build -Dlinux-native-deps dependency:go-offline
 
 COPY server/ server
 COPY util/ util
@@ -28,7 +28,7 @@ ARG GIT_COMMIT=master
 RUN echo "git.commit.id=${GIT_COMMIT}" > server/src/main/resources/git.properties
 
 RUN --mount=type=${MAVEN_MOUNT_TYPE},source=${MAVEN_MOUNT_SOURCE},target=/root/.m2/repository \
-    mvn -B -DskipTests -Pdocker-build package
+    mvn -B -DskipTests -Pdocker-build -Dlinux-native-deps package
 
 FROM ${GRAALVM_IMAGE} AS slim
 
@@ -67,8 +67,7 @@ RUN useradd -u 1000 -m -s /sbin/nologin reservoir
 COPY --from=slim /opt/graalvm-slim /opt/graalvm-slim
 
 # Copy app JAR
-COPY --from=builder /app/server/target/reservoir-server-fat.jar /reservoir.jar
-RUN chown reservoir:reservoir /reservoir.jar
+COPY --from=builder --chown=reservoir:reservoir /app/server/target/reservoir-server-fat.jar /reservoir.jar
 
 # Copy license
 COPY --from=slim /graalvm-license /graalvm-license
