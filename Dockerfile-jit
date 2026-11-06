@@ -27,8 +27,9 @@ COPY descriptors/ descriptors
 ARG GIT_COMMIT=master
 RUN echo "git.commit.id=${GIT_COMMIT}" > server/src/main/resources/git.properties
 
+ARG SHADE_MINIMIZE_JAR=true
 RUN --mount=type=${MAVEN_MOUNT_TYPE},source=${MAVEN_MOUNT_SOURCE},target=/root/.m2/repository \
-    mvn -B -DskipTests -Pdocker-build -Dlinux-native-deps package
+    mvn -B -DskipTests -Pdocker-build -Dlinux-native-deps -Dshade.minimizeJar="${SHADE_MINIMIZE_JAR}" package
 
 FROM ${GRAALVM_IMAGE} AS slim
 
