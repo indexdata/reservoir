@@ -2,11 +2,11 @@ package com.indexdata.reservoir.module.impl;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
-import io.vertx.reactivex.core.http.HttpHeaders;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ModuleScripts {
