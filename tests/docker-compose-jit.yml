@@ -5,6 +5,7 @@ services:
       POSTGRES_USER: folio
       POSTGRES_PASSWORD: folio
       POSTGRES_DB: folio
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
     healthcheck:
       # The temporary initialization server only accepts Unix-socket connections.
       test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U folio -d folio"]
