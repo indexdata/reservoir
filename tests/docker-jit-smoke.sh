@@ -33,6 +33,10 @@ if [[ $runtime_modules == *java.desktop@* ]]; then
   echo "The JIT runtime unexpectedly includes java.desktop" >&2
   exit 1
 fi
+if [[ $runtime_modules == *java.security.sasl@* ]]; then
+  echo "The JIT runtime unexpectedly includes java.security.sasl" >&2
+  exit 1
+fi
 address=$("${compose[@]}" port reservoir 8081)
 
 # Require repeated successful requests so a process that exits just after binding
