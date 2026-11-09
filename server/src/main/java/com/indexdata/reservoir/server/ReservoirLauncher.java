@@ -82,7 +82,13 @@ public class ReservoirLauncher extends VertxApplication {
   }
 
   static String getSysConfOrEnvString(String name, String defaultValue, JsonObject config) {
-    String v = Config.getSysConf(name, null, config);
+    return getSysConfOrEnvString(name, null, defaultValue, config);
+  }
+
+  static String getSysConfOrEnvString(String name, String legacyName,
+      String defaultValue, JsonObject config) {
+    String v = legacyName == null ? Config.getSysConf(name, null, config)
+        : Config.getSysConf(name, legacyName, null, config);
     if (v != null) {
       return v;
     }

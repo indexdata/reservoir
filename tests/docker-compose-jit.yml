@@ -27,5 +27,20 @@ services:
       DB_HOST: postgres
       DB_DATABASE: folio
       DB_PORT: 5432
+      HTTP_PORT: 18081
+      JDK_JAVA_OPTIONS: "-XX:MaxRAMPercentage=55.0 -XX:-UseCompactObjectHeaders"
     ports:
-      - "127.0.0.1::8081"
+      - "127.0.0.1::18081"
+
+  probe:
+    image: ${RESERVOIR_TEST_IMAGE:-reservoir-jit:smoke-test}
+    entrypoint:
+      - /opt/graalvm-slim/bin/java
+      - --sun-misc-unsafe-memory-access=allow
+      - --enable-native-access=ALL-UNNAMED
+      - -cp
+      - /reservoir.jar
+      - com.indexdata.reservoir.server.JitRuntimeProbe
+    command: [postgres]
+    volumes:
+      - ./probe-tls.p12:/probes/tls.p12:ro

@@ -22,7 +22,7 @@ jobs:
             GIT_COMMIT=${{ github.sha }}
           cache-from: type=gha,scope=jit-smoke
           cache-to: type=gha,mode=max,scope=jit-smoke
-      - name: Check JIT image startup
+      - name: Check JIT runtime capabilities and ingest
         run: bash tests/docker-jit-smoke.sh reservoir-jit:smoke-test
 
   mvn-verify:

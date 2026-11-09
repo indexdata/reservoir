@@ -50,8 +50,6 @@ EXPOSE 8081
 
 USER reservoir:reservoir
 
-#TODO scratch does not have a shell
-#there's no way to pass HTTP_PORT env from the chart
 ENTRYPOINT ["/reservoir-native"]
 # Handle SIGTERM
 CMD []

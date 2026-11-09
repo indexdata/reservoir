@@ -2,15 +2,20 @@ package com.indexdata.reservoir.server;
 
 import static org.junit.Assert.assertEquals;
 
-import org.junit.jupiter.api.BeforeAll;
+import java.util.function.Function;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.json.JsonObject;
 
 public class ReservoirLauncherTest {
 
-  @BeforeAll
-  public static void setUpBeforeClass() throws Exception {
+  private Function<String, String> originalEnvLookup;
+
+  @BeforeEach
+  public void setUp() {
+    originalEnvLookup = ReservoirLauncher.envLookup;
     ReservoirLauncher.envLookup = k -> {
       switch (k) {
         case "SOME_INTEGER_PROPERTY_SET":
@@ -23,6 +28,44 @@ public class ReservoirLauncherTest {
           return System.getenv(k);
       }
     };
+  }
+
+  @AfterEach
+  public void tearDown() {
+    ReservoirLauncher.envLookup = originalEnvLookup;
+  }
+
+  @Test
+  public void testHttpPortEnvironmentAndConfig() {
+    ReservoirLauncher.envLookup = k -> "HTTP_PORT".equals(k) ? "18081" : null;
+    assertEquals("18081", ReservoirLauncher.getSysConfOrEnvString(
+        "http.port", "port", "8081", new JsonObject()));
+    assertEquals("9231", ReservoirLauncher.getSysConfOrEnvString(
+        "http.port", "port", "8081", new JsonObject().put("port", "9231")));
+    assertEquals("9232", ReservoirLauncher.getSysConfOrEnvString(
+        "http.port", "port", "8081", new JsonObject()
+            .put("port", "9231").put("http.port", "9232")));
+    ReservoirLauncher.envLookup = k -> " ";
+    assertEquals("8081", ReservoirLauncher.getSysConfOrEnvString(
+        "http.port", "port", "8081", new JsonObject()));
+  }
+
+  @Test
+  public void testSystemPropertyPrecedesEnvironmentAndConfig() {
+    String key = "reservoir.test.port";
+    String previous = System.getProperty(key);
+    try {
+      System.setProperty(key, "9233");
+      ReservoirLauncher.envLookup = k -> "18081";
+      assertEquals("9233", ReservoirLauncher.getSysConfOrEnvString(
+          key, "port", "8081", new JsonObject().put(key, "9232")));
+    } finally {
+      if (previous == null) {
+        System.clearProperty(key);
+      } else {
+        System.setProperty(key, previous);
+      }
+    }
   }
 
   @Test

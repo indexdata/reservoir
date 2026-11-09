@@ -22,6 +22,7 @@ okapi-hooks:
 
 containerPort: 8080
 # envvars passed to the container
+# Example: env: {JDK_JAVA_OPTIONS: "-XX:MaxRAMPercentage=60.0"}
 env: {}
 
 metrics:
@@ -34,7 +35,7 @@ metrics:
     scrapeTimeout: 10s
     labels: {} # match prom-stack serviceMonitorSelector/podMonitorSelector
     # Example: labels: {release: "prometheus"}
-  jmxEnabled: false #jmx port is set via JAVA_OPTS
+  jmxEnabled: false #jmx port is set via JDK_JAVA_OPTIONS
   jmxDomain: "reservoir"
 
 probes:
@@ -133,7 +134,7 @@ resources: {}
   # environments (e.g. Minikube, local dev, CI).
   #
   # In production (Kubernetes/EKS), always set memory limits so the JVM can calculate its heap bounds
-  # using DEFAULT_JAVA_OPTS (-XX:MaxRAMPercentage=70.0). Without memory limits, the JVM sees the
+  # using JAVA_TOOL_OPTIONS (-XX:MaxRAMPercentage=70.0). Without memory limits, the JVM sees the
   # entire node's memory.
   #
   # Recommended baseline sizing for moderate production workloads:
