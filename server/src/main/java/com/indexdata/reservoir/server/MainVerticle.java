@@ -24,7 +24,7 @@ public class MainVerticle extends VerticleBase {
     log.info("Starting {} {} {}", m.getModule(), m.getVersion(), m.getCommitId());
 
     final int port = Integer.parseInt(
-        Config.getSysConf("http.port", "port", "8081", config()));
+        ReservoirLauncher.getSysConfOrEnvString("http.port", "port", "8081", config()));
     log.info("Listening on port {}", port);
 
     String tenantDefault = ReservoirLauncher.getSysConfOrEnvString(

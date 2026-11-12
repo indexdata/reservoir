@@ -256,6 +256,25 @@ To test an image already built, pass its tag, for example
 `bash tests/docker-jit-smoke.sh reservoir-jit:latest`.
 This test also runs in the `mvn-verify` workflow for pull requests and master pushes.
 
+The JIT image uses `scratch` with shared libraries collected from the GraalVM build
+image. It starts Java directly and retains JVM environment options, a non-root
+user, writable home and temporary directory, CA certificates and timezones.
+
+JAR minimization is enabled by default. Add `--build-arg SHADE_MINIMIZE_JAR=false`
+to disable it.
+The smoke test also runs the bundled `JitRuntimeProbe` class in the same image.
+It checks user lookup, writable directories, timezone rules, Java DNS resolution
+of `postgres`, TLS, native Netty libraries and synchronous GraalJS compilation.
+The self-signed TLS keystore in `tests/probe-tls.p12` is mounted read-only for the
+probe and is not included in the image. These checks need no public services.
+
+CI builds one JIT image and runs the capability and ingest checks against it.
+The image contains no shell, Python or package manager. A short inline `ldd` step collects
+OS dependencies of the custom JVM, without extracting or scanning JNI libraries
+from the JAR. The runtime test checks the native libraries used by Reservoir;
+new native dependencies may require additional OS libraries. Copied OS package
+versions and licenses are recorded under `/usr/share`.
+
 To build the native image instead:
 
 ```
@@ -277,11 +296,34 @@ If it is not defined you can specify it by passing `--add-host=host.docker.inter
 
 **Note**: Those docker build and run commands do work as-is with [Colima](https://github.com/abiosoft/colima).
 
-The JIT image configures container-optimized JVM options by default (`DEFAULT_JAVA_OPTS`):
+The JIT image configures container-optimized JVM defaults in `JAVA_TOOL_OPTIONS`:
 Java 25 compact object headers (`-XX:+UseCompactObjectHeaders`), cgroup memory awareness (`-XX:MaxRAMPercentage=70.0`),
 fail-fast on OOM (`-XX:+ExitOnOutOfMemoryError`), G1 string deduplication (`-XX:+UseStringDeduplication`),
 and DNS cache TTL (`-Dsun.net.inetaddr.ttl=30`).
-Options passed in `JAVA_OPTS` take precedence over image defaults (e.g. `JAVA_OPTS=-XX:-UseCompactObjectHeaders`).
+Use `JDK_JAVA_OPTIONS` to override selected defaults, for example:
+
+```sh
+docker run -e JDK_JAVA_OPTIONS="-XX:MaxRAMPercentage=55.0 -XX:-UseCompactObjectHeaders" \
+  reservoir-jit:latest
+```
+
+The Helm chart accepts the same setting through its `env` map:
+
+```yaml
+env:
+  JDK_JAVA_OPTIONS: "-XX:MaxRAMPercentage=55.0 -XX:-UseCompactObjectHeaders"
+```
+
+For these JVM settings, precedence is `JAVA_TOOL_OPTIONS`, then `JDK_JAVA_OPTIONS`,
+then explicit Java command-line arguments. The required GraalVM flags
+`--sun-misc-unsafe-memory-access=allow` and `--enable-native-access=ALL-UNNAMED`
+are passed directly in the entrypoint. The old `DEFAULT_JAVA_OPTS`, `JAVA_OPTS`
+and `GRAAL_OPTS` variables are no longer interpreted by the JIT images;
+move custom options to `JDK_JAVA_OPTIONS`.
+
+Reservoir reads `HTTP_PORT` directly (default `8081`). System properties and JSON
+configuration (`http.port` or the legacy `port`) take precedence over this
+environment variable. This needs no shell expansion.
 
 **Note on image licensing**: The default JIT Docker image published from this repository uses _Oracle GraalVM_
 and therefore includes components licensed under Oracle's

@@ -26,6 +26,7 @@ if (( $# == 0 )); then
 fi
 
 "${compose[@]}" up -d --wait --wait-timeout 90 postgres
+"${compose[@]}" run --rm --no-deps probe
 "${compose[@]}" up -d reservoir
 container=$("${compose[@]}" ps -q reservoir)
 runtime_modules=$(docker exec "$container" java --list-modules)
@@ -37,7 +38,14 @@ if [[ $runtime_modules == *java.security.sasl@* ]]; then
   echo "The JIT runtime unexpectedly includes java.security.sasl" >&2
   exit 1
 fi
-address=$("${compose[@]}" port reservoir 8081)
+# A second JVM inherits the same options as the server, including selective overrides.
+runtime_flags=$(docker exec "$container" java -XX:+PrintFlagsFinal -version)
+if ! grep -Eq 'MaxRAMPercentage[[:space:]]*=[[:space:]]*55\.0' <<< "$runtime_flags" || \
+   ! grep -Eq 'UseCompactObjectHeaders[[:space:]]*=[[:space:]]*false' <<< "$runtime_flags"; then
+  echo "JDK_JAVA_OPTIONS did not override JAVA_TOOL_OPTIONS defaults" >&2
+  exit 1
+fi
+address=$("${compose[@]}" port reservoir 18081)
 
 # Require repeated successful requests so a process that exits just after binding
 # its HTTP port does not pass. /healthz also verifies database connectivity.

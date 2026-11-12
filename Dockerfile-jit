@@ -58,37 +58,68 @@ RUN mkdir -p /graalvm-license && \
     cp -f "$JAVA_HOME/LICENSE.txt" /graalvm-license/LICENSE.txt || true && \
     cp -f "$JAVA_HOME/NOTICE.txt" /graalvm-license/NOTICE.txt || true
 
-FROM oraclelinux:10-slim
+FROM slim AS rootfs
 
-# Create non-root user, home dir is needed so Graal can write attach files for JIT-enabled JS.
-RUN useradd -u 1000 -m -s /sbin/nologin reservoir
+# The linked JVM bundles CA certificates and timezone rules; no OS copies are needed.
+RUN <<'EOF'
+set -eu
+export LC_ALL=C LD_LIBRARY_PATH=/opt/graalvm-slim/lib:/opt/graalvm-slim/lib/server
+mkdir -p /rootfs
+for file in /opt/graalvm-slim/bin/java /opt/graalvm-slim/lib/*.so /opt/graalvm-slim/lib/server/*.so; do
+    ldd "$file"
+done > /tmp/jvm-ldd
+if grep -q 'not found' /tmp/jvm-ldd; then
+    cat /tmp/jvm-ldd
+    exit 1
+fi
+tr -s '[:blank:]' '\n' < /tmp/jvm-ldd | grep '^/' | grep -v '^/opt/graalvm-slim/' | sort -u > /tmp/runtime-libs
+xargs -I % cp -L --parents % /rootfs < /tmp/runtime-libs
 
-# Copy slim runtime
+mkdir -p /rootfs/etc /rootfs/usr/share /rootfs/home/reservoir /rootfs/tmp
+printf '%s\n' 'root:x:0:0:root:/root:/sbin/nologin' \
+    'reservoir:x:1000:1000:Reservoir:/home/reservoir:/sbin/nologin' > /rootfs/etc/passwd
+printf '%s\n' 'root:x:0:' 'reservoir:x:1000:' > /rootfs/etc/group
+printf '%s\n' 'passwd: files' 'group: files' 'hosts: files dns' > /rootfs/etc/nsswitch.conf
+chown 1000:1000 /rootfs/home/reservoir
+chmod 1777 /rootfs/tmp
+cp -L --parents /etc/os-release /rootfs
+
+# Preserve licenses and versions for the copied OS components.
+xargs rpm -qf --qf '%{NAME}\n' < /tmp/runtime-libs > /tmp/runtime-packages
+rpm -qf --qf '%{NAME}\n' /etc/os-release >> /tmp/runtime-packages
+sort -u /tmp/runtime-packages -o /tmp/runtime-packages
+while read -r package; do
+    rpm -q --qf '%{NAME}-%{VERSION}-%{RELEASE}.%{ARCH}\n' "$package"
+    rpm -ql "$package" | while read -r file; do
+        case "$file" in
+            /usr/share/licenses/*)
+                if [ -f "$file" ]; then cp -L --parents "$file" /rootfs; fi ;;
+        esac
+    done
+done < /tmp/runtime-packages > /rootfs/usr/share/reservoir-runtime-packages.txt
+EOF
+
+FROM scratch
+
+COPY --from=rootfs /rootfs/ /
 COPY --from=slim /opt/graalvm-slim /opt/graalvm-slim
-
-# Copy app JAR
-COPY --from=builder --chown=reservoir:reservoir /app/server/target/reservoir-server-fat.jar /reservoir.jar
-
-# Copy license
+COPY --from=builder --chown=1000:1000 /app/server/target/reservoir-server-fat.jar /reservoir.jar
 COPY --from=slim /graalvm-license /graalvm-license
 
-# Switch to non-root user
-USER reservoir
+USER 1000:1000
+ENV HOME=/home/reservoir
+ENV TZ=UTC
 
-ENV DEFAULT_JAVA_OPTS="\
+ENV JAVA_TOOL_OPTIONS="\
 -XX:+UseCompactObjectHeaders \
 -XX:MaxRAMPercentage=70.0 \
 -XX:+ExitOnOutOfMemoryError \
 -XX:+UseStringDeduplication \
 -Dsun.net.inetaddr.ttl=30"
-ENV JAVA_OPTS=""
 ENV JAVA_HOME=/opt/graalvm-slim
 ENV PATH="$JAVA_HOME/bin:${PATH}"
-ENV GRAAL_OPTS="\
---sun-misc-unsafe-memory-access=allow \
---enable-native-access=ALL-UNNAMED"
 
 ENV HTTP_PORT=8081
 EXPOSE $HTTP_PORT
 
-ENTRYPOINT ["sh", "-c", "exec $JAVA_HOME/bin/java -Dport=$HTTP_PORT $DEFAULT_JAVA_OPTS $GRAAL_OPTS $JAVA_OPTS -jar /reservoir.jar"]
+ENTRYPOINT ["/opt/graalvm-slim/bin/java", "--sun-misc-unsafe-memory-access=allow", "--enable-native-access=ALL-UNNAMED", "-jar", "/reservoir.jar"]
