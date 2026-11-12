@@ -52,8 +52,7 @@ while (( SECONDS < deadline )); do
       "http://$address/healthz" 2>/dev/null) && [[ $body == OK ]]; then
     successes=$((successes + 1))
     if (( successes >= 5 )); then
-      echo "Dockerfile-jit smoke test passed: /healthz returned OK"
-      exit 0
+      break
     fi
   else
     successes=0
@@ -61,5 +60,30 @@ while (( SECONDS < deadline )); do
   sleep 1
 done
 
-echo "Timed out waiting for Reservoir /healthz to return OK" >&2
-exit 1
+if (( successes < 5 )); then
+  echo "Timed out waiting for Reservoir /healthz to return OK" >&2
+  exit 1
+fi
+
+# Exercise MARC-8 conversion and persistence in the packaged image.
+http=(curl --fail --silent --show-error --connect-timeout 3 --max-time 40
+  -H 'X-Okapi-Tenant:smoke')
+tenant_job=$("${http[@]}" -H 'Content-Type:application/json' \
+  --data '{"module_to":"mod-reservoir-1.0.0"}' "http://$address/_/tenant" | jq -er '.id')
+"${http[@]}" "http://$address/_/tenant/$tenant_job?wait=30000" | \
+  jq -e '.complete == true and (.error // "") == ""'
+
+"${http[@]}" -H 'Content-Type:application/octet-stream' \
+  -H 'X-Okapi-Permissions:["reservoir-upload.all-sources"]' \
+  --upload-file "$repo_dir/server/src/test/resources/marc3.marc" \
+  "http://$address/reservoir/upload?sourceId=SMOKE&fileName=marc3.marc" | \
+  jq -e '."marc3.marc" | .processed == 3 and .inserted == 3
+    and .ignored == 0 and .updated == 0 and .deleted == 0'
+
+# The fixture's third record contains MARC-8 characters that must become Unicode.
+"${http[@]}" --get --data-urlencode 'query=sourceId=SMOKE' --data-urlencode 'count=exact' \
+  "http://$address/reservoir/records" | \
+  jq -e '.resultInfo.totalRecords == 3 and (.items | length) == 3
+    and any(.items[].payload.marc | .. | strings; contains("Copyright mark (©)"))'
+
+echo "Dockerfile-jit smoke test passed: health, tenant setup and MARC-8 ingest/read-back"
