@@ -9,6 +9,9 @@ registries:
   oracle-graalvm:
     type: docker-registry
     url: https://container-registry.oracle.com
+    # Required by the Docker registry schema; empty values keep access anonymous.
+    username: ""
+    password: ""
 updates:
   # Maven (root + all modules)
   - package-ecosystem: "maven"
