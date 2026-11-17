@@ -6,6 +6,9 @@ registries:
   indexdata:
     type: maven-repository
     url: https://maven.indexdata.com/
+  oracle-graalvm:
+    type: docker-registry
+    url: https://container-registry.oracle.com
 updates:
   # Maven (root + all modules)
   - package-ecosystem: "maven"
@@ -16,7 +19,7 @@ updates:
     schedule:
       interval: "daily"
     cooldown:
-      default-days: 1
+      default-days: 0
     open-pull-requests-limit: 10
     commit-message:
       prefix: "chore"
@@ -54,6 +57,8 @@ updates:
   # Dockerfiles (if you have any, adjust path or add more entries)
   - package-ecosystem: "docker"
     directory: "/"
+    registries:
+      - oracle-graalvm
     schedule:
       interval: "weekly"
     commit-message:
