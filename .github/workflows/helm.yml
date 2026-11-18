@@ -18,7 +18,10 @@ on:
 
 jobs:
   publish-chart:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: >-
+      ${{ github.event.workflow_run.conclusion == 'success' &&
+          (github.event.workflow_run.event == 'workflow_run' ||
+           github.event.workflow_run.event == 'workflow_dispatch') }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -30,10 +33,14 @@ jobs:
             md_path: ./descriptors/ModuleDescriptor-template.json
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Calculate chart and app version with short SHA
+        env:
+          IMAGE_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
-          SHORT_SHA=$(echo $GITHUB_SHA | cut -c1-7)
+          SHORT_SHA=${IMAGE_SHA:0:7}
           CHART_VERSION="${{ matrix.chart_base_version }}+sha.$SHORT_SHA"
           APP_VERSION="sha-$SHORT_SHA"
           echo "CHART_VERSION=$CHART_VERSION" >> $GITHUB_ENV
