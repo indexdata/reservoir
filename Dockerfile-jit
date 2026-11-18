@@ -4,12 +4,11 @@ FROM ${GRAALVM_IMAGE} AS builder
 
 RUN microdnf install -y maven && microdnf clean all
 
-# Docker on GitHub Actions does not persist cache mounts so they are only useful locally
-# as a GHA workaround, we fetch maven deps first and rely on Docker layer caching
-# we allow overriding the mount type and source here, so e.g one can BIND mount $HOME/.m2/repository
-# but this is not possible for GH runner's maven repo due to isolation
+# Local builds keep Maven downloads in a cache mount. CI moves the mount aside
+# so Maven writes to the normal filesystem, which is included in exported layers.
 ARG MAVEN_MOUNT_TYPE=cache
 ARG MAVEN_MOUNT_SOURCE=""
+ARG MAVEN_MOUNT_TARGET=/root/.m2/repository
 
 WORKDIR /app
 
@@ -17,7 +16,7 @@ COPY pom.xml .
 COPY server/pom.xml server/pom.xml
 COPY util/pom.xml util/pom.xml
 
-RUN --mount=type=${MAVEN_MOUNT_TYPE},source=${MAVEN_MOUNT_SOURCE},target=/root/.m2/repository \
+RUN --mount=type=${MAVEN_MOUNT_TYPE},source=${MAVEN_MOUNT_SOURCE},target=${MAVEN_MOUNT_TARGET} \
     mvn -B -Pdocker-build -Dlinux-native-deps dependency:go-offline
 
 COPY server/ server
@@ -28,7 +27,7 @@ ARG GIT_COMMIT=master
 RUN echo "git.commit.id=${GIT_COMMIT}" > server/src/main/resources/git.properties
 
 ARG SHADE_MINIMIZE_JAR=true
-RUN --mount=type=${MAVEN_MOUNT_TYPE},source=${MAVEN_MOUNT_SOURCE},target=/root/.m2/repository \
+RUN --mount=type=${MAVEN_MOUNT_TYPE},source=${MAVEN_MOUNT_SOURCE},target=${MAVEN_MOUNT_TARGET} \
     mvn -B -DskipTests -Pdocker-build -Dlinux-native-deps -Dshade.minimizeJar="${SHADE_MINIMIZE_JAR}" package
 
 FROM ${GRAALVM_IMAGE} AS slim
