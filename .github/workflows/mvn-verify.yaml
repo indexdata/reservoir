@@ -20,7 +20,10 @@ jobs:
           tags: reservoir-jit:smoke-test
           build-args: |
             GIT_COMMIT=${{ github.sha }}
-          cache-from: type=gha,scope=jit-smoke
+            MAVEN_MOUNT_TARGET=/tmp/unused-maven-cache
+          cache-from: |
+            type=gha,scope=jit-smoke
+            type=gha,scope=jit-publish
           cache-to: type=gha,mode=max,scope=jit-smoke
       - name: Check JIT runtime capabilities and ingest
         run: bash tests/docker-jit-smoke.sh reservoir-jit:smoke-test

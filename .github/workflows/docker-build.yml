@@ -94,5 +94,8 @@ jobs:
           annotations: ${{ steps.meta.outputs.annotations }} # GHCR ignores labels so we push them also as annotations
           build-args: |
             GIT_COMMIT=${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+            MAVEN_MOUNT_TARGET=/tmp/unused-maven-cache
+          cache-from: |
+            type=gha,scope=${{ matrix.module }}-publish
+            type=gha,scope=${{ matrix.module }}-smoke
+          cache-to: type=gha,mode=max,scope=${{ matrix.module }}-publish
