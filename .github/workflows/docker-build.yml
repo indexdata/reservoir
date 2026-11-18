@@ -95,6 +95,6 @@ jobs:
           build-args: |
             GIT_COMMIT=${{ github.sha }}
             MAVEN_MOUNT_TARGET=/tmp/unused-maven-cache
-          # Share one cache per image with its verification build.
-          cache-from: type=gha,scope=${{ matrix.module }}-smoke
-          cache-to: type=gha,mode=max,scope=${{ matrix.module }}-smoke
+          # Share one versioned cache per image with its verification build.
+          cache-from: type=gha,scope=${{ matrix.module }}-image-v1
+          cache-to: type=gha,mode=max,scope=${{ matrix.module }}-image-v1

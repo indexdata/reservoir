@@ -21,8 +21,9 @@ jobs:
           build-args: |
             GIT_COMMIT=${{ github.sha }}
             MAVEN_MOUNT_TARGET=/tmp/unused-maven-cache
-          cache-from: type=gha,scope=jit-smoke
-          cache-to: type=gha,mode=max,scope=jit-smoke
+          # Version the shared cache when the dependency-layer layout changes.
+          cache-from: type=gha,scope=jit-image-v1
+          cache-to: type=gha,mode=max,scope=jit-image-v1
       - name: Check JIT runtime capabilities and ingest
         run: bash tests/docker-jit-smoke.sh reservoir-jit:smoke-test
 
