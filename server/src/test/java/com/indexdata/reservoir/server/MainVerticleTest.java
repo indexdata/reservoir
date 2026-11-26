@@ -15,6 +15,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 
 import com.indexdata.reservoir.module.impl.ModuleScripts;
 import com.indexdata.reservoir.server.entity.CodeModuleEntity;
+import com.indexdata.reservoir.server.entity.CodeModuleJson;
 import io.restassured.RestAssured;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpMethod;
@@ -1349,6 +1350,14 @@ public class MainVerticleTest extends TestBase {
         .statusCode(400)
         .body(is("query too broad, must at least contain 'poolId' and 'sourceId'"));
 
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .queryParam("query", "poolId=isbn sortBy sourceId")
+        .post("/reservoir/clusters/touch")
+        .then()
+        .statusCode(400)
+        .body(is("query too broad, must at least contain 'poolId' and 'sourceId'"));
+
     String s = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
@@ -1644,6 +1653,19 @@ public class MainVerticleTest extends TestBase {
         .get("/reservoir/config/pools/issn")
         .then().statusCode(200)
         .body(Matchers.is(poolConfig.encode()));
+
+    for (String filter : List.of(
+        "matcher==\"issn-matcher,isbn-matcher\"",
+        "matcher==\"issn-matcher, isbn-matcher\"",
+        "matcher==\"issn-matcher::, isbn-matcher\"")) {
+      RestAssured.given()
+          .header(XOkapiHeaders.TENANT, TENANT_1)
+          .queryParam("query", filter)
+          .get("/reservoir/config/pools")
+          .then().statusCode(200)
+          .body("pools", hasSize(1))
+          .body("pools[0].id", is("issn"));
+    }
 
     JsonArray records = new JsonArray()
         .add(new JsonObject()
@@ -2406,14 +2428,14 @@ public class MainVerticleTest extends TestBase {
     Storage storage = new Storage(vertx, TENANT_1, HttpMethod.POST);
     UUID olderJobId = UUID.randomUUID();
     UUID newerJobId = UUID.randomUUID();
-    String sql = "INSERT INTO " + storage.poolInitializationJobTable
+    String sql = "INSERT INTO " + storage.db().tables().poolInitializationJobs()
         + " (id, pool_id, status, total_records, started_at, completed_at) VALUES"
         + " ($1, $3, 'idle', 2, "
         + " (CURRENT_TIMESTAMP AT TIME ZONE 'UTC') - INTERVAL '1 minute',"
         + " (CURRENT_TIMESTAMP AT TIME ZONE 'UTC') - INTERVAL '1 minute'),"
         + " ($2, $3, 'idle', 5, CURRENT_TIMESTAMP AT TIME ZONE 'UTC',"
         + " CURRENT_TIMESTAMP AT TIME ZONE 'UTC')";
-    storage.getPool().preparedQuery(sql)
+    storage.db().pool().preparedQuery(sql)
         .execute(Tuple.of(olderJobId, newerJobId, poolId))
         .toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
 
@@ -2443,12 +2465,12 @@ public class MainVerticleTest extends TestBase {
     String poolId = poolConfig.getString("id");
     UUID jobId = UUID.randomUUID();
     Storage storage = new Storage(vertx, TENANT_1, HttpMethod.POST);
-    String sql = "INSERT INTO " + storage.poolInitializationJobTable
+    String sql = "INSERT INTO " + storage.db().tables().poolInitializationJobs()
         + " (id, pool_id, status, claim_token, lease_until, started_at)"
         + " VALUES ($1, $2, 'running', $3,"
         + " (CURRENT_TIMESTAMP AT TIME ZONE 'UTC') - INTERVAL '1 minute',"
         + " CURRENT_TIMESTAMP AT TIME ZONE 'UTC')";
-    storage.getPool().preparedQuery(sql)
+    storage.db().pool().preparedQuery(sql)
         .execute(Tuple.of(jobId, poolId, UUID.randomUUID()))
         .toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
 
@@ -2579,13 +2601,13 @@ public class MainVerticleTest extends TestBase {
     }
     Storage storage = new Storage(vertx, TENANT_1, HttpMethod.POST);
     UUID jobId = UUID.randomUUID();
-    String sql = "INSERT INTO " + storage.poolInitializationJobTable
+    String sql = "INSERT INTO " + storage.db().tables().poolInitializationJobs()
         + " (id, pool_id, status, claim_token, lease_until, checkpoint, total_records, started_at)"
         + " VALUES ($1, $2, 'running', $3,"
         + " (CURRENT_TIMESTAMP AT TIME ZONE 'UTC') - INTERVAL '1 minute',"
         + " $4, 1, "
         + " CURRENT_TIMESTAMP AT TIME ZONE 'UTC')";
-    storage.getPool().preparedQuery(sql)
+    storage.db().pool().preparedQuery(sql)
         .execute(Tuple.of(jobId, poolConfig.getString("id"), UUID.randomUUID(), UUID.fromString(minimalId)))
         .toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
 
@@ -2613,12 +2635,12 @@ public class MainVerticleTest extends TestBase {
     JsonObject poolConfig = createIsbnPool("manual");
     Storage storage = new Storage(vertx, TENANT_1, HttpMethod.POST);
     UUID jobId = UUID.randomUUID();
-    String sql = "INSERT INTO " + storage.poolInitializationJobTable
+    String sql = "INSERT INTO " + storage.db().tables().poolInitializationJobs()
         + " (id, pool_id, status, claim_token, lease_until, started_at)"
         + " VALUES ($1, $2, 'running', $3,"
         + " (CURRENT_TIMESTAMP AT TIME ZONE 'UTC') + INTERVAL '5 minutes',"
         + " CURRENT_TIMESTAMP AT TIME ZONE 'UTC')";
-    storage.getPool().preparedQuery(sql)
+    storage.db().pool().preparedQuery(sql)
         .execute(Tuple.of(jobId, poolConfig.getString("id"), UUID.randomUUID()))
         .toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
 
@@ -2911,27 +2933,27 @@ public class MainVerticleTest extends TestBase {
     String ver1 = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .body(module.asJson().encode())
+        .body(CodeModuleJson.toJson(module).encode())
         .post("/reservoir/config/modules")
         .then()
         .statusCode(201)
         .contentType("application/json")
-        .body("id", is(module.getId()))
-        .body("type", is(module.getType()))
-        .body("url", is(module.getUrl()))
-        .body("function", is(module.getFunction()))
+        .body("id", is(module.id()))
+        .body("type", is(module.type()))
+        .body("url", is(module.url()))
+        .body("function", is(module.function()))
         .extract().body().asString();
 
     String get = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .get("/reservoir/config/modules/" + module.getId())
+        .get("/reservoir/config/modules/" + module.id())
         .then().statusCode(200)
         .contentType("application/json")
-        .body("id", is(module.getId()))
-        .body("type", is(module.getType()))
-        .body("url", is(module.getUrl()))
-        .body("function", is(module.getFunction()))
+        .body("id", is(module.id()))
+        .body("type", is(module.type()))
+        .body("url", is(module.url()))
+        .body("function", is(module.function()))
         .extract().body().asString();
 
     Assert.assertEquals(ver1, get);
@@ -2939,19 +2961,19 @@ public class MainVerticleTest extends TestBase {
     // Reload existing module to get different script version
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
-        .put("/reservoir/config/modules/" + module.getId() + "/reload")
+        .put("/reservoir/config/modules/" + module.id() + "/reload")
         .then().statusCode(204);
 
     String ver2 = RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .get("/reservoir/config/modules/" + module.getId())
+        .get("/reservoir/config/modules/" + module.id())
         .then().statusCode(200)
         .contentType("application/json")
-        .body("id", is(module.getId()))
-        .body("type", is(module.getType()))
-        .body("url", is(module.getUrl()))
-        .body("function", is(module.getFunction()))
+        .body("id", is(module.id()))
+        .body("type", is(module.type()))
+        .body("url", is(module.url()))
+        .body("function", is(module.function()))
         .extract().body().asString();
 
     Assert.assertNotEquals(ver1, ver2);
@@ -2960,7 +2982,7 @@ public class MainVerticleTest extends TestBase {
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .delete("/reservoir/config/modules/" + module.getId())
+        .delete("/reservoir/config/modules/" + module.id())
         .then().statusCode(204);
   }
 
@@ -2990,7 +3012,7 @@ public class MainVerticleTest extends TestBase {
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .body(badModule.asJson().encode())
+        .body(CodeModuleJson.toJson(badModule).encode())
         .post("/reservoir/config/modules")
         .then().statusCode(400)
         .contentType("text/plain")
@@ -3005,39 +3027,39 @@ public class MainVerticleTest extends TestBase {
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .get("/reservoir/config/modules/" + module.getId())
+        .get("/reservoir/config/modules/" + module.id())
         .then().statusCode(404)
         .contentType("text/plain")
-        .body(Matchers.is("Module " + module.getId() + " not found"));
+        .body(Matchers.is("Module " + module.id() + " not found"));
 
     //reload - not found item
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
-        .put("/reservoir/config/modules/" + module.getId() + "/reload")
+        .put("/reservoir/config/modules/" + module.id() + "/reload")
         .then().statusCode(404)
         .contentType("text/plain")
-        .body(Matchers.is("Module " + module.getId() + " not found"));
+        .body(Matchers.is("Module " + module.id() + " not found"));
 
     //POST item
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .body(module.asJson().encode())
+        .body(CodeModuleJson.toJson(module).encode())
         .post("/reservoir/config/modules")
         .then()
         .statusCode(201)
         .contentType("application/json")
-        .body("id", is(module.getId()))
-        .body("type", is(module.getType()))
-        .body("url", is(module.getUrl()))
-        .body("function", is(module.getFunction()))
+        .body("id", is(module.id()))
+        .body("type", is(module.type()))
+        .body("url", is(module.url()))
+        .body("function", is(module.function()))
         .body("script", is(ModuleScripts.TEST_SCRIPT_EMPTY));
 
     //POST same item again
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .body(module.asJson().encode())
+        .body(CodeModuleJson.toJson(module).encode())
         .post("/reservoir/config/modules")
         .then().statusCode(400)
         .contentType("text/plain")
@@ -3047,19 +3069,19 @@ public class MainVerticleTest extends TestBase {
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .get("/reservoir/config/modules/" + module.getId())
+        .get("/reservoir/config/modules/" + module.id())
         .then().statusCode(200)
         .contentType("application/json")
-        .body("id", is(module.getId()))
-        .body("type", is(module.getType()))
-        .body("url", is(module.getUrl()))
-        .body("function", is(module.getFunction()))
+        .body("id", is(module.id()))
+        .body("type", is(module.type()))
+        .body("url", is(module.url()))
+        .body("function", is(module.function()))
         .body("script", is(ModuleScripts.TEST_SCRIPT_EMPTY));
 
     // reload existing module
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
-        .put("/reservoir/config/modules/" + module.getId() + "/reload")
+        .put("/reservoir/config/modules/" + module.id() + "/reload")
         .then().statusCode(204);
 
     //GET item and validate it
@@ -3069,49 +3091,49 @@ public class MainVerticleTest extends TestBase {
         .then().statusCode(200)
         .contentType("application/json")
         .body("modules", hasSize(1))
-        .body("modules[0].id", is(module.getId()))
-        .body("modules[0].url", is(module.getUrl()))
-        .body("modules[0].function", is(module.getFunction()));
+        .body("modules[0].id", is(module.id()))
+        .body("modules[0].url", is(module.url()))
+        .body("modules[0].function", is(module.function()));
 
     //GET search item and validate
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
-        .get("/reservoir/config/modules?query=function=" + module.getFunction())
+        .get("/reservoir/config/modules?query=function=" + module.function())
         .then().statusCode(200)
         .contentType("application/json")
         .body("modules", hasSize(1))
-        .body("modules[0].id", is(module.getId()))
-        .body("modules[0].url", is(module.getUrl()))
-        .body("modules[0].function", is(module.getFunction()))
+        .body("modules[0].id", is(module.id()))
+        .body("modules[0].url", is(module.url()))
+        .body("modules[0].function", is(module.function()))
         .body("modules[0].script", is(ModuleScripts.TEST_SCRIPT_EMPTY));
 
     //DELETE item
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .delete("/reservoir/config/modules/" + module.getId())
+        .delete("/reservoir/config/modules/" + module.id())
         .then().statusCode(204);
 
     //DELETE item again
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .delete("/reservoir/config/modules/" + module.getId())
+        .delete("/reservoir/config/modules/" + module.id())
         .then().statusCode(404);
 
     //GET deleted item
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .get("/reservoir/config/modules/" + module.getId())
+        .get("/reservoir/config/modules/" + module.id())
         .then().statusCode(404);
 
     //PUT item to not existing
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .body(module.asJson().encode())
-        .put("/reservoir/config/modules/" + module.getId())
+        .body(CodeModuleJson.toJson(module).encode())
+        .put("/reservoir/config/modules/" + module.id())
         .then()
         .statusCode(404);
 
@@ -3119,22 +3141,22 @@ public class MainVerticleTest extends TestBase {
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .body(module.asJson().encode())
+        .body(CodeModuleJson.toJson(module).encode())
         .post("/reservoir/config/modules")
         .then().statusCode(201)
         .contentType("application/json")
-        .body("id", is(module.getId()))
-        .body("type", is(module.getType()))
-        .body("url", is(module.getUrl()))
-        .body("function", is(module.getFunction()))
+        .body("id", is(module.id()))
+        .body("type", is(module.type()))
+        .body("url", is(module.url()))
+        .body("function", is(module.function()))
         .body("script", is(ModuleScripts.TEST_SCRIPT_EMPTY));
 
     //PUT item to existing
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .body(module.asJson().encode())
-        .put("/reservoir/config/modules/" + module.getId())
+        .body(CodeModuleJson.toJson(module).encode())
+        .put("/reservoir/config/modules/" + module.id())
         .then()
         .statusCode(204);
 
@@ -3142,7 +3164,7 @@ public class MainVerticleTest extends TestBase {
     RestAssured.given()
         .header(XOkapiHeaders.TENANT, TENANT_1)
         .header("Content-Type", "application/json")
-        .delete("/reservoir/config/modules/" + module.getId())
+        .delete("/reservoir/config/modules/" + module.id())
         .then().statusCode(204);
 
   }
@@ -3521,6 +3543,31 @@ public class MainVerticleTest extends TestBase {
     assertThat(sruVerify.identifiers, hasSize(0));
     assertThat(sruVerify.errors, hasSize(1));
     assertThat(sruVerify.errors.get(0), is("Unsupported parameter value"));
+
+    // Pool mapping overriding built-in rec.id still joins cluster_values (case-insensitively).
+    JsonObject overridePool = new JsonObject()
+        .put("id", "isbn")
+        .put("matcher", "isbn-matcher")
+        .put("cql", new JsonObject().put("isbn", "isbn-cql").put("rec.id", "isbn-cql"));
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .header("Content-Type", "application/json")
+        .body(overridePool.encode())
+        .put("/reservoir/config/pools/isbn")
+        .then().statusCode(204);
+
+    s = RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .param("query", "Rec.Id=2")
+        .get("/reservoir/sru")
+        .then().statusCode(200)
+        .contentType("text/xml")
+        .extract().body().asString();
+
+    sruVerify = new SruVerify(s);
+    assertThat(sruVerify.numberOfRecords, is(1));
+    assertThat(sruVerify.identifiers, hasSize(1));
+    assertThat(sruVerify.errors, hasSize(0));
   }
 
   @Test
@@ -3777,15 +3824,15 @@ public class MainVerticleTest extends TestBase {
       RestAssured.given()
           .header(XOkapiHeaders.TENANT, TENANT_1)
           .header("Content-Type", "application/json")
-          .body(module.asJson(true).encode())
+          .body(CodeModuleJson.toJson(module).encode())
           .post("/reservoir/config/modules")
           .then()
           .statusCode(201)
           .contentType("application/json")
-          .body("id", is(module.getId()))
-          .body("type", is(module.getType()))
-          .body("url", is(module.getUrl()))
-          .body("function", is(module.getFunction()));
+          .body("id", is(module.id()))
+          .body("type", is(module.type()))
+          .body("url", is(module.url()))
+          .body("function", is(module.function()));
     }
 
     //PUT oai configuration
@@ -4241,7 +4288,7 @@ public class MainVerticleTest extends TestBase {
 
     Async async = context.async();
     Storage storage = new Storage(vertx, TENANT_1, HttpMethod.PUT);
-    storage.getPool().preparedQuery("UPDATE " + storage.getClusterMetaTable()
+    storage.db().pool().preparedQuery("UPDATE " + storage.db().tables().clusterMeta()
             + " SET datestamp = $1")
         .execute(Tuple.of(LocalDateTime.now(ZoneOffset.UTC)))
         .onComplete(context.asyncAssertSuccess(h -> {

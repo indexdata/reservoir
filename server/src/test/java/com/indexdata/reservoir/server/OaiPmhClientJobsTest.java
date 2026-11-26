@@ -11,6 +11,7 @@ import static org.junit.Assert.assertTrue;
 
 import com.indexdata.reservoir.server.OaiPmhClientService.ClaimLostException;
 import com.indexdata.reservoir.server.OaiPmhClientService.Harvest;
+import com.indexdata.reservoir.server.entity.OaiPmhJobStatus;
 import com.indexdata.reservoir.server.metrics.IngestMetrics;
 import com.indexdata.reservoir.server.metrics.IngestMetricsNop;
 import com.indexdata.reservoir.util.SourceId;
@@ -75,7 +76,7 @@ public class OaiPmhClientJobsTest extends TestBase {
 
   @After
   public void cleanUp() throws Exception {
-    await(storage.getPool().preparedQuery("DELETE FROM " + storage.getOaiPmhClientTable()
+    await(storage.db().pool().preparedQuery("DELETE FROM " + storage.db().tables().oaiPmhClients()
         + " WHERE id = $1").execute(Tuple.of(id)));
     await(service.httpClient.close());
     if (server != null) {
@@ -85,7 +86,7 @@ public class OaiPmhClientJobsTest extends TestBase {
   }
 
   private void createClient(String url) throws Exception {
-    await(storage.getPool().preparedQuery("INSERT INTO " + storage.getOaiPmhClientTable()
+    await(storage.db().pool().preparedQuery("INSERT INTO " + storage.db().tables().oaiPmhClients()
             + " (id, config) VALUES ($1, $2)")
         .execute(Tuple.of(id, new JsonObject().put("sourceId", id).put("url", url)
             .put("from", "2020-01-01").put("metadataPrefix", "marc21"))));
@@ -97,12 +98,12 @@ public class OaiPmhClientJobsTest extends TestBase {
   }
 
   private Row row() throws Exception {
-    return await(storage.getPool().preparedQuery("SELECT * FROM " + storage.getOaiPmhClientTable()
+    return await(storage.db().pool().preparedQuery("SELECT * FROM " + storage.db().tables().oaiPmhClients()
         + " WHERE id = $1").execute(Tuple.of(id))).iterator().next();
   }
 
   private void expire() throws Exception {
-    await(storage.getPool().preparedQuery("UPDATE " + storage.getOaiPmhClientTable()
+    await(storage.db().pool().preparedQuery("UPDATE " + storage.db().tables().oaiPmhClients()
         + " SET lease_until = (CURRENT_TIMESTAMP AT TIME ZONE 'UTC') - INTERVAL '1 second'"
         + " WHERE id = $1").execute(Tuple.of(id)));
   }
@@ -128,8 +129,8 @@ public class OaiPmhClientJobsTest extends TestBase {
     Harvest second = claims.resultAt(1);
     assertTrue((first == null) != (second == null));
     Harvest original = first == null ? second : first;
-    original.job.setTotalRecords(7L);
-    original.job.getConfig().put("resumptionToken", "checkpoint");
+    original.job = original.job.withTotalRecords(7L);
+    original.config.put("resumptionToken", "checkpoint");
     assertTrue(await(service.saveJob(storage, original, false)));
     assertNull(await(service.claimJob(storage, id, false)));
     assertEquals(original.owner, row().getUUID("owner"));
@@ -143,13 +144,13 @@ public class OaiPmhClientJobsTest extends TestBase {
     assertTrue((first == null) != (second == null));
     Harvest replacement = first == null ? second : first;
     assertNotEquals(original.owner, replacement.owner);
-    assertEquals(Long.valueOf(7), replacement.job.getTotalRecords());
-    assertEquals("checkpoint", replacement.job.getConfig().getString("resumptionToken"));
+    assertEquals(Long.valueOf(7), replacement.job.totalRecords());
+    assertEquals("checkpoint", replacement.config.getString("resumptionToken"));
     assertLost(write(original, false));
     assertTrue(await(write(replacement, false)));
     assertLost(write(original, true));
-    original.job.setStatusIdle();
-    original.job.getConfig().put("resumptionToken", "stale");
+    original.job = original.job.withStatus(OaiPmhJobStatus.IDLE);
+    original.config.put("resumptionToken", "stale");
     assertFalse(await(service.saveJob(storage, original, true)));
     assertEquals("running", row().getJsonObject("job").getString("status"));
     assertEquals("checkpoint", row().getJsonObject("config").getString("resumptionToken"));
@@ -231,7 +232,7 @@ public class OaiPmhClientJobsTest extends TestBase {
       for (int i = 0; i < 4; i++) {
         Promise<Void> locked = Promise.promise();
         entered.add(locked.future());
-        transactions.add(storage.getPool().withTransaction(conn ->
+        transactions.add(storage.db().pool().withTransaction(conn ->
             service.guardRecord(storage, conn, harvest).compose(ignored -> {
               locked.complete();
               return release.future();
@@ -257,22 +258,22 @@ public class OaiPmhClientJobsTest extends TestBase {
     Promise<Void> secondLocked = Promise.promise();
     Promise<Void> releaseFirst = Promise.promise();
     Promise<Void> releaseSecond = Promise.promise();
-    Future<Void> first = storage.getPool().withTransaction(conn ->
+    Future<Void> first = storage.db().pool().withTransaction(conn ->
         service.guardRecord(storage, conn, harvest).compose(ignored -> {
           firstLocked.complete();
           return releaseFirst.future();
         }));
-    Future<Void> second = storage.getPool().withTransaction(conn ->
+    Future<Void> second = storage.db().pool().withTransaction(conn ->
         service.guardRecord(storage, conn, harvest).compose(ignored -> {
           secondLocked.complete();
           return releaseSecond.future();
         }));
     try {
       await(Future.all(firstLocked.future(), secondLocked.future()));
-      var deleted = storage.getPool().preparedQuery("DELETE FROM " + storage.getOaiPmhClientTable()
+      var deleted = storage.db().pool().preparedQuery("DELETE FROM " + storage.db().tables().oaiPmhClients()
           + " WHERE id = $1").execute(Tuple.of(id));
       Awaitility.await().atMost(Duration.ofSeconds(3)).until(() ->
-          await(storage.getPool().query("SELECT count(*) FROM pg_stat_activity"
+          await(storage.db().pool().query("SELECT count(*) FROM pg_stat_activity"
               + " WHERE wait_event_type = 'Lock' AND query LIKE 'DELETE%oai_pmh_clients%'")
               .execute()).iterator().next().getLong(0) > 0);
       releaseFirst.complete();
@@ -306,7 +307,7 @@ public class OaiPmhClientJobsTest extends TestBase {
       await(locked.future());
       Future<Void> stop = service.stopJob(storage, id, false);
       Awaitility.await().atMost(Duration.ofSeconds(3)).until(() ->
-          await(storage.getPool().query("SELECT count(*) FROM pg_stat_activity"
+          await(storage.db().pool().query("SELECT count(*) FROM pg_stat_activity"
               + " WHERE wait_event_type = 'Lock' AND query LIKE '%oai_pmh_clients%'")
               .execute()).iterator().next().getLong(0) > 0);
       assertFalse(stop.isComplete());
@@ -329,7 +330,7 @@ public class OaiPmhClientJobsTest extends TestBase {
   public void deletingAndRecreatingClientRejectsOldWorker() throws Exception {
     createClient("http://localhost:1/oai");
     Harvest original = await(service.claimJob(storage, id, false));
-    await(storage.getPool().preparedQuery("DELETE FROM " + storage.getOaiPmhClientTable()
+    await(storage.db().pool().preparedQuery("DELETE FROM " + storage.db().tables().oaiPmhClients()
         + " WHERE id = $1").execute(Tuple.of(id)));
     assertLost(write(original, false));
     assertFalse(await(service.saveJob(storage, original, false)));
@@ -354,7 +355,7 @@ public class OaiPmhClientJobsTest extends TestBase {
     await(service.startJob(vertx, storage, id, false));
     await(received.future());
     UUID owner = row().getUUID("owner");
-    await(storage.getPool().preparedQuery("UPDATE " + storage.getOaiPmhClientTable()
+    await(storage.db().pool().preparedQuery("UPDATE " + storage.db().tables().oaiPmhClients()
         + " SET lease_until = (CURRENT_TIMESTAMP AT TIME ZONE 'UTC') + INTERVAL '1 second'"
         + " WHERE id = $1").execute(Tuple.of(id)));
     Awaitility.await().atMost(Duration.ofSeconds(3)).until(() ->
@@ -375,7 +376,7 @@ public class OaiPmhClientJobsTest extends TestBase {
       request.response().end(START + END);
     });
     Harvest abandoned = await(service.claimJob(storage, id, false));
-    abandoned.job.getConfig().put("resumptionToken", "saved-token");
+    abandoned.config.put("resumptionToken", "saved-token");
     await(service.saveJob(storage, abandoned, false));
     JsonObject config = row().getJsonObject("config").copy().put("id", id);
     RestAssured.given().header(XOkapiHeaders.TENANT, TENANT_1)
@@ -446,8 +447,8 @@ public class OaiPmhClientJobsTest extends TestBase {
       }
       Promise<Void> locked = Promise.promise();
       Promise<Void> release = Promise.promise();
-      Future<Void> transaction = storage.getPool().withTransaction(conn ->
-          conn.preparedQuery("SELECT id FROM " + storage.getOaiPmhClientTable()
+      Future<Void> transaction = storage.db().pool().withTransaction(conn ->
+          conn.preparedQuery("SELECT id FROM " + storage.db().tables().oaiPmhClients()
                   + " WHERE id = $1 FOR UPDATE").execute(Tuple.of(id)).compose(rows -> {
                     locked.complete();
                     return release.future();
@@ -457,7 +458,7 @@ public class OaiPmhClientJobsTest extends TestBase {
         var response = webClient.postAbs(OKAPI_URL + "/reservoir/pmh-clients/_all/" + operation)
             .putHeader(XOkapiHeaders.TENANT, TENANT_1).send();
         Awaitility.await().atMost(Duration.ofSeconds(3)).until(() ->
-            await(storage.getPool().query("SELECT count(*) FROM pg_stat_activity"
+            await(storage.db().pool().query("SELECT count(*) FROM pg_stat_activity"
                 + " WHERE wait_event_type = 'Lock' AND query LIKE '%oai_pmh_clients%'")
                 .execute()).iterator().next().getLong(0) > 0);
         assertFalse(response.isComplete());
@@ -479,7 +480,7 @@ public class OaiPmhClientJobsTest extends TestBase {
       request.response().end(START + END);
     });
     await(service.claimJob(storage, id, false));
-    await(storage.getPool().preparedQuery("UPDATE " + storage.getOaiPmhClientTable()
+    await(storage.db().pool().preparedQuery("UPDATE " + storage.db().tables().oaiPmhClients()
         + " SET stop = TRUE, lease_until = NULL WHERE id = $1").execute(Tuple.of(id)));
     RestAssured.given().header(XOkapiHeaders.TENANT, TENANT_1)
         .get("/reservoir/pmh-clients/_all/status").then().statusCode(200);

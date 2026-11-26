@@ -3,142 +3,137 @@ package com.indexdata.reservoir.server;
 import com.indexdata.reservoir.module.ModuleCache;
 import com.indexdata.reservoir.module.ModuleExecutable;
 import com.indexdata.reservoir.module.ModuleInvocation;
-import com.indexdata.reservoir.server.entity.ClusterBuilder;
+import com.indexdata.reservoir.server.db.ClusterRepository;
+import com.indexdata.reservoir.server.db.CodeModuleRepository;
+import com.indexdata.reservoir.server.db.GlobalRecordRepository;
+import com.indexdata.reservoir.server.db.OaiConfigRepository;
+import com.indexdata.reservoir.server.db.OaiPmhClientRepository;
+import com.indexdata.reservoir.server.db.PoolConfigRepository;
+import com.indexdata.reservoir.server.db.PoolInitJobRepository;
+import com.indexdata.reservoir.server.db.RowStreamer;
+import com.indexdata.reservoir.server.db.SchemaMigrator;
+import com.indexdata.reservoir.server.db.SqlBuilder;
+import com.indexdata.reservoir.server.db.Tables;
+import com.indexdata.reservoir.server.db.TenantDb;
+import com.indexdata.reservoir.server.entity.Cluster;
 import com.indexdata.reservoir.server.entity.CodeModuleEntity;
+import com.indexdata.reservoir.server.entity.GlobalRecord;
+import com.indexdata.reservoir.server.entity.GlobalRecordJson;
 import com.indexdata.reservoir.server.entity.PoolConfig;
+import com.indexdata.reservoir.server.entity.PoolStats;
 import com.indexdata.reservoir.server.metrics.IngestMetrics;
 import com.indexdata.reservoir.server.metrics.IngestMetricsNop;
 import com.indexdata.reservoir.util.ReadStreamConsumer;
 import com.indexdata.reservoir.util.SourceId;
 import com.indexdata.reservoir.util.readstream.LargeJsonReadStream;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpMethod;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.RoutingContext;
 import io.vertx.pgclient.PgException;
 import io.vertx.sqlclient.Row;
-import io.vertx.sqlclient.RowIterator;
 import io.vertx.sqlclient.RowSet;
-import io.vertx.sqlclient.RowStream;
 import io.vertx.sqlclient.SqlConnection;
 import io.vertx.sqlclient.Tuple;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.tlib.postgres.PgCqlQuery;
-import org.folio.tlib.postgres.TenantPgPool;
 
-// Define a constant instead of duplicating this literal
-@java.lang.SuppressWarnings({"squid:S1192"})
+/**
+ * Tenant-scoped storage facade that wires repositories over {@link TenantDb} and orchestrates
+ * multi-repository ingest and clustering transactions. Contains no raw SQL or HTTP dependencies.
+ */
 public class Storage {
-  public static final String GLOBAL_RECORDS_TABLE = "global_records";
-  public static final String POOL_CONFIG_TABLE = "match_key_config";
-  public static final String CLUSTER_META_TABLE = "cluster_meta";
-  public static final String CLUSTER_RECORDS_TABLE = "cluster_records";
-  public static final String CLUSTER_VALUES_TABLE = "cluster_values";
-  public static final String MODULE_TABLE = "module";
-  public static final String OAI_CONFIG_TABLE = "oai_config";
-  public static final String OAI_PMH_CLIENTS_TABLE = "oai_pmh_clients";
-  public static final String POOL_INITIALIZATION_JOBS_TABLE = "pool_initialization_jobs";
+  public static final String GLOBAL_RECORDS_TABLE = Tables.GLOBAL_RECORDS;
+  public static final String POOL_CONFIG_TABLE = Tables.POOL_CONFIG;
+  public static final String CLUSTER_META_TABLE = Tables.CLUSTER_META;
+  public static final String CLUSTER_RECORDS_TABLE = Tables.CLUSTER_RECORDS;
+  public static final String CLUSTER_VALUES_TABLE = Tables.CLUSTER_VALUES;
+  public static final String MODULE_TABLE = Tables.MODULE;
+  public static final String OAI_CONFIG_TABLE = Tables.OAI_CONFIG;
+  public static final String OAI_PMH_CLIENTS_TABLE = Tables.OAI_PMH_CLIENTS;
+  public static final String POOL_INITIALIZATION_JOBS_TABLE = Tables.POOL_INITIALIZATION_JOBS;
 
   private static final Logger log = LogManager.getLogger(Storage.class);
-  private static final String CREATE_IF_NO_EXISTS = "CREATE TABLE IF NOT EXISTS ";
   private static final int MATCHVALUE_MAX_LENGTH = 600; // < 2704 / 4
 
-  final TenantPgPool pool;
-  final String globalRecordTable;
-  final String poolConfigTable;
-  final String clusterRecordTable;
-  final String clusterValueTable;
-  final String clusterMetaTable;
-  final String moduleTable;
-  final String oaiConfigTable;
-  final String oaiPmhClientTable;
-  final String poolInitializationJobTable;
-  final Vertx vertx;
+  private final TenantDb db;
+  private final Vertx vertx;
   private final String tenant;
+  private final PoolInitJobRepository poolInitJobRepository;
+  private final GlobalRecordRepository globalRecordRepository;
+  private final PoolConfigRepository poolConfigRepository;
+  private final CodeModuleRepository codeModuleRepository;
+  private final OaiPmhClientRepository oaiPmhClientRepository;
+  private final OaiConfigRepository oaiConfigRepository;
+  private final ClusterRepository clusterRepository;
   InitializationDiagnostics initializationDiagnostics;
   static int sqlStreamFetchSize = 50;
 
   /**
    * Create storage service for tenant.
-   * @param vertx Vert.x hande
+   * @param vertx Vert.x handle
    * @param tenant tenant
    * @param method HTTP method for selecting read or write pool
    */
   public Storage(Vertx vertx, String tenant, HttpMethod method) {
-    final String key = getPoolKey(method);
-    this.pool = TenantPgPool.pool(vertx, tenant, key);
+    this.db = TenantDb.forTenant(vertx, tenant, method);
     this.tenant = tenant;
     this.vertx = vertx;
-    this.globalRecordTable = pool.getSchema() + "." + GLOBAL_RECORDS_TABLE;
-    this.poolConfigTable = pool.getSchema() + "." + POOL_CONFIG_TABLE;
-    this.clusterRecordTable = pool.getSchema() + "." + CLUSTER_RECORDS_TABLE;
-    this.clusterValueTable = pool.getSchema() + "." + CLUSTER_VALUES_TABLE;
-    this.clusterMetaTable = pool.getSchema() + "." + CLUSTER_META_TABLE;
-    this.moduleTable = pool.getSchema() + "." + MODULE_TABLE;
-    this.oaiConfigTable = pool.getSchema() + "." + OAI_CONFIG_TABLE;
-    this.oaiPmhClientTable = pool.getSchema() + "." + OAI_PMH_CLIENTS_TABLE;
-    this.poolInitializationJobTable = pool.getSchema() + "." + POOL_INITIALIZATION_JOBS_TABLE;
+    this.poolInitJobRepository = new PoolInitJobRepository(db);
+    this.globalRecordRepository = new GlobalRecordRepository(db);
+    this.poolConfigRepository = new PoolConfigRepository(db);
+    this.codeModuleRepository = new CodeModuleRepository(db);
+    this.oaiPmhClientRepository = new OaiPmhClientRepository(db);
+    this.oaiConfigRepository = new OaiConfigRepository(db);
+    this.clusterRepository = new ClusterRepository(db);
   }
 
   static String getPoolKey(HttpMethod method) {
-    if (method.equals(HttpMethod.GET)) {
-      return "read";
-    }
-    return "write";
+    return TenantDb.poolKey(method);
   }
 
-  public Storage(RoutingContext ctx) {
-    this(ctx.vertx(), Tenant.get(ctx), ctx.request().method());
+  public TenantDb db() {
+    return db;
   }
 
-  public TenantPgPool getPool() {
-    return pool;
+  public PoolInitJobRepository poolInitJobs() {
+    return poolInitJobRepository;
   }
 
-  public String getClusterMetaTable() {
-    return clusterMetaTable;
+  public GlobalRecordRepository globalRecords() {
+    return globalRecordRepository;
   }
 
-  public String getGlobalRecordTable() {
-    return globalRecordTable;
+  public PoolConfigRepository poolConfigs() {
+    return poolConfigRepository;
   }
 
-  public String getClusterRecordTable() {
-    return clusterRecordTable;
+  public CodeModuleRepository codeModules() {
+    return codeModuleRepository;
   }
 
-  public String getClusterValuesTable() {
-    return clusterValueTable;
+  public OaiPmhClientRepository oaiPmhClients() {
+    return oaiPmhClientRepository;
   }
 
-  public String getModuleTable() {
-    return moduleTable;
+  public OaiConfigRepository oaiConfigs() {
+    return oaiConfigRepository;
   }
 
-  public String getOaiPmhClientTable() {
-    return oaiPmhClientTable;
+  public ClusterRepository clusters() {
+    return clusterRepository;
   }
 
   public String getTenant() {
@@ -146,112 +141,17 @@ public class Storage {
   }
 
   /**
-   * Prepares storage with tables, etc.
-   * @return async result.
+   * Run versioned SQL migrations for this tenant and resolve any pending URL-backed code modules.
    */
   public Future<Void> init() {
-    return pool.execute(List.of(
-            "SET search_path TO " + pool.getSchema(),
-            CREATE_IF_NO_EXISTS + globalRecordTable
-                + "(id uuid NOT NULL PRIMARY KEY,"
-                + " local_id VARCHAR NOT NULL,"
-                + " source_id VARCHAR NOT NULL,"
-                + " source_version integer DEFAULT 1,"
-                + " payload JSONB NOT NULL"
-                + ")",
-            "DROP INDEX IF EXISTS idx_local_id",
-            "ALTER TABLE " + globalRecordTable + " ADD COLUMN IF NOT EXISTS"
-                + " source_version integer DEFAULT 1",
-            "CREATE UNIQUE INDEX IF NOT EXISTS idx_local_source ON " + globalRecordTable
-                + " (local_id, source_id, source_version)",
-            "CREATE INDEX IF NOT EXISTS idx_source ON " + globalRecordTable
-                + " (source_id, source_version)",
-            CREATE_IF_NO_EXISTS + poolConfigTable
-                + "(id VARCHAR NOT NULL PRIMARY KEY,"
-                + " matcher VARCHAR, "
-                + " method VARCHAR, "
-                + " update VARCHAR, "
-                + " params JSONB, "
-                + " args VARCHAR, "
-                + " cql JSONB)",
-            "ALTER TABLE " + poolConfigTable + " ADD COLUMN IF NOT EXISTS"
-                + " matcher VARCHAR",
-            "ALTER TABLE " + poolConfigTable + " ADD COLUMN IF NOT EXISTS"
-                + " args VARCHAR",
-            "ALTER TABLE " + poolConfigTable + " ADD COLUMN IF NOT EXISTS"
-                + " cql JSONB",
-            CREATE_IF_NO_EXISTS + clusterMetaTable
-                + "(cluster_id uuid NOT NULL PRIMARY KEY,"
-                + " match_key_config_id VARCHAR NOT NULL,"
-                + " datestamp TIMESTAMP,"
-                + " FOREIGN KEY(match_key_config_id) REFERENCES " + poolConfigTable
-                + " ON DELETE CASCADE)",
-            "CREATE INDEX IF NOT EXISTS cluster_meta_datestamp_idx ON "
-                + clusterMetaTable + "(datestamp)",
-            CREATE_IF_NO_EXISTS + clusterRecordTable
-                + "(record_id uuid NOT NULL,"
-                + " match_key_config_id VARCHAR NOT NULL,"
-                + " cluster_id uuid NOT NULL,"
-                + " FOREIGN KEY(match_key_config_id) REFERENCES " + poolConfigTable
-                + " ON DELETE CASCADE,"
-                + " FOREIGN KEY(record_id) REFERENCES " + globalRecordTable + " ON DELETE CASCADE)",
-            "CREATE UNIQUE INDEX IF NOT EXISTS cluster_record_record_matchkey_idx ON "
-                + clusterRecordTable + "(record_id, match_key_config_id)",
-            "CREATE INDEX IF NOT EXISTS cluster_record_cluster_idx ON "
-                + clusterRecordTable + "(cluster_id)",
-            CREATE_IF_NO_EXISTS + clusterValueTable
-                + "(cluster_id uuid NOT NULL,"
-                + " match_key_config_id VARCHAR NOT NULL,"
-                + " match_value VARCHAR NOT NULL,"
-                + " FOREIGN KEY(match_key_config_id) REFERENCES " + poolConfigTable
-                + " ON DELETE CASCADE)",
-            "CREATE UNIQUE INDEX IF NOT EXISTS cluster_value_value_idx ON "
-                + clusterValueTable + "(match_key_config_id, match_value)",
-            "CREATE INDEX IF NOT EXISTS cluster_value_cluster_idx ON "
-                + clusterValueTable + "(cluster_id)",
-            CREATE_IF_NO_EXISTS + moduleTable
-                + "(id VARCHAR NOT NULL PRIMARY KEY,"
-                + " type VARCHAR,"
-                + " url VARCHAR, "
-                + " function VARCHAR,"
-                + " script VARCHAR)",
-            "ALTER TABLE " + moduleTable + " ADD COLUMN IF NOT EXISTS"
-                + " type VARCHAR",
-            "ALTER TABLE " + moduleTable + " ADD COLUMN IF NOT EXISTS"
-                + " script VARCHAR",
-            CREATE_IF_NO_EXISTS + oaiConfigTable
-                + "(id VARCHAR NOT NULL PRIMARY KEY,"
-                + " config JSONB NOT NULL)",
-            CREATE_IF_NO_EXISTS + oaiPmhClientTable
-                + "(id VARCHAR NOT NULL PRIMARY KEY,"
-                + " config JSONB, job JSONB, stop BOOLEAN, owner UUID)",
-            "ALTER TABLE " + oaiPmhClientTable
-                + " ADD COLUMN IF NOT EXISTS lease_until TIMESTAMP",
-            CREATE_IF_NO_EXISTS + poolInitializationJobTable
-                + "(id UUID NOT NULL PRIMARY KEY,"
-                + " pool_id VARCHAR NOT NULL,"
-                + " status VARCHAR NOT NULL CHECK (status IN ('running', 'idle')),"
-                + " claim_token UUID,"
-                + " lease_until TIMESTAMP,"
-                + " checkpoint UUID,"
-                + " total_records BIGINT NOT NULL DEFAULT 0,"
-                + " started_at TIMESTAMP NOT NULL,"
-                + " completed_at TIMESTAMP,"
-                + " error TEXT,"
-                + " FOREIGN KEY(pool_id) REFERENCES " + poolConfigTable
-                + " ON DELETE CASCADE)",
-            "CREATE UNIQUE INDEX IF NOT EXISTS pool_initialization_one_running_idx ON "
-                + poolInitializationJobTable + "(status) WHERE status = 'running'"
-        )
-      )
-      .mapEmpty()
-      .compose(x -> resolveCodeModuleTable(vertx));
+    return SchemaMigrator.migrate(db)
+        .compose(_ -> resolveCodeModuleTable(vertx));
   }
 
   private Future<Boolean> upsertGlobalRecord(int retryCount, String localIdentifier,
       SourceId sourceId, int sourceVersion, JsonObject payload, List<MatcherResult> matcherResults,
       IngestMetrics ingestMetrics, Function<SqlConnection, Future<Void>> beforeWrite) {
-    return pool.withTransaction(conn -> beforeWrite.apply(conn).compose(ignored ->
+    return db.withTransaction(conn -> beforeWrite.apply(conn).compose(_ ->
             upsertGlobalRecord(conn, localIdentifier, sourceId, sourceVersion,
                 payload, matcherResults, ingestMetrics)))
         // Retry unique violations in a new transaction, rechecking ownership on each attempt.
@@ -268,59 +168,36 @@ public class Storage {
   Future<Boolean> upsertGlobalRecord(SqlConnection conn, String localIdentifier,
       SourceId sourceId, int sourceVersion, JsonObject payload, List<MatcherResult> matcherResults,
       IngestMetrics ingestMetrics) {
-    UUID startId = UUID.randomUUID();
-    return conn.preparedQuery(
-            "INSERT INTO " + globalRecordTable
-                + " (id, local_id, source_id, source_version, payload)"
-                + " VALUES ($1, $2, $3, $4, $5)"
-                + " ON CONFLICT (local_id, source_id, source_version) DO UPDATE "
-                + " SET payload = $5"
-                + " RETURNING id"
-        )
-        .execute(Tuple.of(startId, localIdentifier, sourceId.toString(), sourceVersion, payload))
-        .map(rowSet -> rowSet.iterator().next().getUUID("id"))
+    UUID candidateId = UUID.randomUUID();
+    return globalRecordRepository.upsert(conn, candidateId, localIdentifier,
+            sourceId, sourceVersion, payload)
         .compose(id -> updateMatchKeyValues(conn, id, matcherResults, ingestMetrics)
-            .map(x -> id.equals(startId)));
+            .map(_ -> id.equals(candidateId)));
   }
 
   Future<Void> deleteGlobalRecord(String localIdentifier, SourceId sourceId, int sourceVersion) {
     return deleteGlobalRecord(localIdentifier, sourceId, sourceVersion,
-        connection -> Future.succeededFuture());
+        _ -> Future.succeededFuture());
   }
 
   private Future<Void> deleteGlobalRecord(String localIdentifier, SourceId sourceId,
       int sourceVersion, Function<SqlConnection, Future<Void>> beforeWrite) {
-    String q = "UPDATE " + clusterMetaTable + " AS m"
-        + " SET datestamp = $4"
-        + " FROM " + globalRecordTable + ", " + clusterRecordTable + " AS r"
-        + " WHERE m.cluster_id = r.cluster_id AND r.record_id = id"
-        + " AND local_id = $1 AND source_id = $2 and source_version = $3";
-    return pool.withTransaction(conn -> beforeWrite.apply(conn).compose(ignored ->
-        conn.preparedQuery(q)
-          .execute(Tuple.of(localIdentifier, sourceId.toString(), sourceVersion,
-              LocalDateTime.now(ZoneOffset.UTC)))
-          .compose(x -> conn.preparedQuery("DELETE FROM " + globalRecordTable
-                  + " WHERE local_id = $1 AND source_id = $2 and source_version = $3")
-          .execute(Tuple.of(localIdentifier, sourceId.toString(), sourceVersion))
-          .mapEmpty())));
+    return db.withTransaction(conn -> beforeWrite.apply(conn)
+        .compose(_ -> clusterRepository.touchForDeletedRecord(
+            conn, localIdentifier, sourceId, sourceVersion))
+        .compose(_ -> globalRecordRepository.deleteByKey(
+            conn, localIdentifier, sourceId, sourceVersion)));
   }
 
   /**
    * Insert/update/delete global record.
-   * @param vertx Vert.x handle
-   * @param sourceId source identifier
-   * @param sourceVersion source version
-   * @param globalRecord global record JSON object
-   * @param ingestMatchers pool configurations in use
-   * @param ingestMetrics ingest metrics collector
    * @return async result with TRUE=inserted, FALSE=updated, null=deleted
    */
   Future<Boolean> ingestGlobalRecord(Vertx vertx,
       SourceId sourceId, int sourceVersion, JsonObject globalRecord,
       List<IngestMatcher> ingestMatchers, IngestMetrics ingestMetrics) {
-
     return ingestGlobalRecord(vertx, sourceId, sourceVersion, globalRecord, ingestMatchers,
-        ingestMetrics, connection -> Future.succeededFuture());
+        ingestMetrics, _ -> Future.succeededFuture());
   }
 
   /** Ingest with a guard executed inside the transaction that writes the record. */
@@ -331,9 +208,8 @@ public class Storage {
     long startTime = System.nanoTime();
     return ingestGlobalRecord2(vertx, sourceId, sourceVersion, globalRecord,
         ingestMatchers, ingestMetrics, beforeWrite)
-        .onComplete(x -> ingestMetrics.recordStoring(
-            System.nanoTime() - startTime, TimeUnit.NANOSECONDS)
-        );
+        .onComplete(_ -> ingestMetrics.recordStoring(
+            System.nanoTime() - startTime, TimeUnit.NANOSECONDS));
   }
 
   private Future<Boolean> ingestGlobalRecord2(Vertx vertx,
@@ -341,19 +217,19 @@ public class Storage {
       List<IngestMatcher> ingestMatchers, IngestMetrics ingestMetrics,
       Function<SqlConnection, Future<Void>> beforeWrite) {
 
-    final String localIdentifier = globalRecord.getString(ClusterBuilder.LOCAL_ID_LABEL);
+    final String localIdentifier = globalRecord.getString(GlobalRecordJson.LOCAL_ID);
     if (localIdentifier == null) {
       ingestMetrics.incrementRecordsIgnored();
       return Future.failedFuture("localId required");
     }
     if (Boolean.TRUE.equals(globalRecord.getBoolean("delete"))) {
       return deleteGlobalRecord(localIdentifier, sourceId, sourceVersion, beforeWrite)
-        .map(x -> {
-          ingestMetrics.incrementRecordsDeleted();
-          return null;
-        });
+          .map(_ -> {
+            ingestMetrics.incrementRecordsDeleted();
+            return null;
+          });
     }
-    final JsonObject payload = globalRecord.getJsonObject(ClusterBuilder.PAYLOAD_LABEL);
+    final JsonObject payload = globalRecord.getJsonObject(GlobalRecordJson.PAYLOAD);
     if (payload == null) {
       ingestMetrics.incrementRecordsIgnored();
       return Future.failedFuture("payload required");
@@ -362,25 +238,25 @@ public class Storage {
       ingestMetrics.incrementRecordsIgnored();
       return Future.failedFuture("sourceId required");
     }
-    List<Future<MatcherResult>> futures = new ArrayList<>();
+    List<Future<MatcherResult>> futures = new ArrayList<>(ingestMatchers.size());
     for (IngestMatcher ingestMatcher : ingestMatchers) {
       futures.add(runMatcher(ingestMatcher, ingestMetrics, globalRecord));
     }
     return Future.all(futures).compose(cf -> {
       List<MatcherResult> results = new ArrayList<>(cf.size());
       for (int i = 0; i < cf.size(); i++) {
-        results.add((MatcherResult) cf.resultAt(i));
+        results.add(cf.resultAt(i));
       }
       return upsertGlobalRecord(results.size(), localIdentifier, sourceId, sourceVersion,
           payload, results, ingestMetrics, beforeWrite)
-        .map(inserted -> {
-          if (inserted) {
-            ingestMetrics.incrementRecordsInserted();
-          } else {
-            ingestMetrics.incrementRecordsUpdated();
-          }
-          return inserted;
-        });
+          .map(inserted -> {
+            if (inserted) {
+              ingestMetrics.incrementRecordsInserted();
+            } else {
+              ingestMetrics.incrementRecordsUpdated();
+            }
+            return inserted;
+          });
     });
   }
 
@@ -392,7 +268,7 @@ public class Storage {
     var startTime = System.nanoTime();
     if (ingestMatcher.moduleExecutables != null) {
       JsonObject matcherInput = ingestMatcher.onlyPayload
-          ? globalRecord.getJsonObject(ClusterBuilder.PAYLOAD_LABEL) : globalRecord;
+          ? globalRecord.getJsonObject(GlobalRecordJson.PAYLOAD) : globalRecord;
       List<Future<Collection<String>>> futures = new ArrayList<>();
       for (ModuleExecutable executable : ingestMatcher.moduleExecutables) {
         futures.add(executable.executeAsCollection(matcherInput));
@@ -413,7 +289,7 @@ public class Storage {
 
   Future<Void> updateMatchKeyValues(SqlConnection conn, UUID globalId,
       List<MatcherResult> matcherResults, IngestMetrics ingestMetrics) {
-    List<Future<Void>> futures = new ArrayList<>();
+    List<Future<Void>> futures = new ArrayList<>(matcherResults.size());
     for (MatcherResult matcherResult : matcherResults) {
       futures.add(updateClusterForRecord(conn, globalId, matcherResult));
     }
@@ -422,26 +298,22 @@ public class Storage {
 
   Future<IngestMatcher> createIngestMatcher(PoolConfig poolConfig, Vertx vertx) {
     IngestMatcher ingestMatcher = new IngestMatcher();
-
-    String argsType = poolConfig.getArgs();
-    ingestMatcher.onlyPayload = argsType == null || "payload".equals(argsType);
-
-    ingestMatcher.poolId = poolConfig.getId();
-    String[] matcherInvocations = poolConfig.getMatcherInvocations();
-    if (matcherInvocations.length == 0) {
+    ingestMatcher.onlyPayload = poolConfig.onlyPayload();
+    ingestMatcher.poolId = poolConfig.id();
+    List<ModuleInvocation> invocations = poolConfig.matchers();
+    if (invocations.isEmpty()) {
       return Future.failedFuture("pool config must include 'matcher'");
     }
-    List<Future<?>> futures = new ArrayList<>();
-    for (String matcherInvocation : matcherInvocations) {
-      ModuleInvocation invocation = new ModuleInvocation(matcherInvocation);
-      futures.add(selectCodeModuleEntity(invocation.getModuleName())
+    List<Future<ModuleExecutable>> futures = new ArrayList<>(invocations.size());
+    for (ModuleInvocation invocation : invocations) {
+      futures.add(codeModuleRepository.findById(db.client(), invocation.moduleName())
           .compose(entity -> {
-            if (entity == null) {
+            if (entity.isEmpty()) {
               return Future.failedFuture(
-                  "Module '" + invocation.getModuleName()
+                  "Module '" + invocation.moduleName()
                       + "' does not exist for '" + invocation + "'");
             }
-            return ModuleCache.getInstance().lookup(tenant, entity)
+            return ModuleCache.getInstance().lookup(tenant, entity.get())
                 .map(module -> new ModuleExecutable(module, invocation, vertx));
           }));
     }
@@ -454,19 +326,16 @@ public class Storage {
     });
   }
 
-  Future<List<IngestMatcher>> createIngestMatchers(List<PoolConfig> poolConfigs,
-      Vertx vertx) {
+  Future<List<IngestMatcher>> createIngestMatchers(List<PoolConfig> poolConfigs, Vertx vertx) {
     List<Future<IngestMatcher>> futures = new ArrayList<>();
-    for (int i = 0; i < poolConfigs.size(); i++) {
-      PoolConfig poolConfig = poolConfigs.get(i);
-      String update = poolConfig.getUpdate();
-      if ("manual".equals(update)) {
+    for (PoolConfig poolConfig : poolConfigs) {
+      if (poolConfig.isManualUpdate()) {
         continue;
       }
       futures.add(createIngestMatcher(poolConfig, vertx));
     }
     return Future.all(futures).map(composite -> {
-      List<IngestMatcher> ingestMatchers = new ArrayList<>();
+      List<IngestMatcher> ingestMatchers = new ArrayList<>(composite.size());
       for (int i = 0; i < composite.size(); i++) {
         ingestMatchers.add(composite.resultAt(i));
       }
@@ -486,13 +355,13 @@ public class Storage {
 
   <T> Future<T> initializationTransaction(Function<SqlConnection, Future<T>> action) {
     if (initializationDiagnostics == null) {
-      return pool.withTransaction(action);
+      return db.withTransaction(action);
     }
     long start = System.nanoTime();
     long[] finish = {0};
-    return pool.withTransaction(connection -> {
+    return db.withTransaction(connection -> {
       initializationDiagnostics.elapsed("acquire.begin", start, true);
-      return action.apply(connection).andThen(result -> finish[0] = System.nanoTime());
+      return action.apply(connection).andThen(_ -> finish[0] = System.nanoTime());
     }).andThen(result -> {
       if (finish[0] != 0) {
         initializationDiagnostics.elapsed("transaction.finish", finish[0], result.succeeded());
@@ -531,31 +400,21 @@ public class Storage {
 
   Future<Set<UUID>> updateClusterValues(SqlConnection conn, UUID newClusterId,
       MatcherResult matcherResult) {
-    StringBuilder q = new StringBuilder();
-    List<Object> tupleList = new ArrayList<>();
-    tupleList.add(matcherResult.poolId);
     Set<UUID> clustersFound = new HashSet<>();
-    int no = 2;
     for (String key : matcherResult.keys) {
       if (key.isEmpty()) {
         return Future.succeededFuture(clustersFound);
       }
-      if (no > 2) {
-        q.append(" UNION ALL ");
-      }
-      // Exact lookups keep both columns in the index condition on PostgreSQL 16,
-      // even before statistics account for a newly populated pool.
-      q.append("SELECT cluster_id, match_value FROM ").append(clusterValueTable)
-          .append(" WHERE match_key_config_id = $1 AND match_value = $").append(no++);
-      tupleList.add(key);
     }
+    SqlBuilder.SqlQuery lookup = clusterRepository.buildClusterValueLookupQuery(
+        matcherResult.poolId, matcherResult.keys);
     Set<String> foundKeys = new HashSet<>();
     String stage = "lookup.keys=" + matcherResult.keys.size();
-    Tuple parameters = Tuple.from(tupleList);
     Future<Void> explanation = initializationDiagnostics == null ? Future.succeededFuture()
-        : initializationDiagnostics.explain(conn, q.toString(), parameters,
+        : initializationDiagnostics.explain(conn, lookup.sql(), lookup.params(),
             matcherResult.keys.size());
-    return explanation.compose(ignored -> clusterQuery(conn, stage, q.toString(), parameters))
+    return explanation
+        .compose(_ -> clusterQuery(conn, stage, lookup.sql(), lookup.params()))
         .map(rowSet -> {
           rowSet.forEach(row -> {
             foundKeys.add(row.getString("match_value"));
@@ -564,523 +423,140 @@ public class Storage {
           if (initializationDiagnostics != null) {
             initializationDiagnostics.clusters(clustersFound.size());
           }
-          if (clustersFound.isEmpty()) {
-            return newClusterId;
-          } else {
-            return clustersFound.iterator().next();
-          }
+          return clustersFound.isEmpty() ? newClusterId : clustersFound.iterator().next();
         })
-        .compose(clusterId ->
-            addValuesToCluster(conn, clusterId, matcherResult, foundKeys)
-        )
+        .compose(clusterId -> {
+          List<String> newValues = new ArrayList<>();
+          for (String key : matcherResult.keys) {
+            if (!foundKeys.contains(key)) {
+              newValues.add(key);
+            }
+          }
+          return clusterRepository.addValuesToCluster(
+              conn, clusterId, matcherResult.poolId, newValues, this::clusterQuery);
+        })
         .map(clustersFound);
-  }
-
-  Future<Integer> touchClusters(PgCqlQuery query) {
-    String where = query.getWhereClause();
-    if (where == null
-        || !where.contains("global_records.source_id")
-        || !where.contains("cluster_meta.match_key_config_id")) {
-      return Future.failedFuture(
-        "query too broad, must at least contain 'poolId' and 'sourceId'");
-    }
-    String q = "UPDATE " + clusterMetaTable
-        + " SET datestamp = $1"
-        + " FROM " + globalRecordTable + ", " + clusterRecordTable
-        + " WHERE cluster_meta.cluster_id = cluster_records.cluster_id"
-        + " AND cluster_records.record_id = global_records.id"
-        + " AND " + where;
-    return pool.preparedQuery(q)
-        .execute(Tuple.of(LocalDateTime.now(ZoneOffset.UTC)))
-        .map(rows -> rows.rowCount());
-  }
-
-  Future<Void> removeClusterRecord(SqlConnection conn, UUID globalId, MatcherResult matcherResult) {
-    String q = "UPDATE " + clusterMetaTable
-        + " SET datestamp = $1"
-        + " FROM " + clusterRecordTable
-        + " WHERE cluster_meta.cluster_id = cluster_records.cluster_id"
-        + " AND cluster_records.match_key_config_id = $2"
-        + " AND cluster_records.record_id = $3";
-    return clusterQuery(conn, "remove.meta", q, Tuple.of(
-        LocalDateTime.now(ZoneOffset.UTC), matcherResult.poolId, globalId))
-        .compose(x -> clusterQuery(conn, "remove.record", "DELETE FROM " + clusterRecordTable
-            + " WHERE record_id = $1 AND match_key_config_id = $2",
-            Tuple.of(globalId, matcherResult.poolId))
-            .mapEmpty());
   }
 
   Future<Void> updateClusterForRecord(SqlConnection conn, UUID globalId,
       MatcherResult matcherResult) {
     if (matcherResult.keys.isEmpty()) {
-      return removeClusterRecord(conn, globalId, matcherResult);
+      return clusterRepository.removeClusterRecord(
+          conn, globalId, matcherResult.poolId, this::clusterQuery);
     }
     UUID newClusterId = UUID.randomUUID();
     return updateClusterValues(conn, newClusterId, matcherResult)
         .compose(clustersFound -> {
           Iterator<UUID> iterator = clustersFound.iterator();
           if (!iterator.hasNext()) {
-            return createMetaEntry(conn, newClusterId, matcherResult.poolId);
+            return clusterRepository.createMetaEntry(
+                conn, newClusterId, matcherResult.poolId, this::clusterQuery);
           }
-          return updateMetaEntries(conn, clustersFound).compose(c -> {
-            UUID clusterId = iterator.next();
-            if (!iterator.hasNext()) {
-              return Future.succeededFuture(clusterId); // exactly one already
-            }
-            // multiple clusters: merge remaining with this one
-            return mergeClusters(conn, clusterId, iterator).map(clusterId);
-          });
+          return clusterRepository.updateMetaEntries(conn, clustersFound, this::clusterQuery)
+              .compose(_ -> {
+                UUID targetClusterId = iterator.next();
+                if (!iterator.hasNext()) {
+                  return Future.succeededFuture(targetClusterId);
+                }
+                List<UUID> mergedIds = new ArrayList<>();
+                iterator.forEachRemaining(mergedIds::add);
+                return clusterRepository.mergeClusters(
+                        conn, targetClusterId, mergedIds, this::clusterQuery)
+                    .map(targetClusterId);
+              });
         })
-        .compose(clusterId ->
-            clusterQuery(conn, "write.record", "INSERT INTO " + clusterRecordTable
-                    + " (record_id, match_key_config_id, cluster_id) VALUES ($1, $2, $3)"
-                    + " ON CONFLICT (record_id, match_key_config_id)"
-                    + " DO UPDATE SET record_id = $1, match_key_config_id = $2, cluster_id = $3",
-                Tuple.of(globalId, matcherResult.poolId, clusterId))
-        )
-        .mapEmpty();
+        .compose(clusterId -> clusterRepository.upsertClusterRecord(
+            conn, globalId, matcherResult.poolId, clusterId, this::clusterQuery));
   }
 
-  Future<Void> addValuesToCluster(SqlConnection conn, UUID clusterId, MatcherResult matcherResult,
-      Set<String> foundKeys) {
-
-    StringBuilder q = new StringBuilder("INSERT INTO " + clusterValueTable
-        + " (cluster_id, match_key_config_id, match_value) VALUES");
-
-    List<Object> tupleList = new ArrayList<>();
-    tupleList.add(clusterId);
-    tupleList.add(matcherResult.poolId);
-    int no = 3;
-    for (String key: matcherResult.keys) {
-      if (!foundKeys.contains(key)) {
-        if (no > 3) {
-          q.append(",");
-        }
-        q.append(" ($1, $2, $" + no + ")");
-        tupleList.add(key);
-        no++;
-      }
-    }
-    if (no == 3) {
-      return Future.succeededFuture();
-    }
-    return clusterQuery(conn, "write.values", q.toString(), Tuple.from(tupleList))
-        .mapEmpty();
-  }
-
-  Future<UUID> createMetaEntry(SqlConnection conn, UUID clusterId, String poolConfigId) {
-    return clusterQuery(conn, "write.meta", "INSERT INTO " + clusterMetaTable
-            + " (cluster_id, datestamp, match_key_config_id) VALUES ($1, $2, $3)",
-        Tuple.of(clusterId, LocalDateTime.now(ZoneOffset.UTC), poolConfigId))
-        .map(clusterId);
-  }
-
-  Future<Void> updateMetaEntries(SqlConnection conn, Set<UUID> clusters) {
-    Iterator<UUID> iterator = clusters.iterator();
-    StringBuilder setClause = new StringBuilder("UPDATE " + clusterMetaTable
-        + " SET datestamp = $1 WHERE ");
-    List<Object> tupleList = new ArrayList<>();
-    tupleList.add(LocalDateTime.now(ZoneOffset.UTC));
-    for (int no = 2; iterator.hasNext(); no++) {
-      tupleList.add(iterator.next());
-      if (no > 2) {
-        setClause.append(" OR ");
-      }
-      setClause.append("cluster_id = $");
-      setClause.append(no);
-    }
-    return clusterQuery(conn, "update.meta", setClause.toString(), Tuple.from(tupleList))
-        .mapEmpty();
-  }
-
-  Future<Void> mergeClusters(SqlConnection conn, UUID clusterId, Iterator<UUID> iterator) {
-    StringBuilder setClause = new StringBuilder(" SET cluster_id = $1 WHERE ");
-    List<UUID> tupleList = new ArrayList<>();
-    tupleList.add(clusterId); // $1
-    for (int no = 2; iterator.hasNext(); no++) {
-      tupleList.add(iterator.next());
-      if (no > 2) {
-        setClause.append(" OR ");
-      }
-      setClause.append("cluster_id = $");
-      setClause.append(no);
-    }
-    return clusterQuery(conn, "merge.values", "UPDATE " + clusterValueTable + setClause,
-        Tuple.from(tupleList))
-        .compose(x -> clusterQuery(conn, "merge.records",
-            "UPDATE " + clusterRecordTable + setClause,
-            Tuple.from(tupleList)))
-        .mapEmpty();
-  }
-
-  /**
-   * Update/insert set of global records.
-   * @param vertx Vert.x handle
-   * @param request ingest record request
-   * @return async result
-   */
+  /** Update/insert set of global records from a JSON read stream. */
   public Future<Void> updateGlobalRecords(Vertx vertx, LargeJsonReadStream request) {
     return availableIngestMatchers(vertx)
-      .compose(ingestMatchers -> {
-        return new ReadStreamConsumer<JsonObject, Void>()
-          .consume(request, r -> {
-            JsonObject topRecord = request.topLevelObject();
-            SourceId sourceId = new SourceId(topRecord.getString(ClusterBuilder.SOURCE_ID_LABEL));
-            IngestMetrics ingestMetrics = IngestMetrics.create().withSource(sourceId);
-            Integer sourceVersion = topRecord.getInteger(ClusterBuilder.SOURCE_VERSION_LABEL, 1);
-            r.put(ClusterBuilder.SOURCE_ID_LABEL, sourceId.toString());
-            r.put(ClusterBuilder.SOURCE_VERSION_LABEL, sourceVersion);
-            return ingestGlobalRecord(vertx, sourceId,
-              sourceVersion, r, ingestMatchers, ingestMetrics)
-          .mapEmpty();
-          });
-      });
+        .compose(ingestMatchers -> new ReadStreamConsumer<JsonObject, Void>()
+            .consume(request, r -> {
+              JsonObject topRecord = request.topLevelObject();
+              SourceId sourceId = new SourceId(
+                  topRecord.getString(GlobalRecordJson.SOURCE_ID));
+              IngestMetrics ingestMetrics = IngestMetrics.create().withSource(sourceId);
+              Integer sourceVersion = topRecord.getInteger(
+                  GlobalRecordJson.SOURCE_VERSION, 1);
+              r.put(GlobalRecordJson.SOURCE_ID, sourceId.toString());
+              r.put(GlobalRecordJson.SOURCE_VERSION, sourceVersion);
+              return ingestGlobalRecord(vertx, sourceId,
+                  sourceVersion, r, ingestMatchers, ingestMetrics)
+                  .mapEmpty();
+            }));
   }
 
-  /**
-   * Get available pool configurations.
-   * @return async result with list of configurations
-   */
+  /** Get available pool configurations. */
   public Future<List<PoolConfig>> getAvailablePoolConfigs() {
-    return pool.query("SELECT * FROM " + poolConfigTable)
-        .execute()
-        .map(res -> {
-          List<PoolConfig> poolConfigs = new ArrayList<>();
-          res.forEach(row -> poolConfigs.add(poolConfigFromRow(row)));
-          return poolConfigs;
+    return poolConfigRepository.findAll(db.client());
+  }
+
+  /** Delete global records matching a parsed CQL query and update cluster datestamps. */
+  public Future<Void> deleteGlobalRecords(ParsedCql cql) {
+    return clusterRepository.touchForDeletedRecordsWhere(
+            db.client(), cql.where(), cql.negatedSourceVersionWhere())
+        .compose(updated -> {
+          log.info("Number of meta records updated = {}", updated);
+          return globalRecordRepository.deleteByWhere(db.client(), cql.where());
         });
   }
 
-  /**
-   * Delete global records and update timestamp.
-   * @param sqlWhere SQL WHERE clause
-   * @return async result
-   */
-  public Future<Void> deleteGlobalRecords(String sqlWhere) {
-    String q = "UPDATE " + clusterMetaTable + " AS m"
-        + " SET datestamp = $1"
-        + " FROM " + globalRecordTable + ", " + clusterRecordTable + " AS r"
-        + " WHERE m.cluster_id = r.cluster_id AND r.record_id = id";
-    if (sqlWhere != null) {
-      q = q + " AND " + sqlWhere;
-      if (sqlWhere.contains("source_version=")) {
-        // if limit by source version, then update timestamp only if this cluster only
-        // contains the source_version and not others. The datestamp for cluster was
-        // already updated on update during ingest.
-        q = q + " AND NOT EXISTS (SELECT 1 FROM "
-            + globalRecordTable + ", " + clusterRecordTable + " AS r"
-            + " WHERE m.cluster_id = r.cluster_id AND r.record_id = id"
-            + " AND " + sqlWhere.replace("source_version=", "source_version!=") + ")";
-      }
-    }
-    return pool.preparedQuery(q)
-        .execute(Tuple.of(LocalDateTime.now(ZoneOffset.UTC)))
-        .compose(rowSet -> {
-          log.info("Number of meta records updated = {}", rowSet.rowCount());
-          String from = globalRecordTable;
-          if (sqlWhere != null) {
-            from = from + " WHERE " + sqlWhere;
-          }
-          return pool.query("DELETE FROM " + from).execute();
-        })
-        .mapEmpty();
+  /** Get cluster by cluster identifier. */
+  public Future<Optional<Cluster>> getClusterById(UUID clusterId) {
+    return db.withConnection(conn -> clusterRepository.findById(conn, clusterId));
   }
 
-  /**
-   * Get global records.
-   * @param ctx routing context
-   * @param sqlWhere SQL WHERE clause
-   * @param sqlOrderBy the SQL ORDER BY clause
-   * @return async result
-   */
-  public Future<Void> getGlobalRecords(RoutingContext ctx, String sqlWhere, String sqlOrderBy) {
-    String from = globalRecordTable;
-    if (sqlWhere != null) {
-      from = from + " WHERE " + sqlWhere;
-    }
-    return streamResult(ctx, null, from, sqlOrderBy, "items",
-        row -> Future.succeededFuture(ClusterBuilder.encodeRecord(row)));
-  }
-
-  /**
-   * Get cluster by cluster identifier.
-   * @param clusterId cluster identifier
-   * @return cluster object; null if not found
-   */
-  public Future<JsonObject> getClusterById(UUID clusterId) {
-    return pool.withConnection(connection -> getClusterById(connection, clusterId));
-  }
-
-  Future<JsonObject> getClusterById(SqlConnection connection, UUID clusterId) {
-    // get all records part of cluster and join with cluster_meta to get datestamp
-    return connection.preparedQuery("SELECT * FROM " + globalRecordTable
-            + " LEFT JOIN " + clusterRecordTable + " ON id = record_id"
-            + " LEFT JOIN " + clusterMetaTable + " ON "
-            + clusterMetaTable + ".cluster_id = " + clusterRecordTable + ".cluster_id"
-            + " WHERE " + clusterRecordTable + ".cluster_id = $1")
-        .execute(Tuple.of(clusterId))
-        .map(rowSet -> {
-          ClusterBuilder cb = new ClusterBuilder(clusterId);
-          RowIterator<Row> iterator = rowSet.iterator();
-          if (iterator.hasNext()) {
-            Row row = iterator.next();
-            cb.datestamp(row.getLocalDateTime("datestamp"));
-          }
-          cb.records(rowSet);
-          return cb;
-        })
-        .compose(cb -> connection.preparedQuery("SELECT * FROM " + clusterValueTable
-              + " WHERE cluster_id = $1")
-            .execute(Tuple.of(clusterId))
-            .map(cb::matchValues))
-        .map(clusterBuilder -> clusterBuilder.build());
-  }
-
-  /**
-   * return all clusters as streaming result.
-   * @param ctx routing context
-   * @param poolId pool configuration to use
-   * @return async result
-   */
-  public Future<Void> getClusters(RoutingContext ctx, String poolId,
-      String sqlWhere, String sqlOrderBy) {
-    String joinGlobal = "";
-    if (sqlWhere != null && sqlWhere.contains("global_records.")) {
-      joinGlobal = " LEFT JOIN " + globalRecordTable + " ON "
-          + clusterRecordTable + ".record_id = " + globalRecordTable + ".id";
-    }
-    String joinClusterValue = "";
-    if (sqlWhere != null && sqlWhere.contains("cluster_values.match_value")) {
-      joinClusterValue = " LEFT JOIN " + clusterValueTable + " ON "
-          + clusterValueTable + ".cluster_id = " + clusterRecordTable + ".cluster_id";
-    }
-    String from = clusterRecordTable
-        + joinClusterValue
-        + joinGlobal
-        + " WHERE " + clusterRecordTable + ".match_key_config_id = $1";
-    if (sqlWhere != null) {
-      from = from + " AND (" + sqlWhere + ")";
-    }
-    return streamResult(ctx, clusterRecordTable + ".cluster_id", Tuple.of(poolId),
-        from, sqlOrderBy, "items",
-        row -> getClusterById(row.getUUID("cluster_id")));
-  }
-
-  /**
-   * Get global record given global identifier.
-   * @param id global identifier
-   * @return global record response as JSON object
-   */
-  public Future<JsonObject> getGlobalRecord(String id) {
-    return pool.preparedQuery(
-            "SELECT * FROM " + globalRecordTable + " WHERE id = $1")
-        .execute(Tuple.of(id))
-        .map(res -> {
-          RowIterator<Row> iterator = res.iterator();
-          if (!iterator.hasNext()) {
-            return null;
-          }
-          return ClusterBuilder.encodeRecord(iterator.next());
-        });
-  }
-
-  /**
-   * Insert pool configuration into storage.
-   * @param poolConfig pool configuration
-   * @return async result
-   */
-  public Future<Void> insertPoolConfig(PoolConfig poolConfig) {
-    return pool.preparedQuery(
-        "INSERT INTO " + poolConfigTable + " (id, matcher, method, params, update, args, cql)"
-            + " VALUES ($1, $2, $3, $4, $5, $6, $7)")
-        .execute(Tuple.of(
-          poolConfig.getId(),
-          poolConfig.getMatcher(),
-          poolConfig.getMethod(),
-          poolConfig.getParams(),
-          poolConfig.getUpdate(),
-          poolConfig.getArgs(),
-          poolConfig.getCql()))
-        .mapEmpty();
-  }
-
-  /**
-   * Update pool configuration in storage.
-   * @param poolConfig pool configuration
-   * @return async result: TRUE if updated, FALSE if not found
-   */
-  public Future<Boolean> updatePoolConfig(PoolConfig poolConfig) {
-
-    return pool.preparedQuery(
-            "UPDATE " + poolConfigTable
-                + " SET matcher = $2, method = $3, params = $4, update = $5, args = $6, cql = $7"
-                + " WHERE id = $1")
-        .execute(Tuple.of(
-          poolConfig.getId(),
-          poolConfig.getMatcher(),
-          poolConfig.getMethod(),
-          poolConfig.getParams(),
-          poolConfig.getUpdate(),
-          poolConfig.getArgs(),
-          poolConfig.getCql()))
-        .map(res -> res.rowCount() > 0);
-  }
-
-  static PoolConfig poolConfigFromRow(Row row) {
-    return new PoolConfig(
-      row.getString("id"),
-      row.getString("args"),
-      row.getJsonObject("cql"),
-      row.getString("matcher"),
-      row.getString("method"),
-      row.getJsonObject("params"),
-      row.getString("update")
-    );
-  }
-
-  /**
-   * Select pool configuration from storage.
-   * @param id pool id; null takes any first config
-   * @return JSON object if found; null if not found
-   */
-  public Future<JsonObject> selectPoolConfig(String id) {
-    String q = "SELECT * FROM " + poolConfigTable;
-    List<String> tupleList = new ArrayList<>();
-    if (id != null) {
-      q = q + " WHERE id = $1";
-      tupleList.add(id);
-    }
-    return pool.preparedQuery(q)
-        .execute(Tuple.from(tupleList))
-        .map(res -> {
-          RowIterator<Row> iterator = res.iterator();
-          if (!iterator.hasNext()) {
-            return null;
-          }
-          Row row = iterator.next();
-          return poolConfigFromRow(row).toJson();
-        });
-  }
-
-  /**
-   * Delete pool configuration.
-   * @param id pool identifier
-   * @return TRUE if deleted; FALSE if not found
-   */
-  public Future<Boolean> deletePoolConfig(String id) {
-    return pool.withConnection(connection ->
-        connection.preparedQuery(
-                "DELETE FROM " + poolConfigTable + " WHERE id = $1")
-            .execute(Tuple.of(id))
-            .map(res -> res.rowCount() > 0));
-  }
-
-  /**
-   * Get pool configurations.
-   * @param ctx routing context
-   * @param sqlWhere the SQL WHERE clause
-   * @param sqlOrderBy the SQL ORDER BY clause
-   * @return async result
-   */
-  public Future<Void> getPoolConfigs(RoutingContext ctx, String sqlWhere, String sqlOrderBy,
-      String resultProperty) {
-    String from = poolConfigTable;
-    if (sqlWhere != null) {
-      from = from + " WHERE " + sqlWhere;
-    }
-    return streamResult(ctx, null, from, sqlOrderBy, resultProperty,
-        row -> Future.succeededFuture(poolConfigFromRow(row).toJson()));
+  /** Get pool statistics. */
+  public Future<PoolStats> statsPool(String id) {
+    return clusterRepository.computeStats(id, sqlStreamFetchSize);
   }
 
   Future<Integer> recalculateMatchKeyValueTable(SqlConnection connection,
       IngestMatcher ingestMatcher) {
-    String query = "SELECT * FROM " + globalRecordTable;
     AtomicInteger totalRecords = new AtomicInteger();
     IngestMetrics ingestMetrics = new IngestMetricsNop();
-    return connection.prepare(query).compose(pq ->
-        connection.begin().compose(tx -> {
-          RowStream<Row> stream = pq.createStream(sqlStreamFetchSize);
-          long[] fetchStart = {initializationDiagnostics == null ? 0 : System.nanoTime()};
-          Promise<Integer> promise = Promise.promise();
-          AtomicBoolean finished = new AtomicBoolean();
-          Handler<Throwable> fail = error -> {
-            if (!finished.compareAndSet(false, true)) {
-              return;
-            }
-            log.error(error.getMessage(), error);
-            stream.pause();
-            stream.close()
-                .recover(closeError -> {
-                  if (closeError != error) {
-                    error.addSuppressed(closeError);
-                  }
-                  return Future.succeededFuture();
-                })
-                .compose(ignored -> tx.rollback())
-                .onComplete(rollback -> {
-                  if (rollback.failed() && rollback.cause() != error) {
-                    error.addSuppressed(rollback.cause());
-                  }
-                  promise.tryFail(error);
-                });
-          };
-          stream.exceptionHandler(fail);
-          stream.endHandler(end -> {
-            if (finished.compareAndSet(false, true)) {
-              if (initializationDiagnostics != null) {
-                initializationDiagnostics.elapsed("fetch.wait", fetchStart[0], true);
-              }
-              initializationStage("commit", tx::commit)
-                  .map(totalRecords.get())
-                  .onComplete(promise);
-            }
-          });
-          stream.handler(row -> {
-            if (initializationDiagnostics != null) {
-              initializationDiagnostics.elapsed("fetch.wait", fetchStart[0], true);
-            }
-            stream.pause();
-            totalRecords.incrementAndGet();
-            UUID globalId = row.getUUID("id");
-            JsonObject globalRecord = ClusterBuilder.encodeRecord(row);
-            initializeRecord(connection, ingestMatcher, ingestMetrics, globalId, globalRecord)
-                .onFailure(fail)
-                .onSuccess(ignored -> {
-                  if (!finished.get()) {
-                    if (initializationDiagnostics != null) {
-                      fetchStart[0] = System.nanoTime();
-                    }
-                    stream.resume();
-                  }
-                });
-          });
-          return promise.future();
-        })
-    );
+    long[] fetchStart = {initializationDiagnostics == null ? 0 : System.nanoTime()};
+    return RowStreamer.streamAsync(connection, globalRecordRepository.selectAllQuery(),
+        sqlStreamFetchSize,
+        row -> {
+          if (initializationDiagnostics != null) {
+            initializationDiagnostics.elapsed("fetch.wait", fetchStart[0], true);
+          }
+          totalRecords.incrementAndGet();
+          GlobalRecord rec = GlobalRecordRepository.fromRow(row);
+          return initializeRecord(connection, ingestMatcher, ingestMetrics,
+              rec.id(), GlobalRecordJson.toJson(rec))
+              .onSuccess(_ -> {
+                if (initializationDiagnostics != null) {
+                  fetchStart[0] = System.nanoTime();
+                }
+              });
+        },
+        () -> {
+          if (initializationDiagnostics != null) {
+            initializationDiagnostics.elapsed("fetch.wait", fetchStart[0], true);
+          }
+          return Future.succeededFuture(totalRecords.get());
+        });
   }
 
   /**
-   * Initialize pool (populate clusters).
-   * @param vertx Vert.x handle
-   * @param id pool id (user specified)
-   * @return number of records processed
+   * Synchronously initialize a pool (populate clusters for all global records).
+   * @return number of records processed, or null if pool not found
    */
   public Future<Integer> initializePool(Vertx vertx, String id) {
     initializationDiagnostics = InitializationDiagnostics.create(
         tenant, id, UUID.randomUUID().toString());
-    return pool.withConnection(connection ->
-        connection.preparedQuery(
-                "SELECT * FROM " + poolConfigTable + " WHERE id = $1")
-            .execute(Tuple.of(id))
-            .compose(res -> {
-              RowIterator<Row> iterator = res.iterator();
-              if (!iterator.hasNext()) {
+    return db.withConnection(connection ->
+        poolConfigRepository.findById(connection, id)
+            .compose(optConfig -> {
+              if (optConfig.isEmpty()) {
                 return Future.succeededFuture(null);
               }
-              Row row = iterator.next();
-              PoolConfig poolConfig = poolConfigFromRow(row);
-              return createIngestMatcher(poolConfig, vertx)
-                .compose(matcher -> recalculateMatchKeyValueTable(connection, matcher));
+              return createIngestMatcher(optConfig.get(), vertx)
+                  .compose(matcher -> recalculateMatchKeyValueTable(connection, matcher));
             })
     ).andThen(result -> {
       if (initializationDiagnostics != null) {
@@ -1095,513 +571,54 @@ public class Storage {
     });
   }
 
-  class StatsTrack {
-    UUID clusterId;
-    int clustersTotal;
-    final Set<String> values = new HashSet<>();
-    final Set<UUID> recordIds = new HashSet<>();
-    final Map<Integer, Integer> matchValuesPerCluster = new HashMap<>();
-    final Map<Integer, Integer> recordsPerCluster = new HashMap<>();
-    final Map<Integer, JsonArray> recordsPerClusterSample = new HashMap<>();
-
-    void newCluster() {
-      if (clusterId != null) {
-        matchValuesPerCluster.merge(values.size(), 1, (x, y) -> x + y);
-        int size = recordIds.size();
-        recordsPerCluster.merge(size, 1, (x, y) -> x + y);
-        JsonArray samples = recordsPerClusterSample.computeIfAbsent(size,
-            x -> new JsonArray());
-        if (samples.size() < 3) {
-          samples.add(clusterId.toString());
-        }
-      }
-    }
-  }
-
-  /**
-   * Get pool statistics.
-   * @param id pool id (user specified)
-   * @return statistics
-   */
-  public Future<JsonObject> statsPool(String id) {
-    String qry = "SELECT * FROM "
-        + clusterRecordTable + " LEFT JOIN " + clusterValueTable + " ON "
-        + clusterValueTable + ".cluster_id = " + clusterRecordTable + ".cluster_id"
-        + " WHERE " + clusterRecordTable + ".match_key_config_id = $1"
-        + " ORDER BY " + clusterValueTable + ".cluster_id";
-
-    Tuple tuple = Tuple.of(id);
-    return pool.withConnection(connection ->
-        connection.prepare(qry).compose(pq ->
-            connection.begin().compose(tx -> {
-              StatsTrack st = new StatsTrack();
-              Promise<JsonObject> promise = Promise.promise();
-              RowStream<Row> stream = pq.createStream(sqlStreamFetchSize, tuple);
-              stream.handler(row -> {
-                UUID clusterId = row.getUUID("cluster_id");
-                if (!clusterId.equals(st.clusterId)) {
-                  st.newCluster();
-                  st.clustersTotal++;
-                  st.values.clear();
-                  st.recordIds.clear();
-                  st.clusterId = clusterId;
-                }
-                String v = row.getString("match_value");
-                if (v != null) {
-                  st.values.add(v);
-                }
-                st.recordIds.add(row.getUUID("record_id"));
-                log.debug("row = {}", row::deepToString);
-              });
-              stream.endHandler(end -> {
-                st.newCluster();
-                JsonObject matchValuesPer = new JsonObject();
-                st.matchValuesPerCluster.forEach((k, v) ->
-                    matchValuesPer.put(Integer.toString(k), v));
-                JsonObject recordsPer = new JsonObject();
-                AtomicInteger totalRecs = new AtomicInteger();
-                st.recordsPerCluster.forEach((k, v) -> {
-                  recordsPer.put(Integer.toString(k), v);
-                  totalRecs.addAndGet(k * v);
-                });
-                JsonObject clusterSamplePer = new JsonObject();
-                st.recordsPerClusterSample.forEach((k, v) ->
-                    clusterSamplePer.put(Integer.toString(k), v));
-                promise.complete(new JsonObject()
-                    .put("recordsTotal", totalRecs.get())
-                    .put("clustersTotal", st.clustersTotal)
-                    .put("matchValuesPerCluster", matchValuesPer)
-                    .put("recordsPerCluster", recordsPer)
-                    .put("recordsPerClusterSample", clusterSamplePer)
-                );
-              });
-              return promise.future();
-            })
-        )
-    );
-  }
-
-  /**
-   * Insert code module config into storage.
-   * @param module code module entity
-   * @return async result
-   */
-  public Future<Void> insertCodeModuleEntity(CodeModuleEntity module) {
-
-    return pool.preparedQuery(
-            "INSERT INTO " + moduleTable + " (id, type, url, function, script)"
-                + " VALUES ($1, $2, $3, $4, $5)")
-        .execute(module.asTuple())
-        .mapEmpty();
-  }
-
-  /**
-   * Update code module config in storage.
-   * @param module code module entity
-   * @return async result with TRUE if updated; FALSE if not found
-   */
-  public Future<Boolean> updateCodeModuleEntity(CodeModuleEntity module) {
-
-    return pool.preparedQuery(
-            "UPDATE " + moduleTable
-                + " SET type = $2, url = $3, function = $4, script = $5 WHERE id = $1")
-        .execute(module.asTuple())
-        .map(res -> res.rowCount() > 0);
-  }
-
-  /**
-   * Select code module entity from storage.
-   * @param id code module id; null takes any first config
-   * @return code module entity if found; null if not found
-   */
-  public Future<CodeModuleEntity> selectCodeModuleEntity(String id) {
-    return pool.withConnection(conn -> selectCodeModuleEntity(conn, id));
-  }
-
-  /**
-   * Select code module entity from storage.
-   * @param id code module id; null takes any first config
-   * @return code module entity if found; null if not found
-   */
-  public Future<CodeModuleEntity> selectCodeModuleEntity(SqlConnection conn, String id) {
-    String sql = "SELECT * FROM " + moduleTable;
-    List<String> tupleList = new ArrayList<>();
-    if (id != null) {
-      sql = sql + " WHERE id = $1";
-      tupleList.add(id);
-    }
-    return conn.preparedQuery(sql)
-        .execute(Tuple.from(tupleList))
-        .map(res -> {
-          RowIterator<Row> iterator = res.iterator();
-          if (!iterator.hasNext()) {
-            return null;
-          }
-          Row row = iterator.next();
-          return new CodeModuleEntity.CodeModuleBuilder(row).build();
-        });
-  }
-
-  /**
-   * Delete code module entity.
-   * @param id code module entity id
-   * @return TRUE if deleted; FALSE if not found
-   */
-  public Future<Boolean> deleteCodeModuleEntity(String id) {
-    return pool.withConnection(connection ->
-        connection.preparedQuery(
-                "DELETE FROM " + moduleTable + " WHERE id = $1")
-            .execute(Tuple.of(id))
-            .map(res -> res.rowCount() > 0));
-  }
-
   Future<Void> resolveCodeModuleTable(Vertx vertx) {
-    return pool.query("SELECT * FROM " + moduleTable)
-      .execute()
-      .compose(rowSet -> {
-        Future<Void> result = Future.succeededFuture();
-        for (Row row : rowSet) {
-          var cm = new CodeModuleEntity.CodeModuleBuilder(row).build();
-          if (cm.getScript() != null && !cm.getScript().isEmpty()) {
-            continue;
+    return codeModuleRepository.findAll(db.client())
+        .compose(modules -> {
+          Future<Void> result = Future.succeededFuture();
+          for (CodeModuleEntity cm : modules) {
+            if (cm.hasScript()) {
+              continue;
+            }
+            if (!cm.hasUrl()) {
+              log.warn("Code module '{}' has no URL to resolve", cm.id());
+              continue;
+            }
+            result = result
+                .compose(_ -> CodeModuleResolver.resolve(vertx, cm)
+                        .compose(resolved -> codeModuleRepository.update(db.client(), resolved)
+                            .mapEmpty()),
+                    e -> {
+                      log.warn("Failed to resolve code module '{}': {}", cm.id(), e.getMessage());
+                      return Future.succeededFuture();
+                    });
           }
-          if (cm.getUrl() == null || cm.getUrl().isEmpty()) {
-            log.warn("Code module '{}' has no URL to resolve", cm.getId());
-            continue;
-          }
-          result = result
-            .compose(x -> new CodeModuleEntity.CodeModuleBuilder(row).resolve(vertx)
-            .compose(module -> updateCodeModuleEntity(module).mapEmpty()), e -> {
-              log.warn("Failed to resolve code module '{}': {}",
-                  cm.getId(), e.getMessage());
-              return Future.succeededFuture();
-            });
-        }
-        return result;
-      });
-  }
-
-  /**
-   * Select code module entities keys.
-   * @param ctx routing context
-   * @param sqlWhere the SQL WHERE clause
-   * @param sqlOrderBy the SQL ORDER BY clause
-   * @return async result
-   */
-  public Future<Void> selectCodeModuleEntities(RoutingContext ctx,
-      String sqlWhere, String sqlOrderBy) {
-    String from = moduleTable;
-    if (sqlWhere != null) {
-      from = from + " WHERE " + sqlWhere;
-    }
-    return streamResult(ctx, null, from, sqlOrderBy, "modules",
-        row -> Future.succeededFuture(CodeModuleEntity.CodeModuleBuilder.asJson(row)));
-  }
-
-  //end modules
-  //start oai config
-
-  /**
-   * Update OAI config.
-   * @param config OAI config
-   * @return async result with TRUE if updated; FALSE if not found
-   */
-  public Future<Boolean> updateOaiConfig(JsonObject config) {
-
-    return pool.preparedQuery(
-      "INSERT INTO " + oaiConfigTable + " (id, config)"
-          + " VALUES ($1, $2) ON CONFLICT(id) DO UPDATE SET config = $2")
-      .execute(Tuple.of("1", config))
-      .mapEmpty();
-  }
-
-  /**
-   * Select OAI config.
-   * @return OAI config
-   */
-  public Future<JsonObject> selectOaiConfig() {
-    String sql = "SELECT * FROM " + oaiConfigTable + " WHERE id = '1'";
-
-    return pool.preparedQuery(sql)
-        .execute()
-        .map(res -> {
-          RowIterator<Row> iterator = res.iterator();
-          if (!iterator.hasNext()) {
-            return null;
-          }
-          Row row = iterator.next();
-          return row.getJsonObject("config");
+          return result;
         });
   }
 
-  /**
-   * Delete OAI config.
-   * @return async void result
-   */
-  public Future<Void> deleteOaiConfig() {
-    return pool.preparedQuery("DELETE FROM " + oaiConfigTable + " WHERE id = $1")
-        .execute(Tuple.of("1")).mapEmpty();
-  }
-
-  // end oai config
-
-  private static JsonObject copyWithoutNulls(JsonObject obj) {
-    JsonObject n = new JsonObject();
-    obj.getMap().forEach((key, value) -> {
-      if (value != null) {
-        n.put(key, value);
-      }
-    });
-    return n;
-  }
-
-  static void resultFooter(RoutingContext ctx, RowSet<Row> rowSet, List<String[]> facets,
-      String diagnostic) {
-
-    JsonObject resultInfo = new JsonObject();
-    JsonArray facetArray = new JsonArray();
-    if (rowSet != null) {
-      int pos = 0;
-      Row row = rowSet.iterator().next();
-      int count = row.getInteger(pos);
-      for (String [] facetEntry : facets) {
-        pos++;
-        JsonObject facetObj = null;
-        final String facetType = facetEntry[0];
-        final String facetValue = facetEntry[1];
-        for (int i = 0; i < facetArray.size(); i++) {
-          facetObj = facetArray.getJsonObject(i);
-          if (facetType.equals(facetObj.getString("type"))) {
-            break;
-          }
-          facetObj = null;
-        }
-        if (facetObj == null) {
-          facetObj = new JsonObject();
-          facetObj.put("type", facetType);
-          facetObj.put("facetValues", new JsonArray());
-          facetArray.add(facetObj);
-        }
-        JsonArray facetValues = facetObj.getJsonArray("facetValues");
-        facetValues.add(new JsonObject()
-            .put("value", facetValue)
-            .put("count", row.getInteger(pos)));
-      }
-      resultInfo.put("totalRecords", count);
-    }
-    JsonArray diagnostics = new JsonArray();
-    if (diagnostic != null) {
-      diagnostics.add(new JsonObject().put("message", diagnostic));
-    }
-    resultInfo.put("diagnostics", diagnostics);
-    resultInfo.put("facets", facetArray);
-    ctx.response().write("], \"resultInfo\": " + resultInfo.encode() + "}");
-    ctx.response().end();
-  }
-
-  @java.lang.SuppressWarnings({"squid:S107"})  // too many arguments
-  Future<Void> streamResult(RoutingContext ctx, SqlConnection sqlConnection,
-      String query, String cnt, Tuple tuple, String property, List<String[]> facets,
-      Function<Row, Future<JsonObject>> handler) {
-
-    return sqlConnection.prepare(query)
-        .compose(pq ->
-            sqlConnection.begin().compose(tx -> {
-              ctx.response().setChunked(true);
-              ctx.response().putHeader("Content-Type", "application/json");
-              ctx.response().write("{ \"" + property + "\" : [");
-              AtomicBoolean first = new AtomicBoolean(true);
-              RowStream<Row> stream = pq.createStream(sqlStreamFetchSize, tuple);
-              stream.handler(row -> {
-                stream.pause();
-                Future<JsonObject> f = handler.apply(row);
-                f.onSuccess(response -> {
-                  if (!first.getAndSet(false)) {
-                    ctx.response().write(",");
-                  }
-                  ctx.response().write(copyWithoutNulls(response).encode());
-                  stream.resume();
-                });
-                f.onFailure(e -> {
-                  log.info("failure {}", e.getMessage(), e);
-                  stream.resume();
-                });
-              });
-              stream.endHandler(end -> {
-                Future<RowSet<Row>> cntFuture = cnt != null
-                    ? sqlConnection.preparedQuery(cnt).execute(tuple)
-                    : Future.succeededFuture(null);
-                cntFuture
-                    .onSuccess(cntRes -> resultFooter(ctx, cntRes, facets, null))
-                    .onFailure(f -> {
-                      log.error(f.getMessage(), f);
-                      resultFooter(ctx, null, facets, f.getMessage());
-                    })
-                    .eventually(() -> tx.commit().compose(y -> sqlConnection.close()));
-              });
-              stream.exceptionHandler(e -> {
-                log.error("stream error", e);
-                resultFooter(ctx, null, facets, e.getMessage());
-                tx.commit().compose(y -> sqlConnection.close());
-              });
-              return Future.succeededFuture();
-            })
-        );
-  }
-
-  Future<Void> streamResult(RoutingContext ctx, String distinct,  String from,
-      String orderByClause, String property, Function<Row, Future<JsonObject>> handler) {
-
-    return streamResult(ctx, distinct, distinct, Tuple.tuple(), List.of(from),
-        Collections.emptyList(), orderByClause, property, handler);
-  }
-
-  Future<Void> streamResult(RoutingContext ctx, String distinct,
-      Tuple tuple, String from, String orderByClause, String property,
-      Function<Row, Future<JsonObject>> handler) {
-
-    return streamResult(ctx, distinct, distinct, tuple, List.of(from),
-        Collections.emptyList(), orderByClause, property, handler);
-  }
-
-  @java.lang.SuppressWarnings({"squid:S107"})  // too many arguments
-  Future<Void> streamResult(RoutingContext ctx, String distinctMain,
-      String distinctCount, Tuple tuple, List<String> fromList, List<String[]> facets,
-      String orderByClause, String property, Function<Row, Future<JsonObject>> handler) {
-
-    Integer offset = Integer.parseInt(Util.getQueryParameter(ctx, "offset", "0"));
-    Integer limit = Integer.parseInt(Util.getQueryParameter(ctx, "limit", "10"));
-    String count = Util.getQueryParameter(ctx, "count");
-    String query = "SELECT " + (distinctMain != null ? "DISTINCT ON (" + distinctMain + ")" : "")
-        + " * FROM " + fromList.get(0)
-        + (orderByClause == null ?  "" : " ORDER BY " + orderByClause)
-        + " LIMIT " + limit + " OFFSET " + offset;
-    boolean exact = "exact".equals(count);
-    log.info("query={}", query);
-    StringBuilder countQuery = new StringBuilder("SELECT");
-    if (exact) {
-      int pos = 0;
-      for (String from : fromList) {
-        if (pos > 0) {
-          countQuery.append(",\n");
-        }
-        countQuery.append("(SELECT COUNT("
-            + (distinctCount != null ? "DISTINCT " + distinctCount : "*")
-            + ") FROM " + from + ") AS cnt" + pos);
-        pos++;
-      }
-      log.info("cnt={}", countQuery);
-    }
-    String countQueryString = exact ? countQuery.toString() : null;
-    return pool.getConnection()
-        .compose(sqlConnection -> streamResult(ctx, sqlConnection, query, countQueryString,
-            tuple, property, facets, handler)
-            .onFailure(x -> sqlConnection.close()));
-  }
-
-  Future<ModuleExecutable> getTransformer(RoutingContext ctx, String transformerProp) {
-    ModuleInvocation invocation = new ModuleInvocation(transformerProp);
-    return selectCodeModuleEntity(invocation.getModuleName())
+  Future<ModuleExecutable> getTransformer(Vertx vertx, ModuleInvocation invocation) {
+    return codeModuleRepository.findById(db.client(), invocation.moduleName())
         .compose(entity -> {
-          if (entity == null) {
+          if (entity.isEmpty()) {
             return Future.failedFuture("Transformer module '"
-              + invocation.getModuleName() + "' not found");
+                + invocation.moduleName() + "' not found");
           }
-          return ModuleCache.getInstance().lookup(Tenant.get(ctx), entity)
-              .<ModuleExecutable>map(mod -> new ModuleExecutable(mod, invocation, ctx.vertx()));
+          return ModuleCache.getInstance().lookup(tenant, entity.get())
+              .map(mod -> new ModuleExecutable(mod, invocation, vertx));
         });
   }
 
-  Future<ModuleExecutable> getTransformerOai(RoutingContext ctx) {
-    return selectOaiConfig()
-        .compose(oaiCfg -> {
-          if (oaiCfg == null) {
+  Future<ModuleExecutable> getTransformerOai(Vertx vertx) {
+    return oaiConfigRepository.find(db.client())
+        .compose(oaiCfgOpt -> {
+          if (oaiCfgOpt.isEmpty()) {
             return Future.succeededFuture(null);
           }
-          String transformerProp = oaiCfg.getString("transformer");
+          String transformerProp = oaiCfgOpt.get().getString("transformer");
           if (transformerProp == null) {
             return Future.succeededFuture(null);
           }
-          return getTransformer(ctx, transformerProp);
+          return getTransformer(vertx, ModuleInvocation.parse(transformerProp));
         });
   }
-
-  Future<String> getSqlFromCluster(RoutingContext ctx, PgCqlQuery pgCqlQuery) {
-    // getWhereClause can be CPU intensive, so execute in worker thread
-    return ctx.vertx().executeBlocking(() -> pgCqlQuery.getWhereClause())
-      .map(sqlWhere -> {
-        final String wClause = sqlWhere == null ? "" : " WHERE " + sqlWhere;
-        String joinClusterValue = "";
-        if (sqlWhere != null && sqlWhere.contains(CqlFields.MATCH_VALUE.getQualifiedSqlName())) {
-          joinClusterValue = " LEFT JOIN " + clusterValueTable + " ON "
-              + clusterValueTable + ".cluster_id = " + clusterMetaTable + ".cluster_id";
-        }
-        return getClusterMetaTable() + joinClusterValue + wClause;
-      });
-  }
-
-  Future<Integer> getTotalRecords(RoutingContext ctx, PgCqlQuery pgCqlQuery) {
-    return getSqlFromCluster(ctx, pgCqlQuery)
-      .compose(where -> {
-        String sqlQuery = "SELECT COUNT(DISTINCT "
-            + Storage.CLUSTER_META_TABLE + ".cluster_id) FROM " + where;
-        return getPool()
-            .withConnection(conn -> conn.query(sqlQuery)
-                .execute()
-                .map(res -> res.iterator().next().getInteger(0)));
-      });
-  }
-
-  Future<Void> getMarcxmlRecords(RoutingContext ctx, PgCqlQuery pgCqlQuery,
-      int offset, int limit, Function<String, Future<Void>> handler) {
-    return getSqlFromCluster(ctx, pgCqlQuery)
-      .compose(where -> {
-        String sqlQuery = "SELECT DISTINCT ON ("
-            + Storage.CLUSTER_META_TABLE + ".cluster_id) "
-            + Storage.CLUSTER_META_TABLE + ".* FROM " + where
-            + " LIMIT " + limit + " OFFSET " + offset;
-        return getMarcxmlRecords(ctx, sqlQuery, handler);
-      });
-  }
-
-  private Future<Void> getMarcxmlRecords(RoutingContext ctx, String sqlQuery,
-      Function<String, Future<Void>> handler) {
-    return getTransformerOai(ctx).compose(transformer -> {
-      log.info("SQL Query: {}", sqlQuery);
-      return getPool()
-          .withConnection(conn -> conn.query(sqlQuery)
-              .execute()
-              .compose(res -> {
-                RowIterator<Row> iterator = res.iterator();
-                Future<Void> future = Future.succeededFuture();
-                while (iterator.hasNext()) {
-                  Row row = iterator.next();
-                  future = future.compose(x -> {
-                    ClusterRecordItem cr = new ClusterRecordItem(row);
-                    return cr.populateCluster(this, conn, true)
-                      .compose(cb -> ClusterMarcXml.getClusterMarcXml(cb, transformer, ctx.vertx())
-                      .compose(marcxml -> handler.apply(marcxml)));
-                  });
-                }
-                return future;
-              }
-        ));
-    });
-  }
-
-  Future<Row> getClusterRecord(UUID clusterId) {
-    String sqlQuery = "SELECT * FROM " + getClusterMetaTable() + " WHERE cluster_id = $1";
-    return getPool()
-        .withConnection(conn -> conn.preparedQuery(sqlQuery)
-            .execute(Tuple.of(clusterId))
-            .compose(res -> {
-              RowIterator<Row> iterator = res.iterator();
-              if (!iterator.hasNext()) {
-                return Future.succeededFuture(null);
-              }
-              Row row = iterator.next();
-              return Future.succeededFuture(row);
-            }));
-  }
-
 }

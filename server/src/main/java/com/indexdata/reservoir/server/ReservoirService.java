@@ -2,8 +2,16 @@ package com.indexdata.reservoir.server;
 
 import com.indexdata.reservoir.module.ModuleCache;
 import com.indexdata.reservoir.module.ModuleInvocation;
+import com.indexdata.reservoir.server.db.CodeModuleRepository;
+import com.indexdata.reservoir.server.db.GlobalRecordRepository;
+import com.indexdata.reservoir.server.db.PoolConfigRepository;
+import com.indexdata.reservoir.server.entity.ClusterJson;
 import com.indexdata.reservoir.server.entity.CodeModuleEntity;
+import com.indexdata.reservoir.server.entity.CodeModuleJson;
+import com.indexdata.reservoir.server.entity.GlobalRecordJson;
 import com.indexdata.reservoir.server.entity.PoolConfig;
+import com.indexdata.reservoir.server.entity.PoolConfigJson;
+import com.indexdata.reservoir.server.entity.PoolStatsJson;
 import com.indexdata.reservoir.util.readstream.LargeJsonReadStream;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -21,12 +29,9 @@ import io.vertx.openapi.contract.OpenAPIContract;
 import io.vertx.openapi.validation.RequestParameter;
 import io.vertx.openapi.validation.ValidatedRequest;
 import io.vertx.pgclient.PgException;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -36,16 +41,10 @@ import org.folio.tlib.RouterCreator;
 import org.folio.tlib.TenantInitHooks;
 import org.folio.tlib.postgres.PgCqlDefinition;
 import org.folio.tlib.postgres.PgCqlException;
-import org.folio.tlib.postgres.PgCqlQuery;
 import org.folio.tlib.postgres.cqlfield.PgCqlFieldAlwaysMatches;
 import org.folio.tlib.postgres.cqlfield.PgCqlFieldNumber;
 import org.folio.tlib.postgres.cqlfield.PgCqlFieldText;
 import org.folio.tlib.postgres.cqlfield.PgCqlFieldUuid;
-import org.z3950.zing.cql.CQLDefaultNodeVisitor;
-import org.z3950.zing.cql.CQLParseException;
-import org.z3950.zing.cql.CQLParser;
-import org.z3950.zing.cql.CQLSortNode;
-import org.z3950.zing.cql.CQLTermNode;
 
 public class ReservoirService implements RouterCreator, TenantInitHooks {
 
@@ -63,6 +62,10 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     this.defaultTenant = defaultTenant;
   }
 
+  private static Storage storageFor(RoutingContext ctx) {
+    return new Storage(ctx.vertx(), Tenant.get(ctx), ctx.request().method());
+  }
+
   Future<Void> getServiceInfo(RoutingContext ctx) {
     String baseUrl = ctx.request().absoluteURI().replaceAll("/reservoir$", "");
     JsonObject links = new JsonObject()
@@ -74,8 +77,7 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
         .put("pmhClients", baseUrl + "/reservoir/pmh-clients")
         .put("records", baseUrl + "/reservoir/records")
         .put("sru", baseUrl + "/reservoir/sru")
-        .put("upload", baseUrl + "/reservoir/upload")
-        ;
+        .put("upload", baseUrl + "/reservoir/upload");
     JsonObject response = new JsonObject()
         .put("links", links)
         .put("name", moduleVersionReporter.getModule())
@@ -87,13 +89,12 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
 
   Future<Void> putGlobalRecords(RoutingContext ctx) {
     try {
-      Storage storage = new Storage(ctx);
+      Storage storage = storageFor(ctx);
       HttpServerRequest request = ctx.request();
       request.pause();
       return storage.updateGlobalRecords(ctx.vertx(), new LargeJsonReadStream(request))
-          .compose(res -> {
+          .compose(_ -> {
             JsonArray ar = new JsonArray();
-            // global ids and match keys here ...
             return HttpResponse.responseJson(ctx, 200).end(ar.encode());
           });
     } catch (Exception e) {
@@ -103,30 +104,28 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
 
   Future<Void> reloadCodeModule(RoutingContext ctx) {
     final String id = Util.getPathParameter(ctx, "id");
-    final Storage storage = new Storage(ctx);
+    final Storage storage = storageFor(ctx);
     final String tenant = Tenant.get(ctx);
-    return storage.selectCodeModuleEntity(id)
-      .compose(res -> {
-        if (res == null) {
-          HttpResponse.responseError(ctx, 404,
-              String.format(ENTITY_ID_NOT_FOUND_PATTERN, MODULE_LABEL, id));
-          return Future.succeededFuture();
-        }
-        return new CodeModuleEntity.CodeModuleBuilder(res.asJson())
-          .resolve(ctx.vertx())
-          .compose(cm -> ModuleCache.getInstance().lookup(tenant, cm)
-            .compose(module -> storage.updateCodeModuleEntity(cm))
-            .compose(x -> ctx.response().setStatusCode(204).end())
-          );
-      });
+    return storage.codeModules().findById(storage.db().client(), id)
+        .compose(res -> {
+          if (res.isEmpty()) {
+            HttpResponse.responseError(ctx, 404,
+                String.format(ENTITY_ID_NOT_FOUND_PATTERN, MODULE_LABEL, id));
+            return Future.succeededFuture();
+          }
+          return CodeModuleResolver.resolve(ctx.vertx(), res.get())
+              .compose(cm -> ModuleCache.getInstance().lookup(tenant, cm)
+                  .compose(_ -> storage.codeModules().update(storage.db().client(), cm))
+                  .compose(_ -> ctx.response().setStatusCode(204).end()));
+        });
   }
 
   Future<Void> deleteCodeModule(RoutingContext ctx) {
     String id = Util.getPathParameter(ctx, "id");
-    Storage storage = new Storage(ctx);
-    return storage.deleteCodeModuleEntity(id)
-        .compose(res -> {
-          if (Boolean.FALSE.equals(res)) {
+    Storage storage = storageFor(ctx);
+    return storage.codeModules().delete(storage.db().client(), id)
+        .compose(deleted -> {
+          if (Boolean.FALSE.equals(deleted)) {
             HttpResponse.responseError(ctx, 404,
                 String.format(ENTITY_ID_NOT_FOUND_PATTERN, MODULE_LABEL, id));
             return Future.succeededFuture();
@@ -145,15 +144,15 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
   static PgCqlDefinition createDefinitionGlobalRecords() {
     PgCqlDefinition def = createDefinitionBase();
     def.addField(CqlFields.ID.getCqlName(),
-      new PgCqlFieldUuid());
+        new PgCqlFieldUuid());
     def.addField(CqlFields.GLOBAL_ID.getCqlName(),
-      new PgCqlFieldUuid().withColumn(CqlFields.GLOBAL_ID.getSqlName()));
+        new PgCqlFieldUuid().withColumn(CqlFields.GLOBAL_ID.getSqlName()));
     def.addField(CqlFields.LOCAL_ID.getCqlName(),
-      new PgCqlFieldText().withExact().withColumn(CqlFields.LOCAL_ID.getSqlName()));
+        new PgCqlFieldText().withExact().withColumn(CqlFields.LOCAL_ID.getSqlName()));
     def.addField(CqlFields.SOURCE_ID.getCqlName(),
-      new PgCqlFieldText().withExact().withColumn(CqlFields.SOURCE_ID.getSqlName()));
+        new PgCqlFieldText().withExact().withColumn(CqlFields.SOURCE_ID.getSqlName()));
     def.addField(CqlFields.SOURCE_VERSION.getCqlName(),
-      new PgCqlFieldNumber().withColumn(CqlFields.SOURCE_VERSION.getSqlName()));
+        new PgCqlFieldNumber().withColumn(CqlFields.SOURCE_VERSION.getSqlName()));
     return def;
   }
 
@@ -165,10 +164,10 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
         failHandler(400, ctx, "Must specify query for delete records");
         return Future.succeededFuture();
       }
-      PgCqlQuery pgCqlQuery = definition.parse(query);
-      Storage storage = new Storage(ctx);
-      return storage.deleteGlobalRecords(pgCqlQuery.getWhereClause())
-          .compose(x -> ctx.response().setStatusCode(204).end());
+      ParsedCql parsed = ParsedCql.parseWithSourceVersionNegation(definition, query);
+      Storage storage = storageFor(ctx);
+      return storage.deleteGlobalRecords(parsed)
+          .compose(_ -> ctx.response().setStatusCode(204).end());
     } catch (PgCqlException e) {
       throw badRequest(e);
     }
@@ -177,10 +176,18 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
   Future<Void> getGlobalRecords(RoutingContext ctx) {
     try {
       PgCqlDefinition definition = createDefinitionGlobalRecords();
-      PgCqlQuery pgCqlQuery = definition.parse(Util.getQueryParameterQuery(ctx));
-      Storage storage = new Storage(ctx);
-      return storage.getGlobalRecords(ctx, pgCqlQuery.getWhereClause(),
-          pgCqlQuery.getOrderByClause());
+      ParsedCql parsed = ParsedCql.parse(definition, Util.getQueryParameterQuery(ctx));
+      Storage storage = storageFor(ctx);
+      return JsonListResponder.streamTable(
+          ctx,
+          storage.db(),
+          GlobalRecordRepository.COLUMNS,
+          storage.db().tables().globalRecords(),
+          parsed.where(),
+          parsed.orderBy(),
+          "items",
+          Storage.sqlStreamFetchSize,
+          row -> GlobalRecordJson.toJson(GlobalRecordRepository.fromRow(row)));
     } catch (PgCqlException e) {
       throw badRequest(e);
     }
@@ -188,14 +195,15 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
 
   Future<Void> getGlobalRecord(RoutingContext ctx) {
     String id = Util.getPathParameter(ctx, "globalId");
-    Storage storage = new Storage(ctx);
-    return storage.getGlobalRecord(id)
+    Storage storage = storageFor(ctx);
+    return storage.globalRecords().findById(storage.db().client(), id)
         .compose(res -> {
-          if (res == null) {
+          if (res.isEmpty()) {
             HttpResponse.responseError(ctx, 404, id);
             return Future.succeededFuture();
           }
-          return HttpResponse.responseJson(ctx, 200).end(res.encode());
+          return HttpResponse.responseJson(ctx, 200)
+              .end(GlobalRecordJson.toJson(res.get()).encode());
         });
   }
 
@@ -246,35 +254,6 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     return sanitized.length() <= 256 ? sanitized : sanitized.substring(0, 256);
   }
 
-  static boolean usesCqlIndex(String query, String index) {
-    if (query == null
-        || !query.toLowerCase(Locale.ROOT).contains(index.toLowerCase(Locale.ROOT))) {
-      return false;
-    }
-    AtomicBoolean found = new AtomicBoolean();
-    try {
-      new CQLParser().parse(query).traverse(new CQLDefaultNodeVisitor() {
-        @Override
-        public void onTermNode(CQLTermNode node) {
-          if (index.equalsIgnoreCase(node.getIndex())) {
-            found.set(true);
-          }
-        }
-
-        @Override
-        public void onSortNode(CQLSortNode node) {
-          if (node.getSortIndexes().stream()
-              .anyMatch(sortIndex -> index.equalsIgnoreCase(sortIndex.getBase()))) {
-            found.set(true);
-          }
-        }
-      });
-    } catch (CQLParseException | IOException e) {
-      return false;
-    }
-    return found.get();
-  }
-
   Future<Void> poolNotFound(RoutingContext ctx, String id) {
     String resource = isLegacyPoolRequest(ctx) ? "MatchKey" : "Pool";
     HttpResponse.responseError(ctx, 404, resource + " " + id + " not found");
@@ -296,11 +275,9 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     definition.addField(CqlFields.SOURCE_VERSION.getCqlName(),
         new PgCqlFieldNumber().withColumn(CqlFields.SOURCE_VERSION.getQualifiedSqlName()));
 
-    PgCqlQuery pgCqlQuery;
+    ParsedCql parsed;
     try {
-      pgCqlQuery = definition.parse(Util.getQueryParameterQuery(ctx));
-      pgCqlQuery.getWhereClause();
-      pgCqlQuery.getOrderByClause();
+      parsed = ParsedCql.parse(definition, Util.getQueryParameterQuery(ctx));
     } catch (PgCqlException e) {
       throw badRequest(e);
     }
@@ -317,22 +294,33 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
       return Future.succeededFuture();
     }
     final String poolId = requestedPoolId;
-    Storage storage = new Storage(ctx);
-    return storage.selectPoolConfig(poolId).compose(conf -> {
-      if (conf == null) {
+    Storage storage = storageFor(ctx);
+    return storage.poolConfigs().findById(storage.db().client(), poolId).compose(conf -> {
+      if (conf.isEmpty()) {
         return poolNotFound(ctx, poolId);
       }
-      return storage.getClusters(ctx, poolId,
-          pgCqlQuery.getWhereClause(), pgCqlQuery.getOrderByClause());
+      JsonListResponder.PageParams page = JsonListResponder.PageParams.from(ctx);
+      return storage.db().withConnection(conn ->
+          storage.clusters().findClusterIdsPage(conn, poolId, parsed, page.offset(), page.limit())
+              .compose(ids -> JsonListResponder.streamByChunks(
+                  ctx,
+                  "items",
+                  ids,
+                  Storage.sqlStreamFetchSize,
+                  chunk -> storage.clusters().loadClustersByIds(conn, chunk)
+                      .map(clusters -> clusters.stream().map(ClusterJson::toJson).toList()),
+                  page.exactCount()
+                      ? () -> storage.clusters().countClusters(conn, poolId, parsed)
+                      : null)));
     });
   }
 
   Future<Void> touchClusters(RoutingContext ctx) {
     PgCqlDefinition definition = createDefinitionBase();
     definition.addField(CqlFields.POOL_ID.getCqlName(),
-      new PgCqlFieldText().withExact().withColumn(CqlFields.POOL_ID.getQualifiedSqlName()));
+        new PgCqlFieldText().withExact().withColumn(CqlFields.POOL_ID.getQualifiedSqlName()));
     definition.addField(CqlFields.MATCHKEY_ID.getCqlName(),
-      new PgCqlFieldText().withExact().withColumn(CqlFields.MATCHKEY_ID.getQualifiedSqlName()));
+        new PgCqlFieldText().withExact().withColumn(CqlFields.MATCHKEY_ID.getQualifiedSqlName()));
     definition.addField(CqlFields.CLUSTER_ID.getCqlName(),
         new PgCqlFieldUuid().withColumn(CqlFields.CLUSTER_ID.getQualifiedSqlName()));
     definition.addField(CqlFields.SOURCE_ID.getCqlName(),
@@ -341,26 +329,24 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
         new PgCqlFieldNumber().withColumn(CqlFields.SOURCE_VERSION.getQualifiedSqlName()));
 
     String query = Util.getQueryParameterQuery(ctx);
-    PgCqlQuery pgCqlQuery;
-    String where;
+    ParsedCql parsed;
     try {
-      pgCqlQuery = definition.parse(query);
-      where = pgCqlQuery.getWhereClause();
+      parsed = ParsedCql.parse(definition, query);
     } catch (PgCqlException e) {
       throw badRequest(e);
     }
-    if (where == null
-        || !where.contains("global_records.source_id")
-        || !where.contains("cluster_meta.match_key_config_id")) {
+    if (parsed.where() == null
+        || !parsed.filtersOn(CqlFields.SOURCE_ID)
+        || !parsed.filtersOnAny(CqlFields.POOL_ID, CqlFields.MATCHKEY_ID)) {
       failHandler(400, ctx, "query too broad, must at least contain 'poolId' and 'sourceId'");
       return Future.succeededFuture();
     }
-    if (usesCqlIndex(query, CqlFields.MATCHKEY_ID.getCqlName())) {
+    if (parsed.uses(CqlFields.MATCHKEY_ID)) {
       warnDeprecatedCqlIndex(ctx, CqlFields.MATCHKEY_ID.getCqlName(),
           CqlFields.POOL_ID.getCqlName());
     }
-    Storage storage = new Storage(ctx);
-    return storage.touchClusters(pgCqlQuery)
+    Storage storage = storageFor(ctx);
+    return storage.clusters().touchByCql(storage.db().client(), parsed.where())
         .map(count -> new JsonObject().put("count", count))
         .compose(res -> {
           ctx.response().putHeader("Content-Type", "application/json");
@@ -372,45 +358,40 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
     RequestParameter requestParameter = validatedRequest.getPathParameters().get("clusterId");
     String clusterId = requestParameter.getString();
-    Storage storage = new Storage(ctx);
+    Storage storage = storageFor(ctx);
     return storage.getClusterById(UUID.fromString(clusterId))
         .compose(res -> {
-          if (res.getJsonArray("records").isEmpty()) {
+          if (res.isEmpty()) {
             HttpResponse.responseError(ctx, 404, clusterId);
             return Future.succeededFuture();
           }
-          return HttpResponse.responseJson(ctx, 200).end(res.encode());
+          return HttpResponse.responseJson(ctx, 200)
+              .end(ClusterJson.toJson(res.get()).encode());
         });
   }
 
-  static String getMethod(JsonObject config) {
-    String method = config.getString("method");
-    return method;
-  }
-
   static Future<String> checkMatcher(Storage storage, PoolConfig poolConfig) {
-    String[] matcherInvocations = poolConfig.getMatcherInvocations();
-    if (matcherInvocations.length == 0) {
+    List<ModuleInvocation> matcherInvocations = poolConfig.matchers();
+    if (matcherInvocations.isEmpty()) {
       return Future.succeededFuture(null);
     }
-    List<Future<Void>> futures = new ArrayList<>();
-    for (String matcherInvocation : matcherInvocations) {
-      ModuleInvocation invocation = new ModuleInvocation(matcherInvocation);
-      futures.add(storage.selectCodeModuleEntity(invocation.getModuleName())
+    List<Future<Void>> futures = new ArrayList<>(matcherInvocations.size());
+    for (ModuleInvocation invocation : matcherInvocations) {
+      futures.add(storage.codeModules().findById(storage.db().client(), invocation.moduleName())
           .compose(entity -> {
-            if (entity == null) {
+            if (entity.isEmpty()) {
               return Future.failedFuture(badRequest(
-                  "Matcher module '" + invocation.getModuleName() + "' does not exist"));
+                  "Matcher module '" + invocation.moduleName() + "' does not exist"));
             }
             return Future.succeededFuture();
           }));
     }
-    return Future.all(futures).map(poolConfig.getMatcher());
+    return Future.all(futures).map(poolConfig.matcherString());
   }
 
   private static PoolConfig createPoolConfig(RoutingContext ctx, JsonObject request) {
     try {
-      return new PoolConfig(request);
+      return PoolConfigJson.fromJson(request);
     } catch (IllegalArgumentException e) {
       if (isLegacyPoolRequest(ctx) && e.getMessage() != null) {
         throw badRequest(new IllegalArgumentException(
@@ -421,44 +402,44 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
   }
 
   Future<Void> postPool(RoutingContext ctx) {
-    Storage storage = new Storage(ctx);
+    Storage storage = storageFor(ctx);
     ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
     JsonObject request = validatedRequest.getBody().getJsonObject();
 
     PoolConfig poolConfig = createPoolConfig(ctx, request);
     return checkMatcher(storage, poolConfig)
-        .compose(matcher -> storage.insertPoolConfig(poolConfig))
-        .compose(res ->
-          HttpResponse.responseJson(ctx, 201)
-            .putHeader("Location", ctx.request().absoluteURI() + "/" + poolConfig.getId())
-            .end(request.encode())
-        )
+        .compose(_ -> storage.poolConfigs().insert(storage.db().client(), poolConfig))
+        .compose(_ ->
+            HttpResponse.responseJson(ctx, 201)
+                .putHeader("Location", ctx.request().absoluteURI() + "/" + poolConfig.id())
+                .end(request.encode()))
         .recover(ReservoirService::mapUniqueViolation);
   }
 
   Future<Void> getPool(RoutingContext ctx) {
     ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
     String id = validatedRequest.getPathParameters().get("id").getString();
-    Storage storage = new Storage(ctx);
-    return storage.selectPoolConfig(id)
+    Storage storage = storageFor(ctx);
+    return storage.poolConfigs().findById(storage.db().client(), id)
         .compose(res -> {
-          if (res == null) {
+          if (res.isEmpty()) {
             return poolNotFound(ctx, id);
           }
-          return HttpResponse.responseJson(ctx, 200).end(res.encode());
+          return HttpResponse.responseJson(ctx, 200)
+              .end(PoolConfigJson.toJson(res.get()).encode());
         });
   }
 
   Future<Void> putPool(RoutingContext ctx) {
-    Storage storage = new Storage(ctx);
+    Storage storage = storageFor(ctx);
     ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
     JsonObject request = validatedRequest.getBody().getJsonObject();
     PoolConfig poolConfig = createPoolConfig(ctx, request);
     return checkMatcher(storage, poolConfig)
-        .compose(matcher -> storage.updatePoolConfig(poolConfig))
-        .compose(res -> {
-          if (Boolean.FALSE.equals(res)) {
-            return poolNotFound(ctx, poolConfig.getId());
+        .compose(_ -> storage.poolConfigs().update(storage.db().client(), poolConfig))
+        .compose(updated -> {
+          if (Boolean.FALSE.equals(updated)) {
+            return poolNotFound(ctx, poolConfig.id());
           }
           return ctx.response().setStatusCode(204).end();
         });
@@ -466,10 +447,10 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
 
   Future<Void> deletePool(RoutingContext ctx) {
     String id = Util.getPathParameter(ctx, "id");
-    Storage storage = new Storage(ctx);
-    return storage.deletePoolConfig(id)
-        .compose(res -> {
-          if (Boolean.FALSE.equals(res)) {
+    Storage storage = storageFor(ctx);
+    return storage.poolConfigs().delete(storage.db().client(), id)
+        .compose(deleted -> {
+          if (Boolean.FALSE.equals(deleted)) {
             return poolNotFound(ctx, id);
           }
           return ctx.response().setStatusCode(204).end();
@@ -480,26 +461,39 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     PgCqlDefinition definition = createDefinitionBase();
     definition.addField(CqlFields.ID.getCqlName(), new PgCqlFieldText().withExact());
     definition.addField(CqlFields.METHOD.getCqlName(), new PgCqlFieldText().withExact());
-    definition.addField(CqlFields.MATCHER.getCqlName(), new PgCqlFieldText().withExact());
+    definition.addField(CqlFields.MATCHER.getCqlName(),
+        new CqlFieldTermMapper(new PgCqlFieldText().withExact(), term -> {
+          try {
+            return ModuleInvocation.normalizeList(term);
+          } catch (IllegalArgumentException e) {
+            return term;
+          }
+        }, null));
 
-    PgCqlQuery pgCqlQuery;
+    ParsedCql parsed;
     try {
-      pgCqlQuery = definition.parse(Util.getQueryParameterQuery(ctx));
-      pgCqlQuery.getWhereClause();
-      pgCqlQuery.getOrderByClause();
+      parsed = ParsedCql.parse(definition, Util.getQueryParameterQuery(ctx));
     } catch (PgCqlException e) {
       throw badRequest(e);
     }
 
-    Storage storage = new Storage(ctx);
+    Storage storage = storageFor(ctx);
     String resultProperty = isLegacyPoolRequest(ctx) ? "matchKeys" : "pools";
-    return storage.getPoolConfigs(ctx, pgCqlQuery.getWhereClause(),
-        pgCqlQuery.getOrderByClause(), resultProperty);
+    return JsonListResponder.streamTable(
+        ctx,
+        storage.db(),
+        PoolConfigRepository.COLUMNS,
+        storage.db().tables().poolConfig(),
+        parsed.where(),
+        parsed.orderBy(),
+        resultProperty,
+        Storage.sqlStreamFetchSize,
+        row -> PoolConfigJson.toJson(PoolConfigRepository.fromRow(row)));
   }
 
   Future<Void> initializePool(RoutingContext ctx) {
     String id = Util.getPathParameter(ctx, "id");
-    Storage storage = new Storage(ctx);
+    Storage storage = storageFor(ctx);
     return storage.initializePool(ctx.vertx(), id)
         .compose(totalRecords -> {
           if (totalRecords == null) {
@@ -512,82 +506,76 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
 
   Future<Void> statsPool(RoutingContext ctx) {
     String id = Util.getPathParameter(ctx, "id");
-    Storage storage = new Storage(ctx);
-    return storage.selectPoolConfig(id)
+    Storage storage = storageFor(ctx);
+    return storage.poolConfigs().findById(storage.db().client(), id)
         .compose(conf -> {
-          if (conf == null) {
+          if (conf.isEmpty()) {
             return poolNotFound(ctx, id);
           }
           return storage.statsPool(id)
-              .compose(res -> HttpResponse.responseJson(ctx, 200).end(res.encode()));
+              .compose(stats -> HttpResponse.responseJson(ctx, 200)
+                  .end(PoolStatsJson.toJson(stats).encode()));
         });
   }
 
-  //start modules, move to another class
-
   Future<Void> postCodeModule(RoutingContext ctx) {
-    Storage storage = new Storage(ctx);
+    Storage storage = storageFor(ctx);
     ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
     JsonObject request = validatedRequest.getBody().getJsonObject();
     Future<CodeModuleEntity> resolved;
     try {
-      resolved = new CodeModuleEntity.CodeModuleBuilder(request).resolve(ctx.vertx());
+      resolved = CodeModuleResolver.resolve(ctx.vertx(), CodeModuleJson.fromJson(request));
     } catch (RuntimeException e) {
       throw badRequest(e);
     }
     return resolved
-      .<CodeModuleEntity>compose(cm -> ModuleCache.getInstance().lookup(Tenant.get(ctx), cm)
-        .map(module -> cm)
-      )
-      .recover(cause -> Future.failedFuture(badRequest(cause)))
-      .compose(cm -> storage.insertCodeModuleEntity(cm)
-        .recover(ReservoirService::mapUniqueViolation)
-        .compose(res ->
-          HttpResponse.responseJson(ctx, 201)
-              .putHeader("Location", ctx.request().absoluteURI() + "/" + cm.getId())
-              .end(cm.asJson(true).encode())
-        )
-      );
+        .compose(cm -> ModuleCache.getInstance().lookup(Tenant.get(ctx), cm).map(cm))
+        .recover(cause -> Future.failedFuture(badRequest(cause)))
+        .compose(cm -> storage.codeModules().insert(storage.db().client(), cm)
+            .recover(ReservoirService::mapUniqueViolation)
+            .compose(_ ->
+                HttpResponse.responseJson(ctx, 201)
+                    .putHeader("Location", ctx.request().absoluteURI() + "/" + cm.id())
+                    .end(CodeModuleJson.toJson(cm).encode())));
   }
 
   Future<Void> getCodeModule(RoutingContext ctx) {
     String id = Util.getPathParameter(ctx, "id");
-    Storage storage = new Storage(ctx);
-    return storage.selectCodeModuleEntity(id)
+    Storage storage = storageFor(ctx);
+    return storage.codeModules().findById(storage.db().client(), id)
         .compose(e -> {
-          if (e == null) {
+          if (e.isEmpty()) {
             HttpResponse.responseError(ctx, 404,
                 String.format(ENTITY_ID_NOT_FOUND_PATTERN, MODULE_LABEL, id));
             return Future.succeededFuture();
           }
-          return HttpResponse.responseJson(ctx, 200).end(e.asJson(true).encode());
+          return HttpResponse.responseJson(ctx, 200)
+              .end(CodeModuleJson.toJson(e.get()).encode());
         });
   }
 
   Future<Void> putCodeModule(RoutingContext ctx) {
-    Storage storage = new Storage(ctx);
+    Storage storage = storageFor(ctx);
     ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
     JsonObject request = validatedRequest.getBody().getJsonObject();
     Future<CodeModuleEntity> resolved;
     try {
-      resolved = new CodeModuleEntity.CodeModuleBuilder(request).resolve(ctx.vertx());
+      resolved = CodeModuleResolver.resolve(ctx.vertx(), CodeModuleJson.fromJson(request));
     } catch (RuntimeException e) {
       throw badRequest(e);
     }
     return resolved
-      .<CodeModuleEntity>compose(cm -> ModuleCache.getInstance().lookup(Tenant.get(ctx), cm)
-        .map(module -> cm)
-      )
-      .recover(cause -> Future.failedFuture(badRequest(cause)))
-      .compose(cm -> storage.updateCodeModuleEntity(cm)
-        .compose(res -> {
-          if (Boolean.FALSE.equals(res)) {
-            HttpResponse.responseError(ctx, 404,
-                String.format(ENTITY_ID_NOT_FOUND_PATTERN, MODULE_LABEL, cm.getId()));
-            return Future.succeededFuture();
-          }
-          return ctx.response().setStatusCode(204).end();
-        }));
+        .compose(cm -> ModuleCache.getInstance().lookup(Tenant.get(ctx), cm).map(cm))
+        .recover(cause -> Future.failedFuture(badRequest(cause)))
+        .compose(cm -> storage.codeModules().update(storage.db().client(), cm)
+            .compose(updated -> {
+              if (Boolean.FALSE.equals(updated)) {
+                HttpResponse.responseError(ctx, 404,
+                    String.format(ENTITY_ID_NOT_FOUND_PATTERN, MODULE_LABEL, cm.id()));
+                return Future.succeededFuture();
+              }
+              return ctx.response().setStatusCode(204).end();
+            }));
   }
 
   Future<Void> getCodeModules(RoutingContext ctx) {
@@ -595,58 +583,51 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     definition.addField(CqlFields.ID.getCqlName(), new PgCqlFieldText().withExact());
     definition.addField(CqlFields.FUNCTION.getCqlName(), new PgCqlFieldText().withExact());
 
-    PgCqlQuery pgCqlQuery;
+    ParsedCql parsed;
     try {
-      pgCqlQuery = definition.parse(Util.getQueryParameterQuery(ctx));
-      pgCqlQuery.getWhereClause();
-      pgCqlQuery.getOrderByClause();
+      parsed = ParsedCql.parse(definition, Util.getQueryParameterQuery(ctx));
     } catch (PgCqlException e) {
       throw badRequest(e);
     }
 
-    Storage storage = new Storage(ctx);
-    return storage.selectCodeModuleEntities(ctx, pgCqlQuery.getWhereClause(),
-        pgCqlQuery.getOrderByClause());
+    Storage storage = storageFor(ctx);
+    return JsonListResponder.streamTable(
+        ctx,
+        storage.db(),
+        CodeModuleRepository.COLUMNS,
+        storage.db().tables().module(),
+        parsed.where(),
+        parsed.orderBy(),
+        "modules",
+        Storage.sqlStreamFetchSize,
+        row -> CodeModuleJson.toJson(CodeModuleRepository.fromRow(row)));
   }
 
-
-  //end modules
-
-  //oai config
-
   Future<Void> getOaiConfig(RoutingContext ctx) {
-    Storage storage = new Storage(ctx);
-    return storage.selectOaiConfig()
+    Storage storage = storageFor(ctx);
+    return storage.oaiConfigs().find(storage.db().client())
         .compose(res -> {
-          if (res == null) {
+          if (res.isEmpty()) {
             HttpResponse.responseError(ctx, 404, "OAI config not found");
             return Future.succeededFuture();
           }
-          return HttpResponse.responseJson(ctx, 200).end(res.encode());
+          return HttpResponse.responseJson(ctx, 200).end(res.get().encode());
         });
   }
 
   Future<Void> putOaiConfig(RoutingContext ctx) {
-    Storage storage = new Storage(ctx);
+    Storage storage = storageFor(ctx);
     ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
     JsonObject request = validatedRequest.getBody().getJsonObject();
-    return storage.updateOaiConfig(request)
-        .compose(res -> {
-          if (Boolean.FALSE.equals(res)) {
-            HttpResponse.responseError(ctx, 400, "OAI config not updated");
-            return Future.succeededFuture();
-          }
-          return ctx.response().setStatusCode(204).end();
-        });
+    return storage.oaiConfigs().upsert(storage.db().client(), request)
+        .compose(_ -> ctx.response().setStatusCode(204).end());
   }
 
   Future<Void> deleteOaiConfig(RoutingContext ctx) {
-    Storage storage = new Storage(ctx);
-    return storage.deleteOaiConfig()
-        .compose(res -> ctx.response().setStatusCode(204).end());
+    Storage storage = storageFor(ctx);
+    return storage.oaiConfigs().delete(storage.db().client())
+        .compose(_ -> ctx.response().setStatusCode(204).end());
   }
-
-  //end oai config
 
   private static HttpException badRequest(String message) {
     return badRequest(new IllegalArgumentException(message));
@@ -734,8 +715,6 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
     return OpenAPIContract.from(vertx, "openapi/reservoir.yaml")
         .map(contract -> {
           RouterBuilder routerBuilder = RouterBuilder.create(vertx, contract);
-          // routerBuilder.rootHandler(BodyHandler.create().setBodyLimit(65536)
-          //     .setHandleFileUploads(false));
           add(routerBuilder, "getServiceInfo", this::getServiceInfo);
           add(routerBuilder, "getGlobalRecords", this::getGlobalRecords, false);
           add(routerBuilder, "deleteGlobalRecords", this::deleteGlobalRecords, false);
@@ -797,8 +776,8 @@ public class ReservoirService implements RouterCreator, TenantInitHooks {
               putGlobalRecords(ctx).onFailure(cause -> failHandler(400, ctx, cause)));
           router.route("/reservoir/upload")
               .method(HttpMethod.POST).method(HttpMethod.PUT).handler(ctx ->
-              uploadService.uploadRecords(ctx).onFailure(cause -> failHandler(ctx, cause)));
-          //upload page
+                  uploadService.uploadRecords(ctx).onFailure(cause -> failHandler(ctx, cause)));
+          // upload page
           router.route("/reservoir/upload-form/*")
               .handler(StaticHandler.create());
 

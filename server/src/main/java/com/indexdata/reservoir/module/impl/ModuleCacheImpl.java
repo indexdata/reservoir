@@ -45,7 +45,7 @@ public class ModuleCacheImpl implements ModuleCache {
 
   @Override
   public Future<Module> lookup(String tenantId, CodeModuleEntity entity) {
-    String moduleId = entity.getId();
+    String moduleId = entity.id();
     if (moduleId == null) {
       return Future.failedFuture("module config must include 'id'");
     }
@@ -59,7 +59,7 @@ public class ModuleCacheImpl implements ModuleCache {
       entries.remove(cacheKey);
     }
     try {
-      Module module = createInstance(entity.getType());
+      Module module = createInstance(entity.type());
       module.initialize(entity);
       CacheEntry e = new CacheEntry(module, entity);
       entries.put(cacheKey, e);

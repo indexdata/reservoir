@@ -26,7 +26,7 @@ public class InitializationDiagnosticsDatabaseTest extends TestBase {
   public void explainPreservesQueryResults(TestContext context) {
     Storage storage = new Storage(vertx, TENANT_1, HttpMethod.POST);
     var diagnostics = new InitializationDiagnostics(TENANT_1, "pool", "job", 1, 1, 100);
-    storage.pool.withTransaction(connection ->
+    storage.db().pool().withTransaction(connection ->
         diagnostics.explain(connection, "SELECT $1::text AS value", Tuple.of("match"), 1)
             .compose(ignored -> diagnostics.explain(connection,
                 "SELECT nonexistent_column", Tuple.tuple(), 1))
@@ -43,7 +43,7 @@ public class InitializationDiagnosticsDatabaseTest extends TestBase {
   public void explainFailureIsReported(TestContext context) {
     Storage storage = new Storage(vertx, TENANT_1, HttpMethod.POST);
     var diagnostics = new InitializationDiagnostics(TENANT_1, "pool", "job", 1, 1, 100);
-    storage.pool.withTransaction(connection -> diagnostics.explain(connection,
+    storage.db().pool().withTransaction(connection -> diagnostics.explain(connection,
         "SELECT nonexistent_column", Tuple.tuple(), 1))
         .onComplete(context.asyncAssertFailure(error -> {
           context.assertTrue(error.getMessage().contains("nonexistent_column"));
@@ -87,10 +87,10 @@ public class InitializationDiagnosticsDatabaseTest extends TestBase {
             });
       }
     };
-    storage.pool.withConnection(connection -> connection.query(
+    storage.db().pool().withConnection(connection -> connection.query(
         "CREATE TEMP TABLE " + writes + " (value integer)").execute()
-        .compose(ignored -> connection.query("DELETE FROM " + storage.globalRecordTable).execute())
-        .compose(ignored -> connection.query("INSERT INTO " + storage.globalRecordTable
+        .compose(ignored -> connection.query("DELETE FROM " + storage.db().tables().globalRecords()).execute())
+        .compose(ignored -> connection.query("INSERT INTO " + storage.db().tables().globalRecords()
             + " (id, local_id, source_id, payload)"
             + " SELECT gen_random_uuid(), n::text, 'diagnostics-test', '{}'::jsonb"
             + " FROM generate_series(1, 3) n").execute())

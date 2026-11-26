@@ -1,142 +1,50 @@
 package com.indexdata.reservoir.server.entity;
 
+import com.indexdata.reservoir.module.ModuleInvocation;
 import io.vertx.core.json.JsonObject;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
-public class PoolConfig {
-  private final String id;
-  private final String args;
-  private final String matcher;
-  private final String method;
-  private final JsonObject params;
-  private final String update;
-  private final JsonObject cql;
+/** Pure domain record for a pool (match-key) configuration. */
+public record PoolConfig(
+    String id,
+    MatcherArgs args,
+    List<ModuleInvocation> matchers,
+    String method,
+    UpdateMode update,
+    Map<String, ModuleInvocation> cql,
+    JsonObject params
+) {
 
-  private static final String ID_LABEL = "id";
-  private static final String ARGS_LABEL = "args";
-  private static final String MATCHER_LABEL = "matcher";
-  private static final String METHOD_LABEL = "method";
-  private static final String PARAMS_LABEL = "params";
-  private static final String UPDATE_LABEL = "update";
-  private static final String CQL_LABEL = "cql";
-
-  /**
-   * Constructor.
-   * @param id pool id
-   * @param args kind of args to be passed to the matcher
-   * @param cql CQL query as json object
-   * @param matcher matcher code module id
-   * @param method matching method
-   * @param params OAI-PMH parameters as json object
-   * @param update "manual" or "ingest"
-   */
-  public PoolConfig(String id, String args, JsonObject cql, String matcher, String method,
-      JsonObject params, String update) {
-    this.id = id;
-    this.args = args;
-    this.matcher = matcher;
-    this.method = method;
-    this.params = params;
-    this.update = update;
-    this.cql = cql;
-    validate();
-  }
-
-  /**
-   * Constructor from JsonObject.
-   * @param json object with pool configuration data
-   */
-  public PoolConfig(JsonObject json) {
-    this.id = json.getString(ID_LABEL);
-    this.args = json.getString(ARGS_LABEL);
-    this.matcher = json.getString(MATCHER_LABEL);
-    this.method = json.getString(METHOD_LABEL);
-    this.params = json.getJsonObject(PARAMS_LABEL);
-    this.update = json.getString(UPDATE_LABEL);
-    this.cql = json.getJsonObject(CQL_LABEL);
-    validate();
-  }
-
-  private void validate() {
+  public PoolConfig {
     if (id == null) {
       throw new IllegalArgumentException("PoolConfig id is required");
     }
     if (id.contains("'") || id.contains("\"")) {
       throw new IllegalArgumentException("PoolConfig id cannot contain quotes");
     }
-    getMatcherInvocations();
-  }
-
-  public String getId() {
-    return id;
-  }
-
-  public String getArgs() {
-    return args;
-  }
-
-  public String getMatcher() {
-    return matcher;
-  }
-
-  /**
-   * Get the individual module invocations configured for this pool.
-   * @return module invocation strings
-   */
-  public String[] getMatcherInvocations() {
-    if (matcher == null) {
+    if (matchers == null || matchers.isEmpty()) {
       throw new IllegalArgumentException("PoolConfig matcher is required");
     }
-    String[] invocations = matcher.split(",", -1);
-    for (int i = 0; i < invocations.length; i++) {
-      invocations[i] = invocations[i].trim();
-      if (invocations[i].isEmpty()) {
-        throw new IllegalArgumentException("Matcher module invocation cannot be empty");
-      }
-    }
-    return invocations;
+    matchers = List.copyOf(matchers);
+    cql = cql == null ? null : Collections.unmodifiableMap(new LinkedHashMap<>(cql));
+    params = params == null ? null : params.copy();
   }
 
-  public String getMethod() {
-    return method;
+  public boolean onlyPayload() {
+    return args == null || args == MatcherArgs.PAYLOAD;
   }
 
-  public JsonObject getParams() {
-    return params;
-  }
-
-  public String getUpdate() {
-    return update;
-  }
-
-  public JsonObject getCql() {
-    return cql;
+  public boolean isManualUpdate() {
+    return update == UpdateMode.MANUAL;
   }
 
   /**
-   * Convert to JsonObject.
-   * @return json object
+   * Format configured matcher invocations into the canonical {@code one,two} string.
    */
-  public JsonObject toJson() {
-    JsonObject json = new JsonObject();
-    json.put(ID_LABEL, id);
-    if (args != null) {
-      json.put(ARGS_LABEL, args);
-    }
-    if (matcher != null) {
-      json.put(MATCHER_LABEL, matcher);
-    }
-    if (method != null) {
-      json.put(METHOD_LABEL, method);
-    }
-    if (params != null) {
-      json.put(PARAMS_LABEL, params);
-    }
-    if (update != null) {
-      json.put(UPDATE_LABEL, update);
-    }
-    if (cql != null) {
-      json.put(CQL_LABEL, cql);
-    }
-    return json;
+  public String matcherString() {
+    return ModuleInvocation.formatList(matchers);
   }
 }

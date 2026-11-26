@@ -12,74 +12,69 @@ import org.junit.Test;
 public class OaiPmhStatusTest {
 
   @Test
-  public void test() {
-    OaiPmhStatus oaiPmhStatus = new OaiPmhStatus();
-    assertThat(oaiPmhStatus.status, is(nullValue()));
-    oaiPmhStatus.setStatus("running");
-    assertThat(oaiPmhStatus.getStatus(), is("running"));
+  public void testStatus() {
+    OaiPmhStatus status = OaiPmhStatus.empty();
+    assertThat(status.status(), is(nullValue()));
+    status = status.withStatus(OaiPmhJobStatus.RUNNING);
+    assertThat(status.status(), is(OaiPmhJobStatus.RUNNING));
+    assertThat(status.isRunning(), is(true));
   }
 
   @Test
-  public void mapFromMapTo() {
-    JsonObject o = new JsonObject()
-        .put("status", "idle");
-    OaiPmhStatus oaiPmhStatus = o.mapTo(OaiPmhStatus.class);
-    assertThat(oaiPmhStatus.getStatus(), is("idle"));
-    JsonObject o2 = JsonObject.mapFrom(oaiPmhStatus);
-    assertThat(o, is(o2));
+  public void dbJsonRoundTrip() {
+    JsonObject original = new JsonObject().put("status", "idle");
+    OaiPmhStatus status = OaiPmhStatusJson.fromDbJson(original);
+    assertThat(status.status(), is(OaiPmhJobStatus.IDLE));
+    JsonObject encoded = OaiPmhStatusJson.toDbJson(status);
+    assertThat(encoded, is(original));
   }
 
   @Test
-  public void config() {
-    OaiPmhStatus oaiPmhStatus = new OaiPmhStatus();
+  public void configOnlyInApiJson() {
+    OaiPmhStatus status = OaiPmhStatus.empty();
     JsonObject config = new JsonObject().put("id", "myidentifier");
-    oaiPmhStatus.setConfig(config);
-    JsonObject o = JsonObject.mapFrom(oaiPmhStatus);
-    assertThat(o, is(new JsonObject()));
-    JsonObject o1 = oaiPmhStatus.getJsonObject();
-    assertThat(o1, is(new JsonObject().put("config", new JsonObject().put("id", "myidentifier"))));
+    JsonObject dbJson = OaiPmhStatusJson.toDbJson(status);
+    assertThat(dbJson, is(new JsonObject()));
+    JsonObject apiJson = OaiPmhStatusJson.toApiJson(status, config);
+    assertThat(apiJson, is(new JsonObject().put("config", new JsonObject().put("id", "myidentifier"))));
   }
 
   @Test
   public void lastActiveTimestamp() {
-    OaiPmhStatus oaiPmhStatus1 = new OaiPmhStatus();
     LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
-    oaiPmhStatus1.setLastActiveTimestampRaw(now);
-    JsonObject o = JsonObject.mapFrom(oaiPmhStatus1);
-    OaiPmhStatus oaiPmhStatus2 = o.mapTo(OaiPmhStatus.class);
-    assertThat(oaiPmhStatus2.getLastActiveTimestampRaw(), is(now));
+    OaiPmhStatus status1 = OaiPmhStatus.empty().withLastActiveTimestamp(now);
+    JsonObject encoded = OaiPmhStatusJson.toDbJson(status1);
+    OaiPmhStatus status2 = OaiPmhStatusJson.fromDbJson(encoded);
+    assertThat(status2.lastActiveTimestamp(), is(now));
   }
 
   @Test
   public void lastStartedTimestamp() {
-    OaiPmhStatus oaiPmhStatus1 = new OaiPmhStatus();
     LocalDateTime now = LocalDateTime.now();
-    oaiPmhStatus1.setLastStartedTimestampRaw(now);
-    JsonObject o = JsonObject.mapFrom(oaiPmhStatus1);
-    OaiPmhStatus oaiPmhStatus2 = o.mapTo(OaiPmhStatus.class);
-    assertThat(oaiPmhStatus2.getLastStartedTimestampRaw(), is(now));
+    OaiPmhStatus status1 = OaiPmhStatus.empty().withLastStartedTimestamp(now);
+    JsonObject encoded = OaiPmhStatusJson.toDbJson(status1);
+    OaiPmhStatus status2 = OaiPmhStatusJson.fromDbJson(encoded);
+    assertThat(status2.lastStartedTimestamp(), is(now));
   }
 
   @Test
   public void lastRecsPerSec() {
-    OaiPmhStatus oaiPmhStatus = new OaiPmhStatus();
-    oaiPmhStatus.calculateLastRecsPerSec();
-    assertThat(oaiPmhStatus.getLastRecsPerSec(), is(nullValue()));
-    oaiPmhStatus.setLastRunningTime(0L);
-    oaiPmhStatus.calculateLastRecsPerSec();
-    assertThat(oaiPmhStatus.getLastRecsPerSec(), is(nullValue()));
-    oaiPmhStatus.setLastRunningTime(2L);
-    oaiPmhStatus.setLastTotalRecords(30L);
-    oaiPmhStatus.calculateLastRecsPerSec();
-    assertThat(oaiPmhStatus.getLastRecsPerSec(), is(15000L));
+    OaiPmhStatus status = OaiPmhStatus.empty().withCalculatedLastRecsPerSec();
+    assertThat(status.lastRecsPerSec(), is(nullValue()));
+    status = status.withLastRunningTimeMs(0L).withCalculatedLastRecsPerSec();
+    assertThat(status.lastRecsPerSec(), is(nullValue()));
+    status = status.withLastRunningTimeMs(2L)
+        .withLastTotalRecords(30L)
+        .withCalculatedLastRecsPerSec();
+    assertThat(status.lastRecsPerSec(), is(15000L));
   }
 
   @Test
-  public void readable() {
-    OaiPmhStatus oaiPmhStatus = new OaiPmhStatus();
-    JsonObject o1 = oaiPmhStatus.getJsonObject();
-    oaiPmhStatus.setLastRunningTime(1000L * (2 * 24 * 3600 + 3 * 3600L + 4 * 60 + 5));
-    o1 = oaiPmhStatus.getJsonObject();
-    assertThat(o1.getString("lastRunningTime"), is("2 days 03 hrs 04 mins 05 secs"));
+  public void readableRunningTime() {
+    OaiPmhStatus status = OaiPmhStatus.empty();
+    assertThat(OaiPmhStatusJson.toApiJson(status, null).getString("lastRunningTime"), is(nullValue()));
+    status = status.withLastRunningTimeMs(1000L * (2 * 24 * 3600 + 3 * 3600L + 4 * 60 + 5));
+    JsonObject apiJson = OaiPmhStatusJson.toApiJson(status, null);
+    assertThat(apiJson.getString("lastRunningTime"), is("2 days 03 hrs 04 mins 05 secs"));
   }
 }

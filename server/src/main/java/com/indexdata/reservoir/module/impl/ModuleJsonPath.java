@@ -17,7 +17,7 @@ public class ModuleJsonPath implements Module {
 
   @Override
   public void initialize(CodeModuleEntity entity) {
-    String script = entity.getScript();
+    String script = entity.script();
     if (script == null) {
       throw new IllegalArgumentException("module config must include 'script'");
     }
