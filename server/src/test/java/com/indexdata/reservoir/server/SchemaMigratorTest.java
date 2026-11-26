@@ -182,7 +182,16 @@ public class SchemaMigratorTest extends TestBase {
                   + " (id, matcher, args) VALUES ($1, $2, $3)")
           .execute(Tuple.of("bad-pool", "m1", "unknown-args")));
 
+      // A null cql mapping (disabled index) is valid stored data and must still load.
+      await(db.pool().preparedQuery(
+              "INSERT INTO " + db.tables().poolConfig()
+                  + " (id, matcher, cql) VALUES ($1, $2, $3)")
+          .execute(Tuple.of("null-cql-pool", "m1",
+              new JsonObject().putNull("disabled").put("isbn", "m1"))));
       PoolConfigRepository poolRepo = new PoolConfigRepository(db);
+      var nullCqlPool = await(poolRepo.findById(db.client(), "null-cql-pool")).orElseThrow();
+      assertEquals(List.of("isbn"), new ArrayList<>(nullCqlPool.cql().keySet()));
+
       ExecutionException poolErr = assertThrows(
           ExecutionException.class, () -> await(poolRepo.findAll(db.client())));
       assertTrue(poolErr.getCause() instanceof IllegalArgumentException);

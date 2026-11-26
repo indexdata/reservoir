@@ -48,7 +48,10 @@ public final class PoolConfigJson {
     return json;
   }
 
-  /** Decode the optional CQL index-to-module-invocation map, preserving insertion order. */
+  /**
+   * Decode the optional CQL index-to-module-invocation map, preserving insertion order.
+   * A null mapping marks a disabled index and is skipped.
+   */
   public static Map<String, ModuleInvocation> decodeCql(JsonObject cqlJson) {
     if (cqlJson == null) {
       return null;
@@ -56,6 +59,9 @@ public final class PoolConfigJson {
     Map<String, ModuleInvocation> map = new LinkedHashMap<>();
     for (String key : cqlJson.fieldNames()) {
       Object value = cqlJson.getValue(key);
+      if (value == null) {
+        continue;
+      }
       if (!(value instanceof String invocation)) {
         throw new IllegalArgumentException(
             "CQL module invocation for '" + key + "' must be a string");

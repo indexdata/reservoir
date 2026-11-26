@@ -85,9 +85,17 @@ public class PoolConfigTest {
     assertThrows(IllegalArgumentException.class, () -> PoolConfigJson.fromJson(new JsonObject()
         .put("id", "p1").put("matcher", "m1")
         .put("cql", new JsonObject().put("bad", "::fn"))));
-    assertThrows(IllegalArgumentException.class, () -> PoolConfigJson.fromJson(new JsonObject()
+  }
+
+  @Test
+  public void cqlSkipsNullMappings() {
+    PoolConfig config = PoolConfigJson.fromJson(new JsonObject()
         .put("id", "p1").put("matcher", "m1")
-        .put("cql", new JsonObject().putNull("bad"))));
+        .put("cql", new JsonObject().putNull("disabled").put("isbn", "modA")));
+
+    assertThat(new ArrayList<>(config.cql().keySet()), contains("isbn"));
+    assertThat(PoolConfigJson.toJson(config).getJsonObject("cql"),
+        is(new JsonObject().put("isbn", "modA")));
   }
 
   @Test
