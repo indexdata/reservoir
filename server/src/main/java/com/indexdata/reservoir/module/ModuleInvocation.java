@@ -13,6 +13,9 @@ public record ModuleInvocation(String moduleName, String functionName) {
     if (moduleName == null || moduleName.isEmpty()) {
       throw new IllegalArgumentException("Module name cannot be empty");
     }
+    if (functionName != null && functionName.isEmpty()) {
+      functionName = null;
+    }
   }
 
   /**

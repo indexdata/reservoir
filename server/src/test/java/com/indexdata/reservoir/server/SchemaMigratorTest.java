@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
+import com.indexdata.reservoir.module.ModuleInvocation;
 import com.indexdata.reservoir.server.db.OaiPmhClientRepository;
 import com.indexdata.reservoir.server.db.PoolConfigRepository;
 import com.indexdata.reservoir.server.db.SchemaMigrator;
@@ -146,8 +147,27 @@ public class SchemaMigratorTest extends TestBase {
               "INSERT INTO " + db.tables().poolConfig() + " (id, matcher) VALUES"
                   + " ('legacy', ' a , b:: '), ('clean', 'x,y::fn')")
           .execute());
+      // Odd shapes the legacy parser accepted; V002 must agree with normalizeList on each.
+      List<String> odd = List.of("a::fn::extra", "mod:::", "mod::::fn", "m::::",
+          " p :: q , r::s::t ", "a::b,c::");
+      for (int i = 0; i < odd.size(); i++) {
+        await(db.pool().preparedQuery(
+                "INSERT INTO " + db.tables().poolConfig() + " (id, matcher) VALUES ($1, $2)")
+            .execute(Tuple.of("odd-" + i, odd.get(i))));
+      }
 
       await(SchemaMigrator.migrate(db));
+
+      for (int i = 0; i < odd.size(); i++) {
+        Row row = await(db.pool().preparedQuery(
+                "SELECT matcher FROM " + db.tables().poolConfig() + " WHERE id = $1")
+            .execute(Tuple.of("odd-" + i))).iterator().next();
+        String stored = row.getString("matcher");
+        assertEquals("parity for '" + odd.get(i) + "'",
+            ModuleInvocation.normalizeList(odd.get(i)), stored);
+        assertEquals("idempotent for '" + odd.get(i) + "'",
+            stored, ModuleInvocation.normalizeList(stored));
+      }
 
       Row legacyRow = await(db.pool().preparedQuery(
               "SELECT matcher FROM " + db.tables().poolConfig() + " WHERE id = $1")
