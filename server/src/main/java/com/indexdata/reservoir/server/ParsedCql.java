@@ -11,12 +11,9 @@ import org.folio.tlib.postgres.PgCqlQuery;
 import org.z3950.zing.cql.CQLAndNode;
 import org.z3950.zing.cql.CQLDefaultNodeVisitor;
 import org.z3950.zing.cql.CQLNode;
-import org.z3950.zing.cql.CQLNotNode;
-import org.z3950.zing.cql.CQLOrNode;
 import org.z3950.zing.cql.CQLParseException;
 import org.z3950.zing.cql.CQLParser;
 import org.z3950.zing.cql.CQLPrefixNode;
-import org.z3950.zing.cql.CQLProxNode;
 import org.z3950.zing.cql.CQLRelation;
 import org.z3950.zing.cql.CQLSortNode;
 import org.z3950.zing.cql.CQLTermNode;
@@ -67,7 +64,8 @@ public record ParsedCql(
       try {
         CQLNode root = new CQLParser().parse(query);
         collectFields(root, filterFields, sortFields);
-        if (computeNegatedSourceVersion && hasSourceVersionEquality(root)) {
+        if (computeNegatedSourceVersion && isConjunctive(root)
+            && countSourceVersionEqualities(root) == 1) {
           CQLNode negated = negateSourceVersionEquality(root);
           negatedWhere = definition.parse(negated.toCQL()).getWhereClause();
         }
@@ -149,17 +147,33 @@ public record ParsedCql(
     }
   }
 
-  private static boolean hasSourceVersionEquality(CQLNode root) {
-    boolean[] found = {false};
+  /**
+   * Return true if the tree only combines terms with AND (sort and prefix nodes allowed).
+   * Negating a single equality is only equivalent to "the rest of this filter, other versions"
+   * for such trees; under OR, NOT or PROX the rewritten filter is wrong.
+   */
+  private static boolean isConjunctive(CQLNode node) {
+    return switch (node) {
+      case CQLTermNode _ -> true;
+      case CQLAndNode and -> isConjunctive(and.getLeftOperand())
+          && isConjunctive(and.getRightOperand());
+      case CQLPrefixNode prefix -> isConjunctive(prefix.getSubtree());
+      case CQLSortNode sort -> isConjunctive(sort.getSubtree());
+      default -> false;
+    };
+  }
+
+  private static int countSourceVersionEqualities(CQLNode root) {
+    int[] count = {0};
     root.traverse(new CQLDefaultNodeVisitor() {
       @Override
       public void onTermNode(CQLTermNode node) {
         if (isSourceVersionEquality(node)) {
-          found[0] = true;
+          count[0]++;
         }
       }
     });
-    return found[0];
+    return count[0];
   }
 
   private static boolean isSourceVersionEquality(CQLTermNode node) {
@@ -173,47 +187,29 @@ public record ParsedCql(
     return "=".equals(base) || "==".equals(base);
   }
 
+  /**
+   * Rewrite the single sourceVersion equality to {@code <>}; caller ensures a conjunctive tree.
+   */
   private static CQLNode negateSourceVersionEquality(CQLNode node) {
-    if (node instanceof CQLTermNode term) {
-      if (isSourceVersionEquality(term)) {
-        return new CQLTermNode(term.getIndex(), new CQLRelation("<>"), term.getTerm());
-      }
-      return term;
-    }
-    if (node instanceof CQLAndNode and) {
-      return new CQLAndNode(
+    return switch (node) {
+      case CQLTermNode term when isSourceVersionEquality(term) ->
+          new CQLTermNode(term.getIndex(), new CQLRelation("<>"), term.getTerm());
+      case CQLTermNode term -> term;
+      case CQLAndNode and -> new CQLAndNode(
           negateSourceVersionEquality(and.getLeftOperand()),
           negateSourceVersionEquality(and.getRightOperand()),
           toModifierSet("and", and.getModifiers()));
-    }
-    if (node instanceof CQLOrNode or) {
-      return new CQLOrNode(
-          negateSourceVersionEquality(or.getLeftOperand()),
-          negateSourceVersionEquality(or.getRightOperand()),
-          toModifierSet("or", or.getModifiers()));
-    }
-    if (node instanceof CQLNotNode not) {
-      return new CQLNotNode(
-          negateSourceVersionEquality(not.getLeftOperand()),
-          negateSourceVersionEquality(not.getRightOperand()),
-          toModifierSet("not", not.getModifiers()));
-    }
-    if (node instanceof CQLProxNode prox) {
-      return new CQLProxNode(
-          negateSourceVersionEquality(prox.getLeftOperand()),
-          negateSourceVersionEquality(prox.getRightOperand()),
-          toModifierSet("prox", prox.getModifiers()));
-    }
-    if (node instanceof CQLPrefixNode prefix) {
-      return new CQLPrefixNode(prefix.getPrefix().getName(), prefix.getPrefix().getIdentifier(),
+      case CQLPrefixNode prefix -> new CQLPrefixNode(
+          prefix.getPrefix().getName(), prefix.getPrefix().getIdentifier(),
           negateSourceVersionEquality(prefix.getSubtree()));
-    }
-    if (node instanceof CQLSortNode sort) {
-      CQLSortNode copy = new CQLSortNode(negateSourceVersionEquality(sort.getSubtree()));
-      sort.getSortIndexes().forEach(copy::addSortIndex);
-      return copy;
-    }
-    return node;
+      case CQLSortNode sort -> {
+        CQLSortNode copy = new CQLSortNode(negateSourceVersionEquality(sort.getSubtree()));
+        sort.getSortIndexes().forEach(copy::addSortIndex);
+        yield copy;
+      }
+      default -> throw new IllegalStateException(
+          "Unexpected node in conjunctive tree: " + node.getClass().getSimpleName());
+    };
   }
 
   private static ModifierSet toModifierSet(String base, java.util.List<Modifier> modifiers) {

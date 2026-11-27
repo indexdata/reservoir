@@ -5,6 +5,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
+import java.util.List;
 import org.folio.tlib.postgres.PgCqlDefinition;
 import org.folio.tlib.postgres.cqlfield.PgCqlFieldText;
 import org.junit.jupiter.api.Test;
@@ -49,5 +50,29 @@ class ParsedCqlTest {
     ParsedCql emptyVersion = ParsedCql.parseWithSourceVersionNegation(
         def, "sourceVersion=\"\"");
     assertThat(emptyVersion.negatedSourceVersionWhere(), is(nullValue()));
+  }
+
+  @Test
+  void negationOnlyForAndTreesWithSingleSourceVersionEquality() {
+    PgCqlDefinition def = ReservoirService.createDefinitionGlobalRecords();
+
+    ParsedCql nested = ParsedCql.parseWithSourceVersionNegation(
+        def, "localId=a AND (sourceId=SOURCE-1 AND sourceVersion==2) sortBy localId");
+    assertThat(nested.negatedSourceVersionWhere(), containsString("source_version<>2"));
+    assertThat(nested.negatedSourceVersionWhere(), containsString("local_id = 'a'"));
+
+    ParsedCql otherVersionTerm = ParsedCql.parseWithSourceVersionNegation(
+        def, "sourceVersion=2 AND sourceVersion<5");
+    assertThat(otherVersionTerm.negatedSourceVersionWhere(), containsString("source_version<>2"));
+    assertThat(otherVersionTerm.negatedSourceVersionWhere(), containsString("source_version<5"));
+
+    for (String query : List.of(
+        "sourceId=SOURCE-1 AND (sourceVersion=1 OR sourceVersion=2)",
+        "sourceId=SOURCE-1 NOT sourceVersion=1",
+        "sourceVersion=1 NOT sourceId=SOURCE-1",
+        "sourceVersion=1 AND sourceVersion=2")) {
+      ParsedCql parsed = ParsedCql.parseWithSourceVersionNegation(def, query);
+      assertThat(query, parsed.negatedSourceVersionWhere(), is(nullValue()));
+    }
   }
 }

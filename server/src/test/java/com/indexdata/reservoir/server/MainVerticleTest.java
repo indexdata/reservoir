@@ -4593,6 +4593,48 @@ public class MainVerticleTest extends TestBase {
   }
 
   @Test
+  public void testOaiBulkDeleteWithOrTouchesClusters()
+      throws XMLStreamException, InterruptedException, IOException, SAXException {
+    createIsbnPool();
+
+    ingestRecords(new JsonArray().add(new JsonObject()
+        .put("localId", "S101")
+        .put("payload", new JsonObject()
+            .put("marc", new JsonObject().put("leader", "00914naa  2200337   450 "))
+            .put("inventory", new JsonObject().put("isbn", new JsonArray().add("1"))))),
+        SOURCE_ID_1, 1);
+    ingestRecords(new JsonArray().add(new JsonObject()
+        .put("localId", "S102")
+        .put("payload", new JsonObject()
+            .put("marc", new JsonObject().put("leader", "00914naa  2200337   450 "))
+            .put("inventory", new JsonObject().put("isbn", new JsonArray().add("2"))))),
+        SOURCE_ID_1, 2);
+
+    TimeUnit.SECONDS.sleep(1);
+    String from = Instant.now(Clock.systemUTC()).truncatedTo(ChronoUnit.SECONDS).toString();
+
+    // A naive negation would give "sourceVersion<>1 OR sourceVersion<>2", which is always true,
+    // so neither cluster would be touched and the deletions would be invisible to OAI clients.
+    RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .param("query", "sourceId=" + SOURCE_ID_1 + " AND (sourceVersion=1 OR sourceVersion=2)")
+        .delete("/reservoir/records")
+        .then().statusCode(204);
+
+    String s = RestAssured.given()
+        .header(XOkapiHeaders.TENANT, TENANT_1)
+        .param("verb", "ListRecords")
+        .param("from", from)
+        .param("metadataPrefix", "marcxml")
+        .get("/reservoir/oai")
+        .then().statusCode(200)
+        .contentType("text/xml")
+        .extract().body().asString();
+    verifyOaiResponse(s, "ListRecords", new LinkedList<>(), 2, null);
+    assertThat(s.split("status=\"deleted\"", -1).length - 1, is(2));
+  }
+
+  @Test
   public void upgradeDb(TestContext context) throws IOException {
     String nextModule = MODULE_PREFIX + "-1.0.1";
     String md = Files.readString(Path.of("../descriptors/ModuleDescriptor-template.json"))
