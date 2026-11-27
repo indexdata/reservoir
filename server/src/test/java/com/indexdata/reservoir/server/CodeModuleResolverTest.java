@@ -1,12 +1,12 @@
-package com.indexdata.reservoir.server.entity;
-
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
+package com.indexdata.reservoir.server;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
-public class CodeModuleEntityTest {
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+
+public class CodeModuleResolverTest {
   @ParameterizedTest
   @CsvSource({
       "https://raw.githubusercontent.com/user/repo/branch/file.js, https://api.github.com/repos/user/repo/contents/file.js?ref=branch",
@@ -18,7 +18,7 @@ public class CodeModuleEntityTest {
   public void testTransformToApiFetch(String url, String expected) {
     String rawPrefix = "https://raw.githubusercontent.com/";
     String apiPrefix = "https://api.github.com/";
-    String transformed = CodeModuleEntity.CodeModuleBuilder.transformToApiFetch(url, rawPrefix, apiPrefix);
+    String transformed = CodeModuleResolver.transformToApiFetch(url, rawPrefix, apiPrefix);
     assertThat(transformed, is(expected));
   }
 }

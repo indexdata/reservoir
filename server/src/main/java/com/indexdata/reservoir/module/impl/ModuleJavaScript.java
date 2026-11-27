@@ -20,18 +20,18 @@ public class ModuleJavaScript implements Module {
 
   @Override
   public void initialize(CodeModuleEntity entity) {
-    id = entity.getId();
+    id = entity.id();
     if (id == null || id.isEmpty()) {
       throw new IllegalArgumentException("Module config must include 'id'");
     }
-    String url = entity.getUrl();
-    String script = entity.getScript();
+    String url = entity.url();
+    String script = entity.script();
     if (script == null || script.isEmpty()) {
       throw new IllegalArgumentException("Module config must include 'url' or 'script'");
     }
     if (url != null && !url.isEmpty()) {
       // url always points to an ES module
-      defaultFunctionName = entity.getFunction();
+      defaultFunctionName = entity.function();
       final boolean isModule = url.endsWith("mjs");
       if (!isModule) {
         throw new IllegalArgumentException(

@@ -1,0 +1,9 @@
+{
+  "resources": {
+    "includes": [
+      {
+        "pattern": "\\Qdb/migrations/\\E.*"
+      }
+    ]
+  }
+}

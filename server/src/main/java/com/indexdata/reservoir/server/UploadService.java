@@ -81,8 +81,8 @@ public class UploadService {
         });
         return promise.future(); // a null pointer is returned
       }
-      Storage storage = new Storage(ctx);
-      int queueSize = storage.pool.getPoolOptions().getMaxSize() * 10;
+      Storage storage = new Storage(ctx.vertx(), Tenant.get(ctx), ctx.request().method());
+      int queueSize = storage.db().pool().getPoolOptions().getMaxSize() * 10;
       log.info("{} uploading. {} queueSize: {} tenant: {}",
           params.getSummary(fileName), params.getDetails(contentType),
           queueSize, storage.getTenant());

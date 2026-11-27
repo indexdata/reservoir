@@ -1,7 +1,11 @@
 package com.indexdata.reservoir.server;
 
-import com.indexdata.reservoir.server.entity.ClusterBuilder;
+import com.indexdata.reservoir.server.db.OaiPmhClientRepository;
+import com.indexdata.reservoir.server.entity.GlobalRecordJson;
+import com.indexdata.reservoir.server.entity.OaiPmhClient;
+import com.indexdata.reservoir.server.entity.OaiPmhJobStatus;
 import com.indexdata.reservoir.server.entity.OaiPmhStatus;
+import com.indexdata.reservoir.server.entity.OaiPmhStatusJson;
 import com.indexdata.reservoir.server.metrics.IngestMetrics;
 import com.indexdata.reservoir.util.SourceId;
 import com.indexdata.reservoir.util.XmlMetadataParserMarcInJson;
@@ -29,17 +33,12 @@ import io.vertx.ext.web.handler.HttpException;
 import io.vertx.ext.web.openapi.router.RouterBuilder;
 import io.vertx.openapi.validation.ValidatedRequest;
 import io.vertx.pgclient.PgException;
-import io.vertx.sqlclient.Row;
-import io.vertx.sqlclient.RowIterator;
-import io.vertx.sqlclient.RowSet;
 import io.vertx.sqlclient.SqlConnection;
-import io.vertx.sqlclient.Tuple;
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -52,11 +51,6 @@ import org.folio.okapi.common.HttpResponse;
 
 public class OaiPmhClientService {
 
-  private static final String DB_NOW = "(clock_timestamp() AT TIME ZONE 'UTC')";
-  private static final String NEW_LEASE = DB_NOW + " + INTERVAL '5 minutes'";
-  private static final String ACTIVE_CLAIM = " WHERE id = $1 AND owner = $2"
-      + " AND job->>'status' = 'running' AND stop IS NOT TRUE AND lease_until > " + DB_NOW;
-
   long heartbeatInterval = 10_000;
 
   static class ClaimLostException extends RuntimeException {
@@ -68,15 +62,17 @@ public class OaiPmhClientService {
   static class Harvest {
     final String id;
     final UUID owner;
-    final OaiPmhStatus job;
+    final JsonObject config;
+    OaiPmhStatus job;
     final Promise<Void> done = Promise.promise();
     Throwable cancellation;
     Runnable abort = () -> { };
     boolean renewing;
 
-    Harvest(String id, UUID owner, OaiPmhStatus job) {
+    Harvest(String id, UUID owner, JsonObject config, OaiPmhStatus job) {
       this.id = id;
       this.owner = owner;
+      this.config = config;
       this.job = job;
     }
 
@@ -89,22 +85,13 @@ public class OaiPmhClientService {
   }
 
   private static final String UNIQUE_VIOLATION = "23505";
+  private static final String RESUMPTION_TOKEN_LITERAL = "resumptionToken";
+  private static final String CLIENT_ID_ALL = "_all";
+  private static final String OAI_ERROR_NORECORDSMATCH = "noRecordsMatch";
+  private static final Logger log = LogManager.getLogger(OaiPmhClientService.class);
 
   Vertx vertx;
-
   HttpClient httpClient;
-
-  private static final String RESUMPTION_TOKEN_LITERAL = "resumptionToken";
-
-  private static final String CONFIG_LITERAL = "config";
-
-  private static final String B_WHERE_ID1_LITERAL = " WHERE ID = $1";
-
-  private static final String CLIENT_ID_ALL = "_all";
-
-  private static final String OAI_ERROR_NORECORDSMATCH = "noRecordsMatch";
-
-  private static final Logger log = LogManager.getLogger(OaiPmhClientService.class);
 
   /**
    * Create OAI-PMH client service.
@@ -126,8 +113,7 @@ public class OaiPmhClientService {
    * @return async result
    */
   public Future<Void> post(RoutingContext ctx) {
-    Storage storage = new Storage(ctx);
-
+    Storage storage = new Storage(ctx.vertx(), Tenant.get(ctx), ctx.request().method());
     ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
     JsonObject config = validatedRequest.getBody().getJsonObject();
 
@@ -137,13 +123,9 @@ public class OaiPmhClientService {
           "Invalid value for OAI PMH client identifier: " + id);
       return Future.succeededFuture();
     }
-    config.remove("id");
-    return storage.getPool().preparedQuery("INSERT INTO " + storage.getOaiPmhClientTable()
-            + " (id, config)"
-            + " VALUES ($1, $2)")
-        .execute(Tuple.of(id, config))
-        .compose(x -> HttpResponse.responseJson(ctx, 201)
-            .end(config.put("id", id).encode()))
+    return storage.oaiPmhClients().insert(storage.db().client(), id, config)
+        .compose(_ -> HttpResponse.responseJson(ctx, 201)
+            .end(config.copy().put("id", id).encode()))
         .recover(cause -> {
           if (cause instanceof PgException pgException
               && UNIQUE_VIOLATION.equals(pgException.getSqlState())) {
@@ -153,74 +135,6 @@ public class OaiPmhClientService {
         });
   }
 
-  static Future<Row> getOaiPmhClient(Storage storage, SqlConnection connection, String id) {
-    return connection.preparedQuery("SELECT * FROM " + storage.getOaiPmhClientTable()
-            + B_WHERE_ID1_LITERAL)
-        .execute(Tuple.of(id))
-        .map(rowSet -> {
-          RowIterator<Row> iterator = rowSet.iterator();
-          if (!iterator.hasNext()) {
-            return null;
-          }
-          return iterator.next();
-        });
-  }
-
-  static Future<RowSet<Row>> getOaiPmhClients(Storage storage) {
-    return storage.getPool().query("SELECT * FROM " + storage.getOaiPmhClientTable())
-        .execute();
-  }
-
-  static Future<JsonObject> getConfig(Storage storage, String id) {
-    return storage.getPool().withConnection(connection ->
-        getOaiPmhClient(storage, connection, id).map(row -> {
-          if (row == null) {
-            return null;
-          }
-          return row.getJsonObject(CONFIG_LITERAL);
-        }));
-  }
-
-  static Future<OaiPmhStatus> getJob(Storage storage, String id) {
-    return storage.getPool().withConnection(connection -> getJob(storage, connection, id));
-  }
-
-  static Future<OaiPmhStatus> getJob(Storage storage, SqlConnection connection, String id) {
-    return getOaiPmhClient(storage, connection, id).map(row -> getJob(row, id));
-  }
-
-  static OaiPmhStatus getJob(Row row, String id) {
-    if (row == null) {
-      return null;
-    }
-    JsonObject json = row.getJsonObject("job");
-    OaiPmhStatus oaiPmhStatus;
-    if (json != null) {
-      // earlier version of reservoir stored config in jobs (not anymore)
-      json.remove(CONFIG_LITERAL);
-      oaiPmhStatus = json.mapTo(OaiPmhStatus.class);
-    } else {
-      oaiPmhStatus = new OaiPmhStatus();
-      oaiPmhStatus.setStatusIdle();
-      oaiPmhStatus.setTotalRecords(0L);
-      oaiPmhStatus.setTotalRequests(0);
-    }
-    // because these fields did not exist in earlier reservoir versions.
-    if (oaiPmhStatus.getTotalDeleted() == null) {
-      oaiPmhStatus.setTotalDeleted(0L);
-    }
-    if (oaiPmhStatus.getTotalInserted() == null) {
-      oaiPmhStatus.setTotalInserted(0L);
-    }
-    if (oaiPmhStatus.getTotalUpdated() == null) {
-      oaiPmhStatus.setTotalUpdated(0L);
-    }
-    JsonObject config = row.getJsonObject(CONFIG_LITERAL);
-    config.put("id", id);
-    oaiPmhStatus.setConfig(config);
-    return oaiPmhStatus;
-  }
-
   /**
    * Get OAI-PMH client.
    *
@@ -228,15 +142,14 @@ public class OaiPmhClientService {
    * @return async result
    */
   public Future<Void> get(RoutingContext ctx) {
-    Storage storage = new Storage(ctx);
+    Storage storage = new Storage(ctx.vertx(), Tenant.get(ctx), ctx.request().method());
     String id = Util.getPathParameter(ctx, "id");
-    return getConfig(storage, id).map(config -> {
-      if (config == null) {
+    return storage.oaiPmhClients().findById(storage.db().client(), id).map(client -> {
+      if (client.isEmpty()) {
         HttpResponse.responseError(ctx, 404, id);
         return null;
       }
-      config.put("id", id);
-      HttpResponse.responseJson(ctx, 200).end(config.encode());
+      HttpResponse.responseJson(ctx, 200).end(client.get().configWithId().encode());
       return null;
     });
   }
@@ -248,18 +161,16 @@ public class OaiPmhClientService {
    * @return async result
    */
   public Future<Void> getCollection(RoutingContext ctx) {
-    Storage storage = new Storage(ctx);
-    return getOaiPmhClients(storage)
-        .map(rowSet -> {
-          JsonArray ar = new JsonArray();
-          rowSet.forEach(x -> {
-            JsonObject config = x.getJsonObject(CONFIG_LITERAL);
-            config.put("id", x.getValue("id"));
-            ar.add(config);
-          });
-          JsonObject response = new JsonObject();
-          response.put("items", ar);
-          response.put("resultInfo", new JsonObject().put("totalRecords", ar.size()));
+    Storage storage = new Storage(ctx.vertx(), Tenant.get(ctx), ctx.request().method());
+    return storage.oaiPmhClients().findAll(storage.db().client())
+        .map(clients -> {
+          JsonArray items = new JsonArray();
+          for (OaiPmhClient client : clients) {
+            items.add(client.configWithId());
+          }
+          JsonObject response = new JsonObject()
+              .put("items", items)
+              .put("resultInfo", new JsonObject().put("totalRecords", items.size()));
           HttpResponse.responseJson(ctx, 200).end(response.encode());
           return null;
         });
@@ -272,13 +183,11 @@ public class OaiPmhClientService {
    * @return async result
    */
   public Future<Void> delete(RoutingContext ctx) {
-    Storage storage = new Storage(ctx);
+    Storage storage = new Storage(ctx.vertx(), Tenant.get(ctx), ctx.request().method());
     String id = Util.getPathParameter(ctx, "id");
-    return storage.getPool().preparedQuery("DELETE FROM " + storage.getOaiPmhClientTable()
-            + B_WHERE_ID1_LITERAL)
-        .execute(Tuple.of(id))
-        .map(rowSet -> {
-          if (rowSet.rowCount() == 0) {
+    return storage.oaiPmhClients().delete(storage.db().client(), id)
+        .map(deleted -> {
+          if (!deleted) {
             HttpResponse.responseError(ctx, 404, id);
           } else {
             ctx.response().setStatusCode(204).end();
@@ -294,48 +203,46 @@ public class OaiPmhClientService {
    * @return async result
    */
   public Future<Void> put(RoutingContext ctx) {
-    Storage storage = new Storage(ctx);
+    Storage storage = new Storage(ctx.vertx(), Tenant.get(ctx), ctx.request().method());
+    OaiPmhClientRepository repo = storage.oaiPmhClients();
     String id = Util.getPathParameter(ctx, "id");
     ValidatedRequest validatedRequest = ctx.get(RouterBuilder.KEY_META_DATA_VALIDATED_REQUEST);
-    JsonObject config = validatedRequest.getBody().getJsonObject();
-    config.remove("id");
-    return storage.getPool().withTransaction(connection ->
-        connection.preparedQuery("SELECT * FROM " + storage.getOaiPmhClientTable()
-                + B_WHERE_ID1_LITERAL + " FOR UPDATE")
-            .execute(Tuple.of(id)).compose(rows -> {
-              RowIterator<Row> iterator = rows.iterator();
-              OaiPmhStatus existing = iterator.hasNext() ? getJob(iterator.next(), id) : null;
-              if (existing != null && existing.isRunning()) {
-                return Future.failedFuture(
-                    httpError(409, "Stop the harvest before updating it"));
-              }
-              if (existing != null) {
-                JsonObject existingConfig = existing.getConfig();
-                int existingVersion =
-                    existingConfig.getInteger(ClusterBuilder.SOURCE_VERSION_LABEL, 1);
-                int newVersion = config.getInteger(ClusterBuilder.SOURCE_VERSION_LABEL, 1);
-                String existingSourceId =
-                    existingConfig.getString(ClusterBuilder.SOURCE_ID_LABEL, "");
-                String newSourceId = config.getString(ClusterBuilder.SOURCE_ID_LABEL, "");
-                String existingSet = existingConfig.getString("set", "");
-                String newSet = config.getString("set", "");
-                // increment if same source ID and version *and* the set is changed.
-                if (existingVersion == newVersion && existingSourceId.equals(newSourceId)
-                    && !existingSet.equals(newSet)) {
-                  config.put(ClusterBuilder.SOURCE_VERSION_LABEL, existingVersion + 1);
-                  config.remove("from");
-                }
-              }
-              return connection.preparedQuery("UPDATE " + storage.getOaiPmhClientTable()
-                      + " SET config = $2 WHERE id = $1").execute(Tuple.of(id, config))
-                  .<Boolean>map(rowsUpdated -> rowsUpdated.rowCount() > 0);
-            })).compose(found -> {
-              if (found) {
-                return ctx.response().setStatusCode(204).end();
-              }
-              HttpResponse.responseError(ctx, 404, id);
-              return Future.succeededFuture();
-            });
+    JsonObject updatedConfig = validatedRequest.getBody().getJsonObject().copy();
+    updatedConfig.remove("id");
+
+    return storage.db().withTransaction(connection ->
+        repo.findByIdForUpdate(connection, id).compose(existingOpt -> {
+          if (existingOpt.isEmpty()) {
+            return Future.succeededFuture(false);
+          }
+          OaiPmhClient existing = existingOpt.get();
+          if (existing.status().isRunning()) {
+            return Future.failedFuture(httpError(409, "Stop the harvest before updating it"));
+          }
+          JsonObject existingConfig = existing.config() != null
+              ? existing.config() : new JsonObject();
+          int existingVersion =
+              existingConfig.getInteger(GlobalRecordJson.SOURCE_VERSION, 1);
+          int newVersion = updatedConfig.getInteger(GlobalRecordJson.SOURCE_VERSION, 1);
+          String existingSourceId =
+              existingConfig.getString(GlobalRecordJson.SOURCE_ID, "");
+          String newSourceId = updatedConfig.getString(GlobalRecordJson.SOURCE_ID, "");
+          String existingSet = existingConfig.getString("set", "");
+          String newSet = updatedConfig.getString("set", "");
+          // increment if same source ID and version *and* the set is changed.
+          if (existingVersion == newVersion && existingSourceId.equals(newSourceId)
+              && !existingSet.equals(newSet)) {
+            updatedConfig.put(GlobalRecordJson.SOURCE_VERSION, existingVersion + 1);
+            updatedConfig.remove("from");
+          }
+          return repo.updateConfig(connection, id, updatedConfig);
+        })).compose(found -> {
+          if (found) {
+            return ctx.response().setStatusCode(204).end();
+          }
+          HttpResponse.responseError(ctx, 404, id);
+          return Future.succeededFuture();
+        });
   }
 
   private static HttpException httpError(int status, String message) {
@@ -344,13 +251,8 @@ public class OaiPmhClientService {
 
   /** Save a checkpoint only while this worker still holds the claim. */
   Future<Boolean> saveJob(Storage storage, Harvest harvest, boolean finished) {
-    String sql = "UPDATE " + storage.getOaiPmhClientTable()
-        + " SET config = $3, job = $4, lease_until = " + (finished ? "NULL" : NEW_LEASE)
-        + (finished ? ", owner = NULL" : "") + ACTIVE_CLAIM;
-    return storage.getPool().preparedQuery(sql)
-        .execute(Tuple.of(harvest.id, harvest.owner, harvest.job.getConfig(),
-            JsonObject.mapFrom(harvest.job)))
-        .map(rows -> rows.rowCount() > 0);
+    return storage.oaiPmhClients().saveCheckpoint(
+        storage.db().client(), harvest.id, harvest.owner, harvest.config, harvest.job, finished);
   }
 
   /**
@@ -360,20 +262,21 @@ public class OaiPmhClientService {
    * @return async result
    */
   public Future<Void> start(RoutingContext ctx) {
-    Storage storage = new Storage(ctx);
+    Storage storage = new Storage(ctx.vertx(), Tenant.get(ctx), ctx.request().method());
     String id = Util.getPathParameter(ctx, "id");
     Future<Void> future;
     if (CLIENT_ID_ALL.equals(id)) {
-      future = getOaiPmhClients(storage).compose(rows -> {
-        List<Future<Void>> futures = new LinkedList<>();
-        rows.forEach(row ->
-            futures.add(startJob(ctx.vertx(), storage, row.getString("id"), false)));
+      future = storage.oaiPmhClients().findAll(storage.db().client()).compose(clients -> {
+        List<Future<Void>> futures = new ArrayList<>(clients.size());
+        for (OaiPmhClient client : clients) {
+          futures.add(startJob(ctx.vertx(), storage, client.id(), false));
+        }
         return Future.all(futures).mapEmpty();
       });
     } else {
       future = startJob(ctx.vertx(), storage, id, false);
     }
-    return future.compose(ignored -> ctx.response().setStatusCode(204).end());
+    return future.compose(_ -> ctx.response().setStatusCode(204).end());
   }
 
   Future<Void> startJob(Vertx vertx, Storage storage, String id, boolean resumeOnly) {
@@ -385,69 +288,53 @@ public class OaiPmhClientService {
   }
 
   Future<Harvest> claimJob(Storage storage, String id, boolean resumeOnly) {
-    return storage.getPool().withTransaction(connection ->
-        connection.preparedQuery("SELECT *, lease_until > " + DB_NOW + " AS leased FROM "
-                + storage.getOaiPmhClientTable() + B_WHERE_ID1_LITERAL + " FOR UPDATE")
-            .execute(Tuple.of(id)).compose(rows -> {
-              RowIterator<Row> iterator = rows.iterator();
-              if (!iterator.hasNext()) {
-                return resumeOnly ? Future.succeededFuture()
-                    : Future.failedFuture(httpError(404, id));
-              }
-              Row row = iterator.next();
-              OaiPmhStatus job = getJob(row, id);
-              if (resumeOnly && job.isRunning() && Boolean.TRUE.equals(row.getBoolean("stop"))) {
-                job.setStatusIdle();
-                return connection.preparedQuery("UPDATE " + storage.getOaiPmhClientTable()
-                        + " SET job = $2, owner = NULL, lease_until = NULL" + B_WHERE_ID1_LITERAL)
-                    .execute(Tuple.of(id, JsonObject.mapFrom(job))).map((Harvest) null);
-              }
-              if ((job.isRunning() && Boolean.TRUE.equals(row.getBoolean("leased")))
-                  || (resumeOnly && !job.isRunning())) {
-                return Future.succeededFuture();
-              }
-              if (!job.isRunning()) {
-                job.setLastTotalRecords(0L);
-                job.setLastRecsPerSec(null);
-                job.setLastStartedTimestampRaw(LocalDateTime.now(ZoneOffset.UTC));
-              }
-              job.setStatusRunning();
-              job.setError(null);
-              Harvest harvest = new Harvest(id, UUID.randomUUID(), job);
-              return connection.preparedQuery("UPDATE " + storage.getOaiPmhClientTable()
-                      + " SET job = $2, owner = $3, lease_until = " + NEW_LEASE
-                      + (resumeOnly ? "" : ", stop = FALSE") + B_WHERE_ID1_LITERAL)
-                  .execute(Tuple.of(id, JsonObject.mapFrom(job), harvest.owner)).map(harvest);
-            }));
+    OaiPmhClientRepository repo = storage.oaiPmhClients();
+    return storage.db().withTransaction(connection ->
+        repo.findByIdForUpdateWithLease(connection, id).compose(clientOpt -> {
+          if (clientOpt.isEmpty()) {
+            return resumeOnly ? Future.succeededFuture()
+                : Future.failedFuture(httpError(404, id));
+          }
+          OaiPmhClient client = clientOpt.get();
+          OaiPmhStatus job = client.status();
+          if (resumeOnly && job.isRunning() && client.stop()) {
+            OaiPmhStatus retired = job.withStatus(OaiPmhJobStatus.IDLE);
+            return repo.retireStopped(connection, id, retired).map((Harvest) null);
+          }
+          if ((job.isRunning() && client.leased())
+              || (resumeOnly && !job.isRunning())) {
+            return Future.succeededFuture();
+          }
+          OaiPmhStatus running = job.startingAt(LocalDateTime.now(ZoneOffset.UTC));
+          JsonObject configCopy = client.config() != null
+              ? client.config().copy() : new JsonObject();
+          Harvest harvest = new Harvest(id, UUID.randomUUID(), configCopy, running);
+          return repo.claimStart(connection, id, running, harvest.owner, resumeOnly)
+              .map(harvest);
+        }));
   }
 
   Future<Boolean> renewClaim(Storage storage, SqlConnection connection, Harvest harvest) {
-    return connection.preparedQuery("UPDATE " + storage.getOaiPmhClientTable()
-            + " SET lease_until = " + NEW_LEASE + ACTIVE_CLAIM)
-        .execute(Tuple.of(harvest.id, harvest.owner)).map(rows -> rows.rowCount() > 0);
+    return storage.oaiPmhClients().renewClaim(connection, harvest.id, harvest.owner);
   }
 
-  // Records share this lock until their transactions commit. Stop, delete and takeover
-  // need an exclusive lock, so they wait for all fenced records. Lease renewal belongs to
-  // the heartbeat; updating the lease here would serialize otherwise independent records.
   Future<Void> guardRecord(Storage storage, SqlConnection connection, Harvest harvest) {
     if (harvest.cancellation != null) {
       return Future.failedFuture(harvest.cancellation);
     }
-    return connection.preparedQuery("SELECT id FROM " + storage.getOaiPmhClientTable()
-            + ACTIVE_CLAIM + " FOR SHARE")
-        .execute(Tuple.of(harvest.id, harvest.owner))
-        .compose(rows -> rows.iterator().hasNext()
-            ? Future.succeededFuture() : Future.failedFuture(new ClaimLostException()));
+    return storage.oaiPmhClients().lockActiveClaimForShare(connection, harvest.id, harvest.owner)
+        .compose(held -> held
+            ? Future.succeededFuture()
+            : Future.failedFuture(new ClaimLostException()));
   }
 
   private void runHarvest(Vertx vertx, Storage storage, Harvest harvest) {
-    long timer = vertx.setPeriodic(heartbeatInterval, ignored -> {
+    long timer = vertx.setPeriodic(heartbeatInterval, _ -> {
       if (harvest.renewing || harvest.done.future().isComplete()) {
         return;
       }
       harvest.renewing = true;
-      storage.getPool().withConnection(connection -> renewClaim(storage, connection, harvest))
+      storage.db().withConnection(connection -> renewClaim(storage, connection, harvest))
           .onComplete(result -> {
             harvest.renewing = false;
             if (result.failed()) {
@@ -457,7 +344,7 @@ public class OaiPmhClientService {
             }
           });
     });
-    harvest.done.future().onComplete(ignored -> vertx.cancelTimer(timer))
+    harvest.done.future().onComplete(_ -> vertx.cancelTimer(timer))
         .onFailure(error -> log.error("Unable to finish harvest id={} owner={}",
             harvest.id, harvest.owner, error));
     oaiHarvestLoop(vertx, storage, harvest, 0);
@@ -470,47 +357,39 @@ public class OaiPmhClientService {
    * @return async result
    */
   public Future<Void> stop(RoutingContext ctx) {
-    Storage storage = new Storage(ctx);
+    Storage storage = new Storage(ctx.vertx(), Tenant.get(ctx), ctx.request().method());
     String id = Util.getPathParameter(ctx, "id");
     Future<Void> future;
     if (CLIENT_ID_ALL.equals(id)) {
-      future = getOaiPmhClients(storage).compose(rows -> {
-        List<Future<Void>> futures = new LinkedList<>();
-        rows.forEach(row -> futures.add(stopJob(storage, row.getString("id"), true)));
+      future = storage.oaiPmhClients().findAll(storage.db().client()).compose(clients -> {
+        List<Future<Void>> futures = new ArrayList<>(clients.size());
+        for (OaiPmhClient client : clients) {
+          futures.add(stopJob(storage, client.id(), true));
+        }
         return Future.all(futures).mapEmpty();
       });
     } else {
       future = stopJob(storage, id, false);
     }
-    return future.compose(ignored -> ctx.response().setStatusCode(204).end());
+    return future.compose(_ -> ctx.response().setStatusCode(204).end());
   }
 
   Future<Void> stopJob(Storage storage, String id, boolean all) {
-    return storage.getPool().withTransaction(connection ->
-        connection.preparedQuery("SELECT * FROM " + storage.getOaiPmhClientTable()
-                + B_WHERE_ID1_LITERAL + " FOR UPDATE")
-            .execute(Tuple.of(id)).compose(rows -> {
-              RowIterator<Row> iterator = rows.iterator();
-              if (!iterator.hasNext()) {
-                return all ? Future.succeededFuture()
-                    : Future.failedFuture(httpError(404, id));
-              }
-              OaiPmhStatus job = getJob(iterator.next(), id);
-              if (!job.isRunning()) {
-                return all ? Future.succeededFuture()
-                    : Future.failedFuture(httpError(400, "not running"));
-              }
-              job.setStatusIdle();
-              job.setLastActiveTimestampRaw(LocalDateTime.now(ZoneOffset.UTC));
-              if (job.getLastStartedTimestampRaw() != null) {
-                job.setLastRunningTime(Duration.between(job.getLastStartedTimestampRaw(),
-                    job.getLastActiveTimestampRaw()).toMillis());
-              }
-              return connection.preparedQuery("UPDATE " + storage.getOaiPmhClientTable()
-                      + " SET stop = TRUE, owner = NULL, lease_until = NULL, job = $2"
-                      + B_WHERE_ID1_LITERAL)
-                  .execute(Tuple.of(id, JsonObject.mapFrom(job))).mapEmpty();
-            }));
+    OaiPmhClientRepository repo = storage.oaiPmhClients();
+    return storage.db().withTransaction(connection ->
+        repo.findByIdForUpdate(connection, id).compose(clientOpt -> {
+          if (clientOpt.isEmpty()) {
+            return all ? Future.succeededFuture()
+                : Future.failedFuture(httpError(404, id));
+          }
+          OaiPmhStatus job = clientOpt.get().status();
+          if (!job.isRunning()) {
+            return all ? Future.succeededFuture()
+                : Future.failedFuture(httpError(400, "not running"));
+          }
+          OaiPmhStatus stopped = job.stoppedAt(LocalDateTime.now(ZoneOffset.UTC));
+          return repo.markStopped(connection, id, stopped);
+        }));
   }
 
   /**
@@ -521,26 +400,32 @@ public class OaiPmhClientService {
    */
   public Future<Void> status(RoutingContext ctx) {
     Storage storage = new Storage(ctx.vertx(), Tenant.get(ctx), HttpMethod.POST);
+    OaiPmhClientRepository repo = storage.oaiPmhClients();
     String id = Util.getPathParameter(ctx, "id");
     Future<JsonArray> f;
     if (CLIENT_ID_ALL.equals(id)) {
-      f = getOaiPmhClients(storage).compose(rows -> {
-        List<Future<Void>> futures = new LinkedList<>();
-        rows.forEach(row -> {
-          String clientId = row.getString("id");
-          if (getJob(row, clientId).isRunning()) {
-            futures.add(startJob(ctx.vertx(), storage, clientId, true));
+      f = repo.findAll(storage.db().client()).compose(clients -> {
+        List<Future<Void>> futures = new ArrayList<>();
+        for (OaiPmhClient client : clients) {
+          if (client.status().isRunning()) {
+            futures.add(startJob(ctx.vertx(), storage, client.id(), true));
           }
-        });
+        }
         return Future.all(futures);
-      }).compose(ignored -> getOaiPmhClients(storage)).map(rows -> {
+      }).compose(_ -> repo.findAll(storage.db().client())).map(clients -> {
         JsonArray items = new JsonArray();
-        rows.forEach(row -> items.add(getJob(row, row.getString("id")).getJsonObject()));
+        for (OaiPmhClient client : clients) {
+          items.add(OaiPmhStatusJson.toApiJson(client.status(), client.configWithId()));
+        }
         return items;
       });
     } else {
-      f = startJob(ctx.vertx(), storage, id, true).compose(ignored -> getJob(storage, id))
-          .map(job -> job == null ? null : new JsonArray().add(job.getJsonObject()));
+      f = startJob(ctx.vertx(), storage, id, true)
+          .compose(_ -> repo.findById(storage.db().client(), id))
+          .map(clientOpt -> clientOpt
+              .map(client -> new JsonArray().add(
+                  OaiPmhStatusJson.toApiJson(client.status(), client.configWithId())))
+              .orElse(null));
     }
     return f
         .onSuccess(items -> {
@@ -548,8 +433,7 @@ public class OaiPmhClientService {
             HttpResponse.responseError(ctx, 404, id);
             return;
           }
-          JsonObject response = new JsonObject();
-          response.put("items", items);
+          JsonObject response = new JsonObject().put("items", items);
           HttpResponse.responseJson(ctx, 200).end(response.encode());
         })
         .mapEmpty();
@@ -599,14 +483,14 @@ public class OaiPmhClientService {
       IngestMetrics ingestMetrics, Harvest harvest) {
     try {
       JsonObject globalRecord = new JsonObject();
-      globalRecord.put(ClusterBuilder.LOCAL_ID_LABEL, oaiRecord.getIdentifier());
-      globalRecord.put(ClusterBuilder.SOURCE_ID_LABEL, sourceId.toString());
-      globalRecord.put(ClusterBuilder.SOURCE_VERSION_LABEL, sourceVersion);
+      globalRecord.put(GlobalRecordJson.LOCAL_ID, oaiRecord.getIdentifier());
+      globalRecord.put(GlobalRecordJson.SOURCE_ID, sourceId.toString());
+      globalRecord.put(GlobalRecordJson.SOURCE_VERSION, sourceVersion);
       if (oaiRecord.isDeleted()) {
         globalRecord.put("delete", true);
       } else {
         JsonObject payload = new JsonObject().put("marc", oaiRecord.getMetadata());
-        globalRecord.put(ClusterBuilder.PAYLOAD_LABEL, payload);
+        globalRecord.put(GlobalRecordJson.PAYLOAD, payload);
       }
       return storage.ingestGlobalRecord(vertx, sourceId, sourceVersion,
           globalRecord, ingestMatches, ingestMetrics,
@@ -630,25 +514,20 @@ public class OaiPmhClientService {
       addQueryParameterFromConfig(enc, config, "metadataPrefix");
     }
     addQueryParameterFromParams(enc, config.getJsonObject("params"));
-    String absoluteUri = enc.toString();
-    requestOptions.setAbsoluteURI(absoluteUri);
+    requestOptions.setAbsoluteURI(enc.toString());
     return httpClient.request(requestOptions).compose(request -> {
       if (harvest.cancellation != null) {
         request.reset();
         return Future.failedFuture(harvest.cancellation);
       }
-      harvest.abort = () -> request.reset();
+      harvest.abort = request::reset;
       return request.idleTimeout(60_000).send();
     });
   }
 
-  static Future<Void> endResponse(String resumptionToken, String error, OaiPmhStatus job) {
-    JsonObject config = job.getConfig();
-    LocalDateTime started = job.getLastStartedTimestampRaw();
-    long runningTimeMilli =
-        Duration.between(started, job.getLastActiveTimestampRaw()).toMillis();
-    job.setLastRunningTime(runningTimeMilli);
-    job.calculateLastRecsPerSec();
+  static Future<Void> endResponse(String resumptionToken, String error, Harvest harvest) {
+    JsonObject config = harvest.config;
+    harvest.job = harvest.job.completingPage();
     String oldResumptionToken = config.getString(RESUMPTION_TOKEN_LITERAL);
     if (resumptionToken == null || resumptionToken.equals(oldResumptionToken)) {
       moveFromDate(config);
@@ -668,7 +547,7 @@ public class OaiPmhClientService {
    */
   static void moveFromDate(JsonObject config) {
     String from = config.getString("from");
-    if (from != null &&  Util.unitsBetween(Util.getOaiNow(), from) < 0) {
+    if (from != null && Util.unitsBetween(Util.getOaiNow(), from) < 0) {
       config.put("from", Util.getNextOaiDate(from));
     }
   }
@@ -723,7 +602,7 @@ public class OaiPmhClientService {
       }
     });
     res.exceptionHandler(promise::tryFail);
-    res.endHandler(end -> {
+    res.endHandler(_ -> {
       String msg = buffer.length() > 80
           ? buffer.getString(0, 80) : buffer.toString();
       var e = new HttpStatusError(res.statusCode(), res.getHeader("Retry-After"),
@@ -735,12 +614,11 @@ public class OaiPmhClientService {
 
   private Future<Void> listRecordsResponse(Storage storage, Harvest harvest,
       List<IngestMatcher> ingestMatches, HttpClientResponse res) {
-    OaiPmhStatus job = harvest.job;
-    job.incrementTotalRequests();
+    harvest.job = harvest.job.incrementingRequests();
     if (res.statusCode() != 200) {
       return handleStatusError(res);
     }
-    JsonObject config = job.getConfig();
+    JsonObject config = harvest.config;
     final JsonObject checkpoint = config.copy();
     boolean xmlFixing = config.getBoolean("xmlFixing", false);
     XmlParser xmlParser = XmlParser.newParser(xmlFixing ? new XmlFixer(res) : res);
@@ -773,7 +651,7 @@ public class OaiPmhClientService {
     int sourceVersion = config.getInteger("sourceVersion", 1);
     OaiParserStream<JsonObject> oaiParserStream = new OaiParserStream<>(xmlParser, metadataParser);
     oaiParserStream.exceptionHandler(fail::accept);
-    xmlParser.endHandler(end -> {
+    xmlParser.endHandler(_ -> {
       ended.set(true);
       drain.run();
     });
@@ -792,21 +670,11 @@ public class OaiPmhClientService {
       }
       ingestRecord(storage, oaiRecord, sourceId, sourceVersion,
           ingestMatches, ingestMetrics, harvest)
-          .onSuccess(upd -> {
-            job.setTotalRecords(job.getTotalRecords() + 1);
-            job.setLastTotalRecords(job.getLastTotalRecords() + 1);
-            if (upd == null) {
-              job.setTotalDeleted(job.getTotalDeleted() + 1);
-            } else if (upd) {
-              job.setTotalInserted(job.getTotalInserted() + 1);
-            } else {
-              job.setTotalUpdated(job.getTotalUpdated() + 1);
-            }
-          })
+          .onSuccess(upd -> harvest.job = harvest.job.recordingIngest(upd))
           .onFailure(error -> fail.accept(error instanceof ClaimLostException ? error
               : new VertxException(error.getMessage() + " when parsing record "
                   + oaiRecord.getIdentifier(), error)))
-          .onComplete(ignored -> {
+          .onComplete(_ -> {
             queue.decrementAndGet();
             if (failure.get() == null && queue.get() < 2) {
               xmlParser.resume();
@@ -821,14 +689,14 @@ public class OaiPmhClientService {
       // Records can be replayed after interruption; advancing a partial page can lose records.
       config.clear().mergeIn(checkpoint);
       return Future.failedFuture(error);
-    }).compose(ignored -> {
+    }).compose(_ -> {
       if (oaiParserStream.getError() != null) {
         config.clear().mergeIn(checkpoint);
         return Future.<Void>failedFuture(oaiParserStream.getError());
       }
-      return endResponse(oaiParserStream.getResumptionToken(), null, job);
+      return endResponse(oaiParserStream.getResumptionToken(), null, harvest);
     })
-        .onComplete(ignored -> harvest.abort = () -> { });
+        .onComplete(_ -> harvest.abort = () -> { });
   }
 
   static Long checkRetryWait(Throwable e, JsonObject config) {
@@ -857,20 +725,20 @@ public class OaiPmhClientService {
       finishHarvest(storage, harvest, harvest.cancellation);
       return;
     }
-    OaiPmhStatus job = harvest.job;
-    job.setError(null);
-    job.setLastActiveTimestampRaw(LocalDateTime.now(ZoneOffset.UTC));
-    JsonObject config = job.getConfig();
+    harvest.job = harvest.job
+        .withError(null)
+        .withLastActiveTimestamp(LocalDateTime.now(ZoneOffset.UTC));
+    JsonObject config = harvest.config;
     log.info("harvest loop id={} owner={} rt={} retries={}",
         harvest.id, harvest.owner, config.getString(RESUMPTION_TOKEN_LITERAL), retries);
-    storage.getPool().withConnection(connection -> guardRecord(storage, connection, harvest))
-        .compose(ignored -> storage.availableIngestMatchers(vertx))
+    storage.db().withConnection(connection -> guardRecord(storage, connection, harvest))
+        .compose(_ -> storage.availableIngestMatchers(vertx))
         .compose(ingestMatches -> listRecordsRequest(config, harvest)
             .compose(res -> listRecordsResponse(storage, harvest, ingestMatches, res)))
-        .compose(ignored -> saveJob(storage, harvest, false))
+        .compose(_ -> saveJob(storage, harvest, false))
         .onSuccess(saved -> {
           if (saved) {
-            vertx.runOnContext(ignored -> oaiHarvestLoop(vertx, storage, harvest, 0));
+            vertx.runOnContext(_ -> oaiHarvestLoop(vertx, storage, harvest, 0));
           } else {
             harvest.done.tryComplete();
           }
@@ -880,7 +748,7 @@ public class OaiPmhClientService {
           if (harvest.cancellation == null && waitMs != null
               && retries < config.getInteger("numberRetries", 3)) {
             waitRetry(vertx, harvest, waitMs)
-                .onSuccess(ignored -> oaiHarvestLoop(vertx, storage, harvest, retries + 1))
+                .onSuccess(_ -> oaiHarvestLoop(vertx, storage, harvest, retries + 1))
                 .onFailure(cause -> finishHarvest(storage, harvest, cause));
           } else {
             finishHarvest(storage, harvest,
@@ -891,12 +759,12 @@ public class OaiPmhClientService {
 
   private Future<Void> waitRetry(Vertx vertx, Harvest harvest, long waitMs) {
     Promise<Void> promise = Promise.promise();
-    long timer = vertx.setTimer(waitMs, ignored -> promise.tryComplete());
+    long timer = vertx.setTimer(waitMs, _ -> promise.tryComplete());
     harvest.abort = () -> {
       vertx.cancelTimer(timer);
       promise.tryFail(harvest.cancellation);
     };
-    return promise.future().onComplete(ignored -> harvest.abort = () -> { });
+    return promise.future().onComplete(_ -> harvest.abort = () -> { });
   }
 
   private void finishHarvest(Storage storage, Harvest harvest, Throwable error) {
@@ -906,11 +774,12 @@ public class OaiPmhClientService {
       harvest.done.tryComplete();
       return;
     }
-    harvest.job.setStatusIdle();
+    OaiPmhStatus finished = harvest.job.withStatus(OaiPmhJobStatus.IDLE);
     if (!OAI_ERROR_NORECORDSMATCH.equals(error.getMessage())) {
-      harvest.job.setError(error.getMessage());
+      finished = finished.withError(error.getMessage());
       log.warn("Harvest failed id={} owner={}", harvest.id, harvest.owner, error);
     }
+    harvest.job = finished;
     saveJob(storage, harvest, true).<Void>mapEmpty().onComplete(harvest.done);
   }
 }
