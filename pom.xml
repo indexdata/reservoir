@@ -144,7 +144,7 @@
       <dependency>
         <groupId>io.rest-assured</groupId>
         <artifactId>rest-assured</artifactId>
-        <version>6.3.0</version>
+        <version>7.0.0</version>
       </dependency>
       <dependency>
         <groupId>org.apache.solr</groupId>
@@ -185,7 +185,7 @@
       <dependency>
         <groupId>org.awaitility</groupId>
         <artifactId>awaitility</artifactId>
-        <version>4.3.0</version>
+        <version>4.4.0</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
@@ -271,7 +271,7 @@
       <dependency>
         <groupId>org.mockito</groupId>
         <artifactId>mockito-bom</artifactId>
-        <version>5.24.0</version>
+        <version>5.25.0</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
